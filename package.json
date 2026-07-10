@@ -6,8 +6,8 @@
   "dependencies": {
     "@capacitor/core": "latest",
     "@capacitor/ios": "latest",
-    "capacitor-native-biometric": "latest",
-    "@capacitor-community/voice-recorder": "latest"
+    "@capgo/capacitor-native-biometric": "^8.6.1",
+    "capacitor-voice-recorder": "^7.0.6"
   },
   "devDependencies": {
     "@capacitor/cli": "latest",
