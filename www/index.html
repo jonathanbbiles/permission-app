@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#FCE9F0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Oswald:wght@400;500;600;700&family=Poppins:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<meta name="apple-mobile-web-app-title" content="Permission" />
+<title>Permission</title>
+<style>
+  :root{
+    --bg:#FFF8F1; --bg2:#FDECE5;
+    --surface:#FFFFFF; --surface-tint:#FFFDFB; --surface2:#FBEFE9;
+    --ink:#3A0E2E; --ink-soft:#7A4A66; --muted:#AC8FA4; --faint:#CBB3C4;
+    --line:#F3E1D8; --line2:#EBD5CA;
+    --rose:#FF2D78; --rose-deep:#E4216E; --rose-soft:#FFD6E6;
+    --coral:#5A1E47; --coral-deep:#38112E; --coral-soft:#E9D2DF;
+    --gold:#FF42B3; --plum:#5A1E47;
+    --on-accent:#FFFFFF;
+    --display:'Oswald','Helvetica Neue','Arial Narrow',Arial,sans-serif;
+    --body:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --script:'Caveat','Brush Script MT',cursive;
+    --radius:20px; --radius-sm:14px;
+    --shadow:0 12px 34px rgba(58,14,46,.13);
+    --shadow-soft:0 6px 18px rgba(58,14,46,.09);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:var(--body);
+    background:
+      radial-gradient(1100px 520px at 50% -6%, rgba(255,45,120,.10) 0%, rgba(255,45,120,0) 58%),
+      radial-gradient(900px 620px at 92% 4%, rgba(255,188,140,.08) 0%, rgba(255,188,140,0) 60%),
+      linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    background-attachment:fixed;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding:max(14px,env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+    max-width:540px; margin:0 auto; min-height:100%;
+    touch-action:manipulation;
+  }
+  .serif{font-family:var(--display);}
+  h1,h2,h3{font-family:var(--display); font-weight:600; letter-spacing:.2px;}
+
+  /* header */
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:13px; border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:center; gap:11px;}
+  .logo{width:40px; height:40px; border-radius:13px; flex:none; overflow:hidden;
+    box-shadow:0 6px 16px rgba(255,45,120,.30), inset 0 1px 1px rgba(255,255,255,.5);}
+  .brand h1{font-size:20px; margin:0; color:var(--ink); letter-spacing:.6px; text-transform:uppercase;}
+  .brand .sub{font-size:10px; color:var(--rose); letter-spacing:3px; text-transform:uppercase; margin-top:1px; font-family:-apple-system,sans-serif; font-weight:700;}
+  .hbtns{display:flex; gap:8px;}
+  .iconbtn{width:40px; height:40px; border-radius:12px; border:1px solid var(--line2); background:var(--surface-tint);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--plum); transition:transform .06s, background .2s;}
+  .iconbtn:active{transform:scale(.93);}
+  .iconbtn svg{width:19px; height:19px;}
+
+  /* views */
+  .view{display:none; animation:fade .34s ease;}
+  .view.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .card{background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px; margin-bottom:14px; box-shadow:var(--shadow-soft);}
+  .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.6px; font-weight:700; margin-bottom:8px;}
+
+  /* greeting */
+  .greet{margin:2px 2px 16px;}
+  .greet .hi{font-size:27px; color:var(--ink); line-height:1.15; text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
+  .greet .date{font-size:13px; color:var(--muted); margin-top:5px; letter-spacing:.3px; font-weight:600;}
+
+  /* prompt card */
+  .prompt{position:relative; background:
+      radial-gradient(120% 120% at 0% 0%, rgba(250,209,229,.7) 0%, rgba(250,209,229,0) 55%),
+      linear-gradient(180deg,#FFFFFF,#FFF3F9);
+    border:1px solid var(--rose-soft); border-radius:var(--radius); padding:22px 20px 18px; margin-bottom:16px; box-shadow:var(--shadow);}
+  .prompt .kick{font-family:var(--script); font-size:20px; color:#FF42B3; letter-spacing:0; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:7px;}
+  .prompt .q{font-size:22px; line-height:1.36; color:var(--ink); font-weight:500; letter-spacing:.2px;}
+  .prompt .quotemark{position:absolute; top:8px; right:16px; font-size:66px; line-height:1; color:var(--rose-soft); font-family:var(--display); opacity:.7; pointer-events:none; user-select:none;}
+  .prompt .another{margin-top:14px;}
+  .textlink{background:none; border:0; color:var(--rose-deep); font-weight:700; font-size:13px; padding:4px 0; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px;}
+  .textlink:active{opacity:.6;}
+
+  /* mode buttons */
+  .modes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-bottom:18px;}
+  .mode{background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line2);
+    border-radius:var(--radius-sm); padding:16px 8px 13px; text-align:center; cursor:pointer; transition:transform .07s, box-shadow .2s, border-color .2s; box-shadow:var(--shadow-soft);}
+  .mode:active{transform:scale(.95);}
+  .mode .ic{width:46px; height:46px; margin:0 auto 9px; border-radius:14px; display:flex; align-items:center; justify-content:center;}
+  .mode .ic svg{width:23px; height:23px; color:var(--on-accent);}
+  .mode.write .ic{background:linear-gradient(155deg,var(--rose),var(--rose-deep));}
+  .mode.speak .ic{background:linear-gradient(155deg,var(--coral),var(--coral-deep));}
+  .mode.draw  .ic{background:linear-gradient(155deg,var(--gold),#D81E96);}
+  .mode .nm{font-size:14px; font-weight:700; color:var(--ink); letter-spacing:.2px;}
+  .mode .dsc{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  /* section header row */
+  .sechead{display:flex; align-items:baseline; justify-content:space-between; margin:6px 2px 11px;}
+  .sechead h3{font-size:19px; margin:0; color:var(--ink); text-transform:uppercase; letter-spacing:.6px;}
+
+  /* entry list */
+  .entry{display:flex; gap:13px; align-items:center; background:linear-gradient(180deg,var(--surface),var(--surface-tint));
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:13px; margin-bottom:11px; cursor:pointer; transition:transform .07s, box-shadow .2s; box-shadow:var(--shadow-soft);}
+  .entry:active{transform:scale(.985);}
+  .entry .badge{width:44px; height:44px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+  .entry .badge svg{width:20px; height:20px; color:var(--on-accent);}
+  .entry .badge img{width:100%; height:100%; object-fit:cover;}
+  .badge.write{background:linear-gradient(155deg,var(--rose),var(--rose-deep));}
+  .badge.speak{background:linear-gradient(155deg,var(--coral),var(--coral-deep));}
+  .badge.draw{background:linear-gradient(155deg,var(--gold),#D81E96);}
+  .entry .meta{flex:1; min-width:0;}
+  .entry .meta .d{font-size:12.5px; color:var(--rose-deep); font-weight:700; letter-spacing:.2px;}
+  .entry .meta .p{font-size:13.5px; color:var(--ink-soft); margin-top:2px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .entry .chev{color:var(--faint); flex:none;}
+
+  .empty{text-align:center; color:var(--muted); padding:30px 18px; line-height:1.6;}
+  .empty .big{font-size:34px; margin-bottom:8px;}
+  .empty .t{font-size:16px; color:var(--ink); font-family:var(--display); font-weight:500;}
+  .empty .s{font-size:13px; margin-top:5px;}
+
+  /* buttons */
+  .btn{border:1px solid var(--line2); background:var(--surface-tint); color:var(--ink); border-radius:999px;
+    padding:15px 18px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; transition:transform .06s, box-shadow .2s; width:100%; display:flex; align-items:center; justify-content:center; gap:9px;}
+  .btn:active{transform:scale(.98);}
+  .btn svg{width:19px; height:19px;}
+  .btn.primary{background:linear-gradient(180deg,var(--rose),var(--rose-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px rgba(255,45,120,.34);}
+  .btn.coral{background:linear-gradient(180deg,var(--coral),var(--coral-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px rgba(90,33,73,.30);}
+  .btn.ghost{background:transparent; color:var(--muted); border-color:transparent;}
+  .btn.danger{background:transparent; color:#C42163; border-color:rgba(196,33,99,.45);}
+  .btn.small{padding:11px 14px; font-size:14px; width:auto;}
+  .btnrow{display:flex; gap:11px; margin-top:14px;}
+  .btnrow .btn{width:auto; flex:1;}
+
+  /* editor */
+  .editor-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .editor-head .back{flex:none;}
+  .editor-head .ttl{font-size:20px; color:var(--ink); font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.6px;}
+  .promptmini{background:linear-gradient(180deg,#FFFFFF,#FFF3F9); border:1px solid var(--rose-soft); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:14px;}
+  .promptmini .k{font-size:10px; color:var(--rose-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800; margin-bottom:6px;}
+  .promptmini .q{font-size:17px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display);}
+
+  textarea{width:100%; min-height:230px; border:1px solid var(--line2); border-radius:var(--radius-sm); background:var(--surface);
+    padding:16px; font-size:17px; line-height:1.6; color:var(--ink); font-family:var(--body); resize:none; outline:none; transition:border-color .2s, box-shadow .2s;}
+  textarea:focus{border-color:var(--rose); box-shadow:0 0 0 3px rgba(255,45,120,.18);}
+  textarea::placeholder{color:var(--faint); font-style:italic;}
+  .count{font-size:12px; color:var(--muted); text-align:right; margin-top:7px; letter-spacing:.3px;}
+
+  /* voice recorder */
+  .rec-wrap{text-align:center; padding:12px 0 6px;}
+  .rec-btn{width:106px; height:106px; border-radius:50%; border:0; margin:6px auto 4px; cursor:pointer; position:relative;
+    background:linear-gradient(160deg,var(--coral),var(--coral-deep)); box-shadow:0 12px 30px rgba(206,108,78,.36); display:flex; align-items:center; justify-content:center; transition:transform .12s;}
+  .rec-btn:active{transform:scale(.96);}
+  .rec-btn svg{width:38px; height:38px; color:#fff;}
+  .rec-btn.recording{background:linear-gradient(160deg,#D8586A,#B2394C);}
+  .rec-btn.recording .sq{width:30px; height:30px; border-radius:8px; background:#fff;}
+  .pulse{position:absolute; inset:0; border-radius:50%; border:3px solid rgba(216,88,106,.5); animation:pulse 1.5s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(1); opacity:.7;} 100%{transform:scale(1.5); opacity:0;}}
+  .rec-time{font-size:34px; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:300; letter-spacing:1px; margin:12px 0 4px; font-family:var(--display);}
+  .rec-hint{font-size:13.5px; color:var(--muted); line-height:1.5; margin-top:2px;}
+  .wave{height:40px; display:flex; align-items:center; justify-content:center; gap:4px; margin:14px 0 2px;}
+  .wave span{width:4px; height:10px; border-radius:3px; background:var(--coral-soft); transition:height .1s;}
+  .wave.on span{background:var(--coral);}
+  audio{width:100%; margin-top:14px;}
+
+  /* draw canvas */
+  .canvas-wrap{border:1px solid var(--line2); border-radius:var(--radius-sm); overflow:hidden; background:#FFFFFF; box-shadow:inset 0 1px 4px rgba(58,14,46,.06); position:relative;}
+  canvas{display:block; width:100%; touch-action:none; background:#FFFFFF;}
+  .canvas-tools{display:flex; align-items:center; gap:9px; margin-top:12px; flex-wrap:wrap;}
+  .pen{width:34px; height:34px; border-radius:50%; border:2px solid rgba(255,255,255,.85); cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.12); transition:transform .08s;}
+  .pen:active{transform:scale(.9);}
+  .pen.on{outline:2.5px solid var(--ink); outline-offset:2px;}
+  .spacer{flex:1;}
+
+  /* entry viewer */
+  .viewer .date{font-size:13px; color:var(--rose-deep); font-weight:700; letter-spacing:.4px; text-transform:uppercase; margin-bottom:4px;}
+  .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
+  .viewer .body{font-size:17px; line-height:1.68; color:var(--ink-soft); font-family:var(--body); white-space:pre-wrap; word-wrap:break-word;}
+  .viewer img.draw{width:100%; border-radius:var(--radius-sm); border:1px solid var(--line); background:#FFFFFF;}
+
+  /* lock screen */
+  #lock{position:fixed; inset:0; z-index:60; background:
+      radial-gradient(1100px 560px at 50% 8%, rgba(255,45,120,.20) 0%, rgba(255,45,120,0) 60%),
+      linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    display:none; flex-direction:column; align-items:center; justify-content:center; padding:32px 26px calc(32px + env(safe-area-inset-bottom)); text-align:center;}
+  #lock.show{display:flex;}
+  .locklogo{width:78px; height:78px; border-radius:24px; margin-bottom:20px; box-shadow:0 14px 40px rgba(255,45,120,.4);}
+  #lock h2{font-size:32px; margin:0 0 6px; color:var(--ink); text-transform:uppercase; letter-spacing:1.5px;}
+  #lock .tagline{font-size:15px; color:var(--ink-soft); font-family:var(--body); font-style:italic; line-height:1.5; max-width:300px; margin-bottom:26px;}
+  #lock .lk-label{font-size:13px; color:var(--muted); margin-bottom:16px; letter-spacing:.3px; min-height:19px;}
+  .dots{display:flex; gap:16px; justify-content:center; margin-bottom:28px;}
+  .dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--rose); background:transparent; transition:transform .15s, background .15s;}
+  .dot.fill{background:var(--rose); transform:scale(1.12);}
+  .dot.err{border-color:#C42163; background:#C42163;}
+  .pad{display:grid; grid-template-columns:repeat(3,74px); gap:16px; justify-content:center;}
+  .key{width:74px; height:74px; border-radius:50%; border:1px solid var(--line2); background:linear-gradient(180deg,var(--surface),var(--surface-tint));
+    font-size:28px; color:var(--ink); font-weight:500; cursor:pointer; font-family:var(--display); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-soft); transition:transform .08s, background .15s;}
+  .key:active{transform:scale(.92); background:var(--surface2);}
+  .key.blank{background:transparent; border:0; box-shadow:none; cursor:default;}
+  .key.fn{font-size:14px; font-weight:700; font-family:-apple-system,sans-serif; color:var(--rose-deep); background:transparent; border:0; box-shadow:none;}
+  .key.fn svg{width:26px; height:26px;}
+  .lk-foot{margin-top:22px; font-size:12px; color:var(--muted); line-height:1.5; max-width:280px; display:flex; align-items:center; gap:7px; justify-content:center;}
+  .lk-foot svg{width:14px; height:14px; flex:none;}
+
+  /* modal / sheet */
+  #sheet-scrim{position:fixed; inset:0; background:rgba(58,14,46,.42); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:70; opacity:0; pointer-events:none; transition:opacity .28s;}
+  #sheet-scrim.show{opacity:1; pointer-events:auto;}
+  .sheet{position:fixed; left:0; right:0; bottom:0; z-index:71; max-width:540px; margin:0 auto; background:linear-gradient(180deg,var(--surface),var(--surface-tint));
+    border-radius:26px 26px 0 0; padding:12px 20px calc(24px + env(safe-area-inset-bottom)); box-shadow:0 -12px 44px rgba(58,14,46,.24); transform:translateY(110%); transition:transform .34s cubic-bezier(.22,1,.36,1);}
+  .sheet.show{transform:none;}
+  .grab{width:42px; height:5px; border-radius:3px; background:var(--line2); margin:2px auto 16px;}
+  .sheet h3{font-size:21px; margin:0 0 4px; color:var(--ink); text-transform:uppercase; letter-spacing:.5px;}
+  .sheet .sub{font-size:13.5px; color:var(--muted); line-height:1.55; margin-bottom:16px;}
+  .setrow{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 4px; border-top:1px solid var(--line);}
+  .setrow:first-of-type{border-top:0;}
+  .setrow .l{display:flex; align-items:center; gap:12px;}
+  .setrow .l .si{width:38px;height:38px;border-radius:11px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--plum);flex:none;}
+  .setrow .l .si svg{width:18px;height:18px;}
+  .setrow .l .tx .a{font-size:15px; font-weight:700; color:var(--ink);}
+  .setrow .l .tx .b{font-size:12px; color:var(--muted); margin-top:1px;}
+  .setrow .go{color:var(--faint);}
+  /* toggle */
+  .toggle{width:50px; height:30px; border-radius:16px; background:var(--line2); position:relative; cursor:pointer; transition:background .2s; flex:none;}
+  .toggle.on{background:var(--rose);}
+  .toggle .kn{position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.2); transition:transform .2s;}
+  .toggle.on .kn{transform:translateX(20px);}
+
+  /* toast */
+  #toast{position:fixed; left:50%; bottom:calc(28px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(16px);
+    background:linear-gradient(180deg,var(--ink),#2A1023); color:var(--on-accent); padding:13px 20px; border-radius:14px; font-weight:700; font-size:14px;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; box-shadow:0 10px 30px rgba(58,14,46,.34); z-index:90; display:flex; align-items:center; gap:9px; max-width:88%;}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast svg{width:17px; height:17px; color:var(--rose-soft); flex:none;}
+
+  .foot{text-align:center; color:var(--faint); font-size:11px; margin:20px 0 4px; letter-spacing:.4px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<div id="lock">
+  <img class="locklogo" id="lockLogo" alt="Permission" />
+  <h2 class="serif">Permission</h2>
+  <div class="tagline" id="lockTagline">A private place to come home to yourself.</div>
+  <div class="lk-label" id="lockLabel">Enter your passcode</div>
+  <div class="dots" id="dots">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div class="pad" id="pad"></div>
+  <div class="lk-foot" id="lockFoot">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>Your passcode &amp; journal stay only on this phone.</span>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<header>
+  <div class="brand">
+    <div class="logo" id="hdrLogo"></div>
+    <div>
+      <h1 class="serif">Permission</h1>
+      <div class="sub">Journal</div>
+    </div>
+  </div>
+  <div class="hbtns">
+    <button class="iconbtn" id="btnSettings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <button class="iconbtn" id="btnLock" aria-label="Lock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- HOME -->
+<div class="view active" id="v-home">
+  <div class="greet">
+    <div class="hi serif" id="greetHi">Good morning</div>
+    <div class="date" id="greetDate"></div>
+  </div>
+
+  <div class="prompt">
+    <div class="quotemark">&rdquo;</div>
+    <div class="kick">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3 1.5 4.5S8 17 8 17h8s.5-2 .5-3.5S18 11 18 9a6 6 0 0 0-6-6z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg>
+      Today&rsquo;s invitation
+    </div>
+    <div class="q serif" id="promptText">&hellip;</div>
+    <div class="another">
+      <button class="textlink" id="anotherPrompt">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Offer me another
+      </button>
+    </div>
+  </div>
+
+  <div class="modes">
+    <div class="mode write" data-mode="text">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+      <div class="nm">Write</div>
+      <div class="dsc">put it in words</div>
+    </div>
+    <div class="mode speak" data-mode="voice">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg></div>
+      <div class="nm">Speak</div>
+      <div class="dsc">say it aloud</div>
+    </div>
+    <div class="mode draw" data-mode="draw">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="M2 2l7.5 7.5"/><circle cx="11" cy="11" r="1.5"/></svg></div>
+      <div class="nm">Draw</div>
+      <div class="dsc">by hand</div>
+    </div>
+  </div>
+
+  <div class="sechead">
+    <h3 class="serif">Your journal</h3>
+    <button class="textlink" id="viewAll" style="display:none;">See all &rsaquo;</button>
+  </div>
+  <div id="homeList"></div>
+</div>
+
+<!-- JOURNAL (all entries) -->
+<div class="view" id="v-journal">
+  <div class="editor-head">
+    <button class="iconbtn back" data-back="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Your journal</div>
+  </div>
+  <div id="allList"></div>
+</div>
+
+<!-- TEXT EDITOR -->
+<div class="view" id="v-text">
+  <div class="editor-head">
+    <button class="iconbtn back" data-discard="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Write</div>
+  </div>
+  <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="tPrompt"></div></div>
+  <textarea id="tArea" placeholder="Let it come as it comes. No one will read this but you&hellip;"></textarea>
+  <div class="count" id="tCount">0 words</div>
+  <div class="btnrow">
+    <button class="btn ghost" data-discard="1">Discard</button>
+    <button class="btn primary" id="tSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+  </div>
+</div>
+
+<!-- VOICE EDITOR -->
+<div class="view" id="v-voice">
+  <div class="editor-head">
+    <button class="iconbtn back" data-discard="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Speak</div>
+  </div>
+  <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="vPrompt"></div></div>
+  <div class="card">
+    <div class="rec-wrap">
+      <button class="rec-btn" id="recBtn" aria-label="Record">
+        <svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
+      </button>
+      <div class="rec-time" id="recTime">0:00</div>
+      <div class="wave" id="wave"></div>
+      <div class="rec-hint" id="recHint">Tap to begin recording your voice.</div>
+      <div id="playbackWrap" class="hidden"><audio id="playback" controls></audio></div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="btn ghost" data-discard="1">Discard</button>
+    <button class="btn coral" id="vSave" disabled style="opacity:.5;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+  </div>
+</div>
+
+<!-- DRAW EDITOR -->
+<div class="view" id="v-draw">
+  <div class="editor-head">
+    <button class="iconbtn back" data-discard="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Draw</div>
+  </div>
+  <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="dPrompt"></div></div>
+  <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+  <div class="canvas-tools">
+    <div class="pen" data-color="#3A0E2E" style="background:#3A0E2E;"></div>
+    <div class="pen" data-color="#FF2D78" style="background:#FF2D78;"></div>
+    <div class="pen" data-color="#FF42B3" style="background:#FF42B3;"></div>
+    <div class="pen" data-color="#9A5B80" style="background:#9A5B80;"></div>
+    <div class="spacer"></div>
+    <button class="btn small ghost" id="undoBtn" style="color:var(--plum);"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.6-6.4L3 9"/></svg>Undo</button>
+    <button class="btn small ghost" id="clearBtn" style="color:var(--plum);">Clear</button>
+  </div>
+  <div class="btnrow">
+    <button class="btn ghost" data-discard="1">Discard</button>
+    <button class="btn primary" id="dSave" style="background:linear-gradient(180deg,var(--gold),#D81E96); box-shadow:0 8px 22px rgba(150,39,95,.34);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+  </div>
+</div>
+
+<!-- ENTRY VIEWER -->
+<div class="view viewer" id="v-entry">
+  <div class="editor-head">
+    <button class="iconbtn back" id="entryBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Entry</div>
+  </div>
+  <div class="prompt" style="margin-bottom:16px;">
+    <div class="date" style="font-size:12px; color:var(--rose-deep); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:8px;" id="eDate"></div>
+    <div class="vq serif" id="ePrompt"></div>
+  </div>
+  <div class="card" id="eContent"></div>
+  <div class="btnrow">
+    <button class="btn small danger" id="eDelete" style="flex:0 0 auto;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+    <button class="btn coral" id="eShare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Export a copy</button>
+  </div>
+</div>
+
+<div class="foot"><a href="https://jessicaleighbiles.com" target="_blank" rel="noopener" style="color:var(--rose); text-decoration:none; font-weight:700; letter-spacing:.2px;">A gift from Jessica Leigh Biles &#8599;</a><div style="margin-top:6px;">your words never leave this phone</div></div>
+
+<!-- SETTINGS SHEET -->
+<div id="sheet-scrim"></div>
+<div class="sheet" id="settingsSheet">
+  <div class="grab"></div>
+  <h3 class="serif">Settings</h3>
+  <div class="sub">Permission keeps everything private, on this phone. Nothing is ever uploaded or shared unless you choose to export it.</div>
+  <div class="setrow" id="setFace">
+    <div class="l">
+      <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M20 8V6a2 2 0 0 0-2-2h-2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M9 10v1M15 10v1M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></div>
+      <div class="tx"><div class="a">Face ID / Touch ID</div><div class="b" id="faceSub">Unlock without typing</div></div>
+    </div>
+    <div class="toggle" id="faceToggle"><div class="kn"></div></div>
+  </div>
+  <div class="setrow" id="setPin">
+    <div class="l">
+      <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="tx"><div class="a">Change passcode</div><div class="b">Set a new 4-digit code</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+  </div>
+  <a class="setrow" id="setSite" href="https://jessicaleighbiles.com" target="_blank" rel="noopener" style="text-decoration:none;">
+    <div class="l">
+      <div class="si" style="color:var(--rose);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
+      <div class="tx"><div class="a">Visit Jessica&rsquo;s website</div><div class="b">jessicaleighbiles.com</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+  </a>
+  <div class="setrow" id="setErase">
+    <div class="l">
+      <div class="si" style="color:var(--coral-deep);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></div>
+      <div class="tx"><div class="a" style="color:var(--coral-deep);">Erase everything</div><div class="b">Permanently delete all entries</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+  </div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; v1.0</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg">Saved</span></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ============================================================
+     BRAND LOGO (inline SVG used for header + lock + icon)
+     ============================================================ */
+  var LOGO_SVG = '<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8FC0"/><stop offset=".55" stop-color="#FF42B3"/><stop offset="1" stop-color="#E01E7E"/></linearGradient><radialGradient id="sn" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBD6E7"/></radialGradient><clipPath id="ab"><rect x="0" y="0" width="100" height="64"/></clipPath></defs><rect width="100" height="100" rx="26" fill="url(#lg)"/><g clip-path="url(#ab)"><line x1="31.4" y1="45.0" x2="22.6" y2="43.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="34.2" y1="38.4" x2="26.8" y2="33.3" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="39.4" y1="33.2" x2="34.3" y2="25.8" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="46.0" y1="30.4" x2="44.2" y2="21.6" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="53.3" y1="30.3" x2="54.9" y2="21.4" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="60.1" y1="32.9" x2="64.8" y2="25.3" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="65.4" y1="37.8" x2="72.7" y2="32.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="68.4" y1="44.4" x2="77.2" y2="42.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><circle cx="50" cy="49" r="14.5" fill="url(#sn)"/></g><path d="M20 64 Q50 61 80 64" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".95"/><path d="M29 72 Q50 70 71 72" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".55"/></svg>';
+  $("hdrLogo").innerHTML = LOGO_SVG;
+  (function(){ // lock logo as data image via svg blob
+    var svg = LOGO_SVG.replace('width="100%" height="100%"','width="160" height="160"');
+    var url = 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
+    $("lockLogo").src = url;
+  })();
+
+  /* ============================================================
+     PROMPTS — written in Jessica's voice (gentle growth + tasteful body/desire)
+     ============================================================ */
+  var PROMPTS = [
+    "Where in your body do you feel most at home right now? Breathe there for a moment.",
+    "What is one thing your body did for you today that you can quietly thank it for?",
+    "You are not broken. What part of you have you been calling “too much” that is actually just alive?",
+    "Name one “should” you inherited about your body. Whose voice is it in?",
+    "What might change today if you believed your desire was good?",
+    "Recall a moment you said yes when you meant no. What were you trying to protect?",
+    "What does your softer, kinder inner voice want to tell you this morning?",
+    "Where are you waiting for permission? What if you gave it to yourself, right here?",
+    "What is one small want you can honor today, simply because it is yours?",
+    "Describe a time you felt fully at ease in your own skin. What made it feel safe?",
+    "What story about yourself are you ready to begin, slowly, to rewrite?",
+    "Where do you tend to make yourself smaller? What would taking up space feel like?",
+    "What are you allowed to receive today without having to earn it?",
+    "Finish this gently: “It is safe for me to want…”",
+    "What does real rest look like for you? When did you last let yourself have it?",
+    "Name a boundary you’d like to hold this week. Picture yourself keeping it with love.",
+    "What part of your body have you been at war with? Offer it one kind sentence.",
+    "When do you feel most like yourself? How could you invite a little more of that in?",
+    "What did you learn about pleasure growing up? What do you want to believe now?",
+    "Who would you be if shame no longer got a say?",
+    "What is one desire you’ve kept quiet? You don’t have to act on it — just name it here.",
+    "Where in your life are you giving without receiving? What would balance feel like?",
+    "What does your body need more of? What does it need less of?",
+    "Recall something that made you feel alive this week. Let yourself relive it slowly.",
+    "What would you do differently if you trusted yourself completely?",
+    "Name one way you’ve grown that your younger self would be proud of.",
+    "What are you finally ready to forgive yourself for?",
+    "Where do you crave more tenderness — from others, or from yourself?",
+    "What feels good and true to you in this exact moment?",
+    "What have you been told is “selfish” that might actually be self-honoring?",
+    "Write yourself a permission slip. What does it allow you to feel or do?",
+    "What is one thing you long for in your intimate life? Speak it gently to this page.",
+    "When you imagine feeling free in your body, what do you see?",
+    "What emotion have you been carrying in your body? Where does it seem to live?",
+    "What would change if you stopped performing and simply let yourself be?",
+    "Name a pleasure that has nothing to do with anyone else’s approval.",
+    "What does “enough” feel like? Is it possible you are already there?",
+    "Whose expectations are you carrying that were never yours to hold?",
+    "What does your intuition already know that you’ve been talking yourself out of?",
+    "Describe the woman you are becoming. What is she learning to allow herself?",
+    "What touch, taste, sound, or sight brought you comfort today?",
+    "Where have you mistaken numbness for peace? What might waking up feel like?",
+    "What is one honest thing you’d say to a partner if fear weren’t in the room?",
+    "What have you been taught to apologize for that needs no apology?",
+    "How do you want to feel by the end of today? What’s one gentle step toward it?",
+    "What part of your story deserves more compassion than you’ve been giving it?",
+    "Name something your body simply enjoys. When can you give it that this week?",
+    "Where are you ready to trade “good girl” for “whole woman”?",
+    "What longing have you been afraid to admit? It is safe on this page.",
+    "What would tenderness toward yourself look like in the next hour?",
+    "What did you make mean something bad about you that simply wasn’t true?",
+    "When did you last feel wanted — or want yourself? Describe it.",
+    "What is one way you can come home to your body today?",
+    "What are you unlearning right now, and what is quietly taking its place?",
+    "Where do you need to say a clear, kind “no” this week?",
+    "What has felt like awakening in your life lately, even in the smallest way?",
+    "What do you most want your desire to know — perhaps, that it is welcome here?",
+    "Name three things about yourself that are simply not up for debate.",
+    "What would you reach for today if you knew you couldn’t get it “wrong”?",
+    "Close your eyes and take one slow breath. What is the first true thing you notice?"
+  ];
+
+  function dayNumber(d){ var s=new Date(d.getFullYear(),0,0); return Math.floor((d-s)/86400000); }
+  var todayPrompt = "";
+  function setDailyPrompt(){ todayPrompt = PROMPTS[ dayNumber(new Date()) % PROMPTS.length ]; renderPrompt(); }
+  function renderPrompt(){ $("promptText").textContent = todayPrompt; }
+  function anotherPrompt(){
+    var cur = todayPrompt, next = cur;
+    while(next===cur){ next = PROMPTS[Math.floor(Math.random()*PROMPTS.length)]; }
+    todayPrompt = next; renderPrompt(); haptic();
+  }
+
+  /* ============================================================
+     LITTLE HELPERS
+     ============================================================ */
+  function haptic(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms||8); }catch(e){} } }
+  function toast(msg){ var t=$("toast"); $("toastMsg").textContent=msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove("show"); }, 1900); }
+  function pad2(n){ return (n<10?"0":"")+n; }
+  function fmtTime(s){ var m=Math.floor(s/60); return m+":"+pad2(Math.floor(s%60)); }
+  function fmtDate(ts){
+    var d=new Date(ts), now=new Date();
+    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var mons=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    var sameDay=d.toDateString()===now.toDateString();
+    var y=new Date(now); y.setDate(now.getDate()-1);
+    var yest=d.toDateString()===y.toDateString();
+    var t=pad2(d.getHours()>12?d.getHours()-12:(d.getHours()===0?12:d.getHours()))+":"+pad2(d.getMinutes())+(d.getHours()>=12?" PM":" AM");
+    if(sameDay) return "Today · "+t;
+    if(yest) return "Yesterday · "+t;
+    return days[d.getDay()]+", "+mons[d.getMonth()]+" "+d.getDate()+" · "+t;
+  }
+  function greeting(){ var h=new Date().getHours();
+    if(h<12) return "Good morning"; if(h<17) return "Good afternoon"; if(h<21) return "Good evening"; return "Rest well tonight"; }
+
+  /* ============================================================
+     STORAGE — IndexedDB for entries (text/audio/drawings). On-device only.
+     ============================================================ */
+  var DB=null;
+  function openDB(){ return new Promise(function(res,rej){
+    if(DB) return res(DB);
+    var req=indexedDB.open("awaken_db",1);
+    req.onupgradeneeded=function(e){ var db=e.target.result;
+      if(!db.objectStoreNames.contains("entries")){ db.createObjectStore("entries",{keyPath:"id"}); } };
+    req.onsuccess=function(e){ DB=e.target.result; res(DB); };
+    req.onerror=function(e){ rej(e); };
+  }); }
+  function txStore(mode){ return openDB().then(function(db){ return db.transaction("entries",mode).objectStore("entries"); }); }
+  function dbPut(entry){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+    var r=st.put(entry); r.onsuccess=function(){res(entry);}; r.onerror=function(e){rej(e);}; }); }); }
+  function dbAll(){ return txStore("readonly").then(function(st){ return new Promise(function(res,rej){
+    var out=[]; var c=st.openCursor(); c.onsuccess=function(e){ var cur=e.target.result;
+      if(cur){ out.push(cur.value); cur.continue(); } else { out.sort(function(a,b){return b.ts-a.ts;}); res(out); } };
+    c.onerror=function(e){rej(e);}; }); }); }
+  function dbGet(id){ return txStore("readonly").then(function(st){ return new Promise(function(res,rej){
+    var r=st.get(id); r.onsuccess=function(){res(r.result);}; r.onerror=function(e){rej(e);}; }); }); }
+  function dbDel(id){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+    var r=st.delete(id); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
+  function dbClear(){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+    var r=st.clear(); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
+
+  /* ============================================================
+     PASSCODE — hashed, stored only in localStorage on this device.
+     ============================================================ */
+  var LSK_PIN="awaken_pin", LSK_FACE="awaken_face";
+  function randHex(n){ var a=new Uint8Array(n); (crypto.getRandomValues?crypto.getRandomValues(a):a.forEach(function(_,i){a[i]=Math.floor(Math.random()*256);}));
+    return Array.prototype.map.call(a,function(b){return pad2h(b);}).join(""); }
+  function pad2h(b){ return (b<16?"0":"")+b.toString(16); }
+  function simpleHash(str){ var h=5381; for(var i=0;i<str.length;i++){ h=((h<<5)+h)+str.charCodeAt(i); h=h&0xffffffff; } return (h>>>0).toString(16); }
+  function hashPin(pin,salt){
+    var data=salt+"|"+pin;
+    if(window.crypto && crypto.subtle && window.isSecureContext){
+      var buf=new TextEncoder().encode(data);
+      return crypto.subtle.digest("SHA-256",buf).then(function(d){
+        return Array.prototype.map.call(new Uint8Array(d),function(b){return pad2h(b);}).join(""); });
+    }
+    return Promise.resolve(simpleHash(data)+simpleHash(data.split("").reverse().join("")));
+  }
+  function hasPin(){ return !!localStorage.getItem(LSK_PIN); }
+  function savePin(pin){ var salt=randHex(8); return hashPin(pin,salt).then(function(h){
+    localStorage.setItem(LSK_PIN, JSON.stringify({salt:salt,hash:h})); }); }
+  function checkPin(pin){ try{ var rec=JSON.parse(localStorage.getItem(LSK_PIN)); if(!rec) return Promise.resolve(false);
+    return hashPin(pin,rec.salt).then(function(h){ return h===rec.hash; }); }catch(e){ return Promise.resolve(false); } }
+
+  /* Face ID — native (Capacitor NativeBiometric) when available, else WebAuthn, else PIN */
+  function capNative(){ try{ return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }catch(e){ return false; } }
+  function bioPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric) || null; }catch(e){ return null; } }
+  function faceSupported(){ if(capNative() && bioPlugin()) return true; try{ return !!(window.PublicKeyCredential) && window.isSecureContext; }catch(e){ return false; } }
+  function faceAvailable(){
+    var p=bioPlugin();
+    if(capNative() && p){ try{ return Promise.resolve(p.isAvailable()).then(function(r){ return !!(r && r.isAvailable); }).catch(function(){ return false; }); }catch(e){ return Promise.resolve(false); } }
+    if(!faceSupported()) return Promise.resolve(false);
+    try{ return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function(){return false;}); }
+    catch(e){ return Promise.resolve(false); } }
+  function b64(buf){ var b=new Uint8Array(buf),s=""; for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]); return btoa(s); }
+  function unb64(str){ var s=atob(str),a=new Uint8Array(s.length); for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i); return a; }
+  function faceEnabled(){ return !!localStorage.getItem(LSK_FACE); }
+  function enableFace(){
+    var p=bioPlugin();
+    if(capNative() && p){ return Promise.resolve(p.isAvailable()).then(function(r){ if(r && r.isAvailable){ localStorage.setItem(LSK_FACE,"native"); return true; } return Promise.reject("unavailable"); }); }
+    if(!faceSupported()) return Promise.reject("unsupported");
+    var challenge=crypto.getRandomValues(new Uint8Array(32));
+    var uid=crypto.getRandomValues(new Uint8Array(16));
+    return navigator.credentials.create({ publicKey:{
+      challenge:challenge, rp:{name:"Permission"},
+      user:{id:uid,name:"permission-user",displayName:"Permission"},
+      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required"},
+      timeout:60000, attestation:"none"
+    }}).then(function(cred){ localStorage.setItem(LSK_FACE, b64(cred.rawId)); return true; });
+  }
+  function disableFace(){ localStorage.removeItem(LSK_FACE); }
+  function faceUnlock(){
+    if(!faceEnabled()) return Promise.reject("no");
+    var p=bioPlugin();
+    if(capNative() && p && localStorage.getItem(LSK_FACE)==="native"){
+      return Promise.resolve(p.verifyIdentity({ reason:"Unlock your journal", title:"Permission", subtitle:"", description:"" })).then(function(){ return true; });
+    }
+    if(!faceSupported()) return Promise.reject("no");
+    var id=unb64(localStorage.getItem(LSK_FACE));
+    var challenge=crypto.getRandomValues(new Uint8Array(32));
+    return navigator.credentials.get({ publicKey:{
+      challenge:challenge, timeout:60000, userVerification:"required",
+      allowCredentials:[{type:"public-key",id:id,transports:["internal"]}]
+    }}).then(function(){ return true; });
+  }
+
+  /* ============================================================
+     LOCK SCREEN LOGIC
+     ============================================================ */
+  var lockMode="enter"; // "set" | "confirm" | "enter" | "change-old" | "change-new" | "change-confirm"
+  var buf="", firstPin="", onUnlock=null, changeCtx=null;
+  function buildPad(){
+    var pad=$("pad"); pad.innerHTML="";
+    var keys=["1","2","3","4","5","6","7","8","9","face","0","del"];
+    keys.forEach(function(k){
+      var b=document.createElement("button");
+      if(k==="face"){ b.className="key fn"; b.id="faceKey";
+        b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M20 8V6a2 2 0 0 0-2-2h-2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M9 10v1M15 10v1M9.5 15a3.5 3.5 0 0 0 5 0"/></svg>';
+        b.addEventListener("click", tryFaceUnlock); }
+      else if(k==="del"){ b.className="key fn"; b.textContent="Delete";
+        b.addEventListener("click", function(){ if(buf.length){ buf=buf.slice(0,-1); haptic(5); paintDots(); } }); }
+      else { b.className="key"; b.textContent=k;
+        b.addEventListener("click", function(){ pressDigit(k); }); }
+      pad.appendChild(b);
+    });
+    updateFaceKey();
+  }
+  function updateFaceKey(){ var fk=$("faceKey"); if(!fk) return;
+    var show = (lockMode==="enter") && faceEnabled();
+    fk.style.visibility = show ? "visible" : "hidden"; }
+  function paintDots(err){ var dots=$("dots").children;
+    for(var i=0;i<4;i++){ dots[i].className="dot"+(i<buf.length?" fill":"")+(err?" err":""); } }
+  function pressDigit(d){
+    if(buf.length>=4) return;
+    buf+=d; haptic(6); paintDots();
+    if(buf.length===4){ setTimeout(submitPin,140); }
+  }
+  function shake(){ var dots=$("dots"); paintDots(true); dots.style.transition="transform .06s";
+    var seq=[-9,9,-7,7,-4,4,0],i=0; var iv=setInterval(function(){ dots.style.transform="translateX("+seq[i]+"px)"; i++;
+      if(i>=seq.length){ clearInterval(iv); dots.style.transform=""; } },40); }
+  function submitPin(){
+    var pin=buf;
+    if(lockMode==="set"){ firstPin=pin; buf=""; lockMode="confirm"; $("lockLabel").textContent="Confirm your passcode"; paintDots(); return; }
+    if(lockMode==="confirm"){
+      if(pin===firstPin){ savePin(pin).then(function(){ toast("Passcode set"); afterAuth(); }); }
+      else { buf=""; firstPin=""; lockMode="set"; $("lockLabel").textContent="Codes didn’t match. Choose a passcode"; shake(); setTimeout(paintDots,500); }
+      return;
+    }
+    if(lockMode==="enter"){
+      checkPin(pin).then(function(ok){ if(ok){ afterAuth(); } else { buf=""; shake(); setTimeout(function(){paintDots();},500); } });
+      return;
+    }
+    if(lockMode==="change-old"){
+      checkPin(pin).then(function(ok){ if(ok){ buf=""; lockMode="change-new"; $("lockLabel").textContent="Choose a new passcode"; paintDots(); }
+        else { buf=""; shake(); setTimeout(paintDots,500); } });
+      return;
+    }
+    if(lockMode==="change-new"){ firstPin=pin; buf=""; lockMode="change-confirm"; $("lockLabel").textContent="Confirm new passcode"; paintDots(); return; }
+    if(lockMode==="change-confirm"){
+      if(pin===firstPin){ savePin(pin).then(function(){ toast("Passcode updated"); afterAuth(); }); }
+      else { buf=""; firstPin=""; lockMode="change-new"; $("lockLabel").textContent="Didn’t match. Choose a new passcode"; shake(); setTimeout(paintDots,500); }
+      return;
+    }
+  }
+  function tryFaceUnlock(){
+    if(!faceEnabled()) return;
+    $("lockLabel").textContent="Look at your phone…";
+    faceUnlock().then(function(){ haptic(12); afterAuth(); })
+      .catch(function(){ $("lockLabel").textContent="Enter your passcode"; });
+  }
+  function afterAuth(){
+    var cb=onUnlock; onUnlock=null; buf=""; firstPin="";
+    $("lock").classList.remove("show");
+    if(cb) cb(); else showApp();
+  }
+  function showLock(mode, cb){
+    lockMode=mode||"enter"; onUnlock=cb||null; buf=""; firstPin="";
+    if(mode==="set"){ $("lockTagline").textContent="Create a passcode to keep this space just for you."; $("lockLabel").textContent="Choose a 4-digit passcode"; }
+    else if(mode==="change-old"){ $("lockTagline").textContent="Let’s update your passcode."; $("lockLabel").textContent="Enter your current passcode"; }
+    else { $("lockTagline").textContent="A private place to come home to yourself."; $("lockLabel").textContent="Enter your passcode"; }
+    paintDots(); updateFaceKey();
+    $("lock").classList.add("show");
+    // If entering and Face ID is on, offer it right away
+    if(mode==="enter" && faceEnabled()){ setTimeout(tryFaceUnlock, 350); }
+  }
+
+  /* ============================================================
+     VIEW ROUTER
+     ============================================================ */
+  function showView(id){
+    var vs=document.querySelectorAll(".view");
+    for(var i=0;i<vs.length;i++) vs[i].classList.remove("active");
+    $("v-"+id).classList.add("active");
+    window.scrollTo(0,0);
+  }
+  function showApp(){ setDailyPrompt(); $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate(); refreshLists(); showView("home"); }
+  function longDate(){ var d=new Date();
+    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var mons=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return days[d.getDay()]+", "+mons[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
+
+  /* ============================================================
+     ENTRY LISTS
+     ============================================================ */
+  function typeIcon(type){
+    if(type==="text") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+    if(type==="voice") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/></svg>';
+  }
+  function badgeClass(type){ return type==="text"?"write":(type==="voice"?"speak":"draw"); }
+  function previewText(e){
+    if(e.type==="text") return (e.text||"").trim().slice(0,120) || "A written reflection";
+    if(e.type==="voice") return "Voice note · "+fmtTime(e.duration||0);
+    return "A handwritten reflection";
+  }
+  function entryRow(e){
+    var el=document.createElement("div"); el.className="entry";
+    var badge='<div class="badge '+badgeClass(e.type)+'">'+
+      (e.type==="draw" && e.image ? '<img src="'+e.image+'" alt=""/>' : typeIcon(e.type))+'</div>';
+    el.innerHTML=badge+
+      '<div class="meta"><div class="d">'+fmtDate(e.ts)+'</div><div class="p">'+escapeHtml(previewText(e))+'</div></div>'+
+      '<div class="chev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>';
+    el.addEventListener("click", function(){ openEntry(e.id); });
+    return el;
+  }
+  function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function emptyState(sub){ return '<div class="empty"><div class="big">🭻</div><div class="t">Your journal is waiting.</div><div class="s">'+sub+'</div></div>'; }
+
+  function refreshLists(){
+    dbAll().then(function(list){
+      var home=$("homeList"), all=$("allList");
+      home.innerHTML=""; all.innerHTML="";
+      if(list.length===0){ home.innerHTML=emptyState("Choose Write, Speak, or Draw above to begin."); $("viewAll").style.display="none"; }
+      else {
+        list.slice(0,3).forEach(function(e){ home.appendChild(entryRow(e)); });
+        $("viewAll").style.display = list.length>3 ? "inline" : "none";
+        list.forEach(function(e){ all.appendChild(entryRow(e)); });
+      }
+    });
+  }
+
+  /* ============================================================
+     TEXT ENTRY
+     ============================================================ */
+  function startText(){ $("tPrompt").textContent=todayPrompt; $("tArea").value=""; $("tCount").textContent="0 words"; showView("text"); setTimeout(function(){$("tArea").focus();},250); }
+  $("tArea").addEventListener("input", function(){ var w=$("tArea").value.trim(); var n=w?w.split(/\s+/).length:0; $("tCount").textContent=n+(n===1?" word":" words"); });
+  $("tSave").addEventListener("click", function(){
+    var txt=$("tArea").value.trim();
+    if(!txt){ toast("Write a little something first"); return; }
+    saveEntry({ type:"text", prompt:todayPrompt, text:txt }).then(function(){ toast("Saved to your journal"); haptic(14); showApp(); });
+  });
+
+  /* ============================================================
+     VOICE ENTRY
+     ============================================================ */
+  var mediaRec=null, chunks=[], recTimer=null, recSeconds=0, recBlob=null, recStream=null, analyser=null, rafId=null, audioCtx=null;
+  function buildWave(){ var w=$("wave"); w.innerHTML=""; for(var i=0;i<13;i++){ w.appendChild(document.createElement("span")); } }
+  function startVoice(){
+    $("vPrompt").textContent=todayPrompt; recSeconds=0; recBlob=null; chunks=[]; nativeRec=false;
+    $("recTime").textContent="0:00"; $("recHint").textContent="Tap to begin recording your voice.";
+    $("playbackWrap").classList.add("hidden"); $("recBtn").classList.remove("recording");
+    $("recIcon").outerHTML='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    var wrap=$("wave"); wrap.classList.remove("on"); buildWave();
+    disableSave($("vSave"),true);
+    showView("voice");
+  }
+  function recIcon(recording){ var svg = recording ? '<div class="sq"></div>' :
+    '<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    $("recBtn").innerHTML = (recording?'<span class="pulse"></span>':'')+svg; }
+  var nativeRec=false, fauxTimer=null;
+  function vrPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VoiceRecorder) || null; }catch(e){ return null; } }
+  function b64ToBlob(d,mime){ try{ var bin=atob(d),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime||"audio/aac"}); }catch(e){ return null; } }
+  function fauxWaveOn(on){ var bars=$("wave").children; if(on){ $("wave").classList.add("on"); fauxTimer=setInterval(function(){ for(var i=0;i<bars.length;i++){ bars[i].style.height=(9+Math.random()*28)+"px"; } },110); } else { if(fauxTimer)clearInterval(fauxTimer); fauxTimer=null; $("wave").classList.remove("on"); flatWave(); } }
+  function finishNativeRec(){ var vp=vrPlugin(); if(!vp) return; clearInterval(recTimer); nativeRec=false; $("recBtn").classList.remove("recording"); recIcon(false); fauxWaveOn(false);
+    Promise.resolve(vp.stopRecording()).then(function(res){ var v=(res&&res.value)?res.value:(res||{}); var mime=v.mimeType||"audio/aac";
+      if(v.msDuration){ recSeconds=Math.max(1,Math.round(v.msDuration/1000)); $("recTime").textContent=fmtTime(recSeconds); }
+      recBlob=v.recordDataBase64?b64ToBlob(v.recordDataBase64,mime):null;
+      if(recBlob){ $("playback").src=URL.createObjectURL(recBlob); $("playbackWrap").classList.remove("hidden"); disableSave($("vSave"),false); $("recHint").textContent="Listen back, then save — or tap the mic to re-record."; }
+      else toast("Couldn’t capture audio");
+    }).catch(function(){ toast("Couldn’t stop recording"); }); }
+  function toggleRecord(){
+    var vp=vrPlugin();
+    if(capNative() && vp){ if(nativeRec){ finishNativeRec(); return; }
+      recSeconds=0; recBlob=null;
+      Promise.resolve(vp.requestAudioRecordingPermission()).then(function(){ return vp.startRecording(); }).then(function(){
+        nativeRec=true; $("recBtn").classList.add("recording"); recIcon(true); $("recHint").textContent="Recording… tap to stop."; $("recTime").textContent="0:00";
+        fauxWaveOn(true); recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) finishNativeRec(); },1000); haptic(12);
+      }).catch(function(){ toast("Microphone permission needed"); }); return; }
+    if(mediaRec && mediaRec.state==="recording"){ stopRecord(); return; }
+    if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording isn’t supported here"); return; }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      recStream=stream; chunks=[]; recSeconds=0; recBlob=null;
+      var mime = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : (MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":"");
+      mediaRec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream);
+      mediaRec.ondataavailable=function(e){ if(e.data && e.data.size>0) chunks.push(e.data); };
+      mediaRec.onstop=function(){
+        recBlob=new Blob(chunks,{type:mediaRec.mimeType||"audio/mp4"});
+        var url=URL.createObjectURL(recBlob); $("playback").src=url; $("playbackWrap").classList.remove("hidden");
+        disableSave($("vSave"),false);
+        $("recHint").textContent="Listen back, then save — or tap the mic to re-record.";
+        if(recStream){ recStream.getTracks().forEach(function(t){t.stop();}); }
+        stopMeter();
+      };
+      mediaRec.start();
+      $("recBtn").classList.add("recording"); recIcon(true);
+      $("recHint").textContent="Recording… tap to stop."; $("wave").classList.add("on");
+      recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) stopRecord(); },1000);
+      startMeter(stream); haptic(12);
+    }).catch(function(){ toast("Microphone permission needed"); });
+  }
+  function stopRecord(){ if(nativeRec){ finishNativeRec(); return; } if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); } clearInterval(recTimer);
+    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave(); }
+  function startMeter(stream){ try{
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    var src=audioCtx.createMediaStreamSource(stream); analyser=audioCtx.createAnalyser(); analyser.fftSize=64; src.connect(analyser);
+    var data=new Uint8Array(analyser.frequencyBinCount); var bars=$("wave").children;
+    (function loop(){ analyser.getByteFrequencyData(data);
+      for(var i=0;i<bars.length;i++){ var v=data[i+2]||0; bars[i].style.height=(8+v/255*30)+"px"; }
+      rafId=requestAnimationFrame(loop); })();
+  }catch(e){} }
+  function stopMeter(){ if(rafId) cancelAnimationFrame(rafId); rafId=null; if(audioCtx){ try{audioCtx.close();}catch(e){} audioCtx=null; } flatWave(); }
+  function flatWave(){ var bars=$("wave").children; for(var i=0;i<bars.length;i++){ bars[i].style.height="10px"; } }
+  function disableSave(btn,dis){ btn.disabled=dis; btn.style.opacity=dis?".5":"1"; }
+  $("recBtn").addEventListener("click", toggleRecord);
+  $("vSave").addEventListener("click", function(){
+    if(!recBlob){ toast("Record something first"); return; }
+    saveEntry({ type:"voice", prompt:todayPrompt, audio:recBlob, mime:recBlob.type, duration:recSeconds })
+      .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); showApp(); });
+  });
+  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; }
+
+  /* ============================================================
+     DRAW ENTRY
+     ============================================================ */
+  var ctx=null, drawing=false, penColor="#3A0E2E", strokes=[], curStroke=null, dpr=1, cw=0, ch=0;
+  function setupCanvas(){
+    var c=$("canvas"); var wrap=c.parentNode; dpr=window.devicePixelRatio||1;
+    cw=wrap.clientWidth; ch=Math.round(cw*1.15);
+    c.width=cw*dpr; c.height=ch*dpr; c.style.height=ch+"px";
+    ctx=c.getContext("2d"); ctx.scale(dpr,dpr); ctx.lineCap="round"; ctx.lineJoin="round";
+    fillCanvas(); strokes=[];
+  }
+  function fillCanvas(){ ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,cw,ch); }
+  function redraw(){ fillCanvas(); strokes.forEach(function(s){ drawStroke(s); }); }
+  function drawStroke(s){ if(s.pts.length<1) return; ctx.strokeStyle=s.color; ctx.lineWidth=s.w;
+    ctx.beginPath(); ctx.moveTo(s.pts[0].x,s.pts[0].y);
+    for(var i=1;i<s.pts.length;i++){ ctx.lineTo(s.pts[i].x,s.pts[i].y); } ctx.stroke();
+    if(s.pts.length===1){ ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.pts[0].x,s.pts[0].y,s.w/2,0,7); ctx.fill(); } }
+  function ptFrom(e){ var c=$("canvas"), r=c.getBoundingClientRect();
+    var t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left), y:(t.clientY-r.top)}; }
+  function startDraw(e){ e.preventDefault(); drawing=true; curStroke={color:penColor,w:3.2,pts:[ptFrom(e)]}; strokes.push(curStroke); drawStroke(curStroke); }
+  function moveDraw(e){ if(!drawing) return; e.preventDefault(); curStroke.pts.push(ptFrom(e)); drawStroke(curStroke); }
+  function endDraw(){ drawing=false; curStroke=null; }
+  function startDrawView(){ $("dPrompt").textContent=todayPrompt; showView("draw"); setTimeout(setupCanvas,60); }
+  function bindCanvas(){ var c=$("canvas");
+    c.addEventListener("mousedown",startDraw); c.addEventListener("mousemove",moveDraw); window.addEventListener("mouseup",endDraw);
+    c.addEventListener("touchstart",startDraw,{passive:false}); c.addEventListener("touchmove",moveDraw,{passive:false}); c.addEventListener("touchend",endDraw);
+  }
+  document.querySelectorAll(".pen").forEach(function(p){ p.addEventListener("click", function(){
+    penColor=p.dataset.color; document.querySelectorAll(".pen").forEach(function(x){x.classList.remove("on");}); p.classList.add("on"); haptic(6); }); });
+  document.querySelector(".pen").classList.add("on");
+  $("undoBtn").addEventListener("click", function(){ strokes.pop(); redraw(); haptic(6); });
+  $("clearBtn").addEventListener("click", function(){ strokes=[]; redraw(); haptic(6); });
+  $("dSave").addEventListener("click", function(){
+    if(strokes.length===0){ toast("Make a mark first"); return; }
+    var dataUrl=$("canvas").toDataURL("image/png");
+    saveEntry({ type:"draw", prompt:todayPrompt, image:dataUrl }).then(function(){ toast("Saved to your journal"); haptic(14); showApp(); });
+  });
+
+  /* ============================================================
+     SAVE
+     ============================================================ */
+  function saveEntry(e){ e.id="e_"+Date.now()+"_"+Math.floor(Math.random()*9999); e.ts=Date.now(); return dbPut(e); }
+
+  /* ============================================================
+     ENTRY VIEWER
+     ============================================================ */
+  var curEntry=null, curObjUrl=null;
+  function openEntry(id){ dbGet(id).then(function(e){ if(!e) return; curEntry=e;
+    $("eDate").textContent=fmtDate(e.ts); $("ePrompt").textContent=e.prompt||"";
+    var box=$("eContent");
+    if(curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl=null; }
+    if(e.type==="text"){ box.innerHTML='<div class="body">'+escapeHtml(e.text||"")+'</div>'; }
+    else if(e.type==="voice"){ curObjUrl=URL.createObjectURL(e.audio);
+      box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Voice reflection · '+fmtTime(e.duration||0)+'</div><audio controls src="'+curObjUrl+'" style="width:100%"></audio>'; }
+    else { box.innerHTML='<img class="draw" src="'+e.image+'" alt="Handwritten entry"/>'; }
+    showView("entry");
+  }); }
+  $("entryBack").addEventListener("click", function(){ showApp(); });
+  $("eDelete").addEventListener("click", function(){
+    if(!curEntry) return;
+    if(confirm("Delete this entry? This can’t be undone.")){ dbDel(curEntry.id).then(function(){ toast("Entry deleted"); showApp(); }); }
+  });
+  $("eShare").addEventListener("click", function(){ if(curEntry) exportEntry(curEntry); });
+
+  function exportEntry(e){
+    var dateStr=fmtDate(e.ts).replace(" · "," at ");
+    if(e.type==="text"){
+      var text="Permission — "+dateStr+"\n\nReflecting on: "+e.prompt+"\n\n"+e.text;
+      if(navigator.share){ navigator.share({title:"My Permission entry", text:text}).catch(function(){}); }
+      else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(function(){toast("Copied to clipboard");}).catch(function(){toast("Couldn’t export here");}); }
+      else { toast("Export not supported here"); }
+    } else if(e.type==="draw"){
+      fetch(e.image).then(function(r){return r.blob();}).then(function(blob){
+        var file=new File([blob],"awaken-drawing.png",{type:"image/png"});
+        if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission drawing"}).catch(function(){}); }
+        else { downloadBlob(blob,"awaken-drawing.png"); toast("Saved image"); }
+      });
+    } else if(e.type==="voice"){
+      var ext=(e.mime&&e.mime.indexOf("webm")>-1)?"webm":"m4a";
+      var file=new File([e.audio],"awaken-voice."+ext,{type:e.mime||"audio/mp4"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission voice note"}).catch(function(){}); }
+      else { downloadBlob(e.audio,"awaken-voice."+ext); toast("Saved audio"); }
+    }
+  }
+  function downloadBlob(blob,name){ var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },500); }
+
+  /* ============================================================
+     SETTINGS SHEET
+     ============================================================ */
+  function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); }
+  function closeSheet(){ $("sheet-scrim").classList.remove("show"); $("settingsSheet").classList.remove("show"); }
+  $("btnSettings").addEventListener("click", openSheet);
+  $("sheet-scrim").addEventListener("click", closeSheet);
+  function syncFaceToggle(){ var t=$("faceToggle"); t.classList.toggle("on", faceEnabled());
+    faceAvailable().then(function(ok){ var row=$("setFace");
+      if(!ok){ row.style.opacity=".5"; $("faceSub").textContent="Not available on this device"; t.style.pointerEvents="none"; }
+      else { row.style.opacity="1"; $("faceSub").textContent=faceEnabled()?"On — unlock without typing":"Unlock without typing"; t.style.pointerEvents="auto"; } }); }
+  $("faceToggle").addEventListener("click", function(){
+    if(faceEnabled()){ disableFace(); toast("Face ID turned off"); syncFaceToggle(); }
+    else { enableFace().then(function(){ toast("Face ID enabled"); syncFaceToggle(); })
+      .catch(function(){ toast("Couldn’t enable Face ID"); syncFaceToggle(); }); }
+  });
+  $("setPin").addEventListener("click", function(){ closeSheet(); showLock("change-old", showApp); });
+  $("setErase").addEventListener("click", function(){
+    if(confirm("Erase ALL entries permanently? This cannot be undone.")){
+      if(confirm("Are you sure? Every entry will be gone forever.")){
+        dbClear().then(function(){ toast("Everything erased"); closeSheet(); showApp(); }); } }
+  });
+
+  /* ============================================================
+     WIRING
+     ============================================================ */
+  document.querySelectorAll(".mode").forEach(function(m){ m.addEventListener("click", function(){
+    haptic(10); var mode=m.dataset.mode;
+    if(mode==="text") startText(); else if(mode==="voice") startVoice(); else startDrawView();
+  }); });
+  $("anotherPrompt").addEventListener("click", anotherPrompt);
+  $("viewAll").addEventListener("click", function(){ showView("journal"); });
+  document.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ showApp(); }); });
+  document.querySelectorAll("[data-discard]").forEach(function(b){ b.addEventListener("click", function(){
+    if(mediaRec && mediaRec.state==="recording") stopRecord(); cleanupVoice(); showApp(); }); });
+  $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
+
+  bindCanvas();
+  window.addEventListener("resize", function(){ if($("v-draw").classList.contains("active")){ var snap=strokes.slice(); setupCanvas(); strokes=snap; redraw(); } });
+
+  /* ============================================================
+     BOOT
+     ============================================================ */
+  buildPad();
+  if(hasPin()){ showLock("enter", showApp); }
+  else { showLock("set", function(){ showApp(); }); }
+
+})();
+</script>
+</body>
+</html>
