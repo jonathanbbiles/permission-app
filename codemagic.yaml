@@ -1,0 +1,74 @@
+# Permission — Codemagic cloud build → TestFlight (Capacitor iOS)
+# Same proven pipeline as ChordLoop. Automatic signing via an App Store Connect API key.
+workflows:
+  ios-testflight:
+    name: Permission iOS → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: ChordLoopAPIKey   # reusing your existing account-wide App Store Connect API key
+    environment:
+      vars:
+        BUNDLE_ID: "com.jonathanbiles.permission"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"     # SPM project (no .xcworkspace) — same as ChordLoop
+        XCODE_SCHEME: "App"
+        APP_APPLE_ID: "6789405787"     # <-- after you create the app record in App Store Connect, paste its Apple ID (the number) here so build numbers auto-increment
+      node: 22               # Capacitor CLI needs Node 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: npm install
+      - name: Add + sync iOS platform (Capacitor)
+        script: |
+          [ -d ios ] || npx cap add ios
+          npx cap sync ios
+      - name: Generate app icon + splash from assets/
+        script: npx @capacitor/assets generate --ios || echo "asset generation warning (continuing)"
+      - name: Info.plist — display name, permission strings, export compliance
+        script: |
+          P=ios/App/App/Info.plist
+          set +e
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Permission" "$P" || /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Permission" "$P"
+          MIC="Permission uses the microphone only to record your voice journal entries. Recordings are saved privately on your device and are never uploaded."
+          FID="Permission uses Face ID so only you can unlock your journal. Your data never leaves your phone."
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string \"$MIC\"" "$P" || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription \"$MIC\"" "$P"
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string \"$FID\"" "$P" || /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription \"$FID\"" "$P"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$P" || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$P"
+          echo "----- Info.plist -----"; cat "$P"
+      - name: Enable iOS audio session (record + playback of voice notes)
+        script: |
+          python3 - <<'PY'
+          import pathlib
+          p = pathlib.Path("ios/App/App/AppDelegate.swift")
+          s = p.read_text()
+          if "import AVFoundation" not in s:
+              s = s.replace("import Capacitor", "import Capacitor\nimport AVFoundation", 1)
+          if "setCategory(.playAndRecord" not in s and "didFinishLaunchingWithOptions" in s:
+              i = s.index("didFinishLaunchingWithOptions"); b = s.index("{", i)
+              inject = '\n        do { try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth]); try AVAudioSession.sharedInstance().setActive(true) } catch { print("Audio session error: \\(error)") }'
+              s = s[:b+1] + inject + s[b+1:]
+          p.write_text(s); print(s)
+          PY
+      - name: Set a unique build number
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" 2>/dev/null || echo 0)
+          NEXT=$(( LATEST + 1 ))
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
+          echo "CFBundleVersion = $NEXT (previous latest: $LATEST)"
+      - name: Set up code signing (create cert + profile if missing)
+        script: |
+          keychain initialize
+          openssl genrsa -out /tmp/dist_key.pem 2048
+          app-store-connect certificates create --type IOS_DISTRIBUTION --certificate-key=@file:/tmp/dist_key.pem --save
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --certificate-key=@file:/tmp/dist_key.pem --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build signed IPA
+        script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

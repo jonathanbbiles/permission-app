@@ -1,0 +1,16 @@
+{
+  "name": "permission",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Permission — a private journal (native iOS via Capacitor)",
+  "dependencies": {
+    "@capacitor/core": "latest",
+    "@capacitor/ios": "latest",
+    "capacitor-native-biometric": "latest",
+    "@capacitor-community/voice-recorder": "latest"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest",
+    "@capacitor/assets": "latest"
+  }
+}
