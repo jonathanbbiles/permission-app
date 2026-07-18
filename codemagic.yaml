@@ -8,6 +8,11 @@ workflows:
     integrations:
       app_store_connect: ChordLoopAPIKey   # reusing your existing account-wide App Store Connect API key
     environment:
+      ios_signing:
+        provisioning_profiles:
+          - Permission_AppStore_SharedDist
+        certificates:
+          - JB_Shared_Distribution
       vars:
         BUNDLE_ID: "com.jonathanbiles.permission"
         XCODE_PROJECT: "ios/App/App.xcodeproj"     # SPM project (no .xcworkspace) — same as ChordLoop
@@ -56,13 +61,10 @@ workflows:
           NEXT=$(( LATEST + 1 ))
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
           echo "CFBundleVersion = $NEXT (previous latest: $LATEST)"
-      - name: Set up code signing (create cert + profile if missing)
+      - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
-          keychain initialize
-          openssl genrsa -out /tmp/dist_key.pem 2048
-          app-store-connect certificates create --type IOS_DISTRIBUTION --certificate-key=@file:/tmp/dist_key.pem --save
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --certificate-key=@file:/tmp/dist_key.pem --create
-          keychain add-certificates
+          security find-identity -v -p codesigning || true
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
           xcode-project use-profiles
       - name: Build signed IPA
         script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
