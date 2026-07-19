@@ -61,6 +61,7 @@ workflows:
           # Use a unix timestamp: always an integer, always increasing, immune to float app versions like 1.0.
           NEXT=$(date +%s)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.1" ios/App/App/Info.plist
           echo "CFBundleVersion = $NEXT (timestamp-based, always increasing)"
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
