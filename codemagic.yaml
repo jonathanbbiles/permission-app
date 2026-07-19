@@ -57,10 +57,11 @@ workflows:
           PY
       - name: Set a unique build number
         script: |
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" 2>/dev/null || echo 0)
-          NEXT=$(( LATEST + 1 ))
+          # CFBundleVersion must be a monotonically increasing integer, higher than any prior build.
+          # Use a unix timestamp: always an integer, always increasing, immune to float app versions like 1.0.
+          NEXT=$(date +%s)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
-          echo "CFBundleVersion = $NEXT (previous latest: $LATEST)"
+          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing)"
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true
