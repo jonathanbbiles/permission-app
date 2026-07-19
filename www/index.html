@@ -237,6 +237,64 @@
 
   .foot{text-align:center; color:var(--faint); font-size:11px; margin:20px 0 4px; letter-spacing:.4px;}
   .hidden{display:none !important;}
+
+  /* ============================================================
+     TAPPING TAB  (audience-facing video library; reads a JSON feed)
+     ============================================================ */
+  /* bottom tab bar */
+  body.has-tabbar{ padding-bottom:calc(86px + env(safe-area-inset-bottom)); }
+  .tabbar{position:fixed; left:0; right:0; bottom:0; z-index:50; max-width:540px; margin:0 auto; display:none;
+    background:linear-gradient(180deg, rgba(255,253,251,.86), rgba(255,246,239,.98));
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line2); box-shadow:0 -8px 26px rgba(58,14,46,.08);
+    padding:9px 16px calc(7px + env(safe-area-inset-bottom));}
+  .tabbar.show{display:flex;}
+  .tabitem{flex:1; background:none; border:0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:5px 4px; color:var(--muted); font-family:inherit; transition:transform .07s, color .2s;}
+  .tabitem:active{transform:scale(.9);}
+  .tabitem svg{width:23px; height:23px;}
+  .tabitem .tl{font-size:11px; font-weight:700; letter-spacing:.5px;}
+  .tabitem.on{color:var(--rose-deep);}
+
+  /* tapping header */
+  .tap-head{margin:2px 2px 16px;}
+  .tap-title{font-size:27px; color:var(--ink); line-height:1.12; text-transform:uppercase; letter-spacing:.5px; font-weight:700; display:inline-block;}
+  .tap-sub{font-size:13px; color:var(--muted); margin-top:5px; letter-spacing:.3px; font-weight:600;}
+
+  /* video grid */
+  .tap-grid{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
+  .tap-card{position:relative; background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line);
+    border-radius:var(--radius-sm); overflow:hidden; cursor:pointer; box-shadow:var(--shadow-soft); transition:transform .07s, box-shadow .2s;}
+  .tap-card:active{transform:scale(.97);}
+  .tap-card:focus-visible{outline:2.5px solid var(--rose); outline-offset:2px;}
+  .tap-thumb{position:relative; width:100%; aspect-ratio:16/10; overflow:hidden;
+    background:radial-gradient(120% 120% at 20% 0%, rgba(255,143,192,.55), rgba(255,143,192,0) 60%), linear-gradient(150deg,var(--coral),var(--coral-deep));}
+  .tap-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .tap-thumb .play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+  .tap-thumb .play span{width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,.94);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 5px 16px rgba(0,0,0,.28);}
+  .tap-thumb .play svg{width:20px; height:20px; color:var(--rose-deep); margin-left:3px;}
+  .tap-cap{padding:11px 11px 13px;}
+  .tap-cap .t{font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.3;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .tap-cap .s{font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.4;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .tap-retry{margin-top:16px; display:flex; justify-content:center;}
+
+  /* full-screen player */
+  #tapPlayer{position:fixed; inset:0; z-index:100; background:#0B0410; display:none; flex-direction:column;}
+  #tapPlayer.show{display:flex;}
+  .tap-player-stage{flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#000;}
+  .tap-frame{width:100%; aspect-ratio:16/9; max-height:100%; background:#000;}
+  .tap-frame > video, .tap-frame > iframe{width:100%; height:100%; border:0; display:block; background:#000; object-fit:contain;}
+  .tap-player-close{position:absolute; top:calc(10px + env(safe-area-inset-top)); right:14px; z-index:3; width:42px; height:42px; border-radius:50%;
+    border:0; background:rgba(255,255,255,.16); color:#fff; font-size:22px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .08s;}
+  .tap-player-close:active{transform:scale(.92);}
+  .tap-player-meta{padding:15px 20px calc(20px + env(safe-area-inset-bottom)); color:#fff; flex:none;}
+  .tap-player-meta .t{font-size:18px; font-weight:700; font-family:var(--display); letter-spacing:.4px; text-transform:uppercase;}
+  .tap-player-meta .d{font-size:13.5px; color:rgba(255,255,255,.74); margin-top:6px; line-height:1.55; white-space:pre-wrap;}
+  .tap-spin{width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,45,120,.30); border-top-color:var(--rose); animation:tapspin .7s linear infinite; display:inline-block; vertical-align:middle;}
+  @keyframes tapspin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -411,6 +469,15 @@
   </div>
 </div>
 
+<!-- TAPPING (audience-facing video library) -->
+<div class="view" id="v-tapping">
+  <div class="tap-head">
+    <div class="tap-title serif" id="tapTitle">Tapping</div>
+    <div class="tap-sub" id="tapSub">Guided EFT tapping with Jessica</div>
+  </div>
+  <div id="tapList" aria-live="polite"></div>
+</div>
+
 <div class="foot"><a href="https://jessicaleighbiles.com" target="_blank" rel="noopener" style="color:var(--rose); text-decoration:none; font-weight:700; letter-spacing:.2px;">A gift from Jessica Leigh Biles &#8599;</a><div style="margin-top:6px;">your words never leave this phone</div></div>
 
 <!-- SETTINGS SHEET -->
@@ -450,9 +517,29 @@
   <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; v1.0</div>
 </div>
 
+<!-- BOTTOM TAB BAR (audience navigation) -->
+<nav class="tabbar" id="permTabbar" role="tablist" aria-label="Sections">
+  <button class="tabitem" id="tabJournal" type="button" role="tab" aria-label="Journal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H7a2 2 0 0 0-2 2z"/><path d="M9 2v18"/></svg>
+    <span class="tl">Journal</span>
+  </button>
+  <button class="tabitem" id="tabTapping" type="button" role="tab" aria-label="Tapping">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V13a7 7 0 0 1-7 7 7 7 0 0 1-6.06-3.48l-1.9-3.3a1.6 1.6 0 0 1 2.77-1.6L9 13.5"/></svg>
+    <span class="tl">Tapping</span>
+  </button>
+</nav>
+
+<!-- TAPPING FULL-SCREEN PLAYER -->
+<div id="tapPlayer" role="dialog" aria-modal="true" aria-label="Video player">
+  <button class="tap-player-close" id="tapPlayerClose" type="button" aria-label="Close player">&times;</button>
+  <div class="tap-player-stage"><div class="tap-frame" id="tapFrame"></div></div>
+  <div class="tap-player-meta"><div class="t" id="tapPlayerTitle"></div><div class="d" id="tapPlayerDesc"></div></div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg">Saved</span></div>
 
+<script src="tapping-config.js"></script>
 <script>
 (function(){
   "use strict";
@@ -748,6 +835,7 @@
     for(var i=0;i<vs.length;i++) vs[i].classList.remove("active");
     $("v-"+id).classList.add("active");
     window.scrollTo(0,0);
+    if(window.__permTab){ try{ window.__permTab(id); }catch(e){} }
   }
   function showApp(){ setDailyPrompt(); $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate(); refreshLists(); showView("home"); }
   function longDate(){ var d=new Date();
@@ -1018,6 +1106,175 @@
   if(hasPin()){ showLock("enter", showApp); }
   else { showLock("set", function(){ showApp(); }); }
 
+  /* bridge so the Tapping module can drive navigation */
+  window.Permission = { showView: showView, showApp: showApp, refreshLists: refreshLists };
+})();
+</script>
+
+<script>
+/* ============================================================
+   TAPPING TAB MODULE
+   Audience-facing. Reads a public JSON feed of tapping videos
+   (published on Jessica's site) and plays them natively.
+   No admin, no backend, no upload — management lives on the site.
+   ============================================================ */
+(function(){
+  "use strict";
+  var $=function(id){ return document.getElementById(id); };
+  var CFG=window.TAPPING_CONFIG||{};
+  var FEED_URL=(CFG.FEED_URL||"").trim();
+  var videos=[], state="idle"; /* idle | loading | loaded | empty | error */
+
+  function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  /* ---- tab bar + chrome visibility (called by core showView) ---- */
+  window.__permTab=function(id){
+    var top=(id==="home"||id==="journal"||id==="tapping");
+    var bar=$("permTabbar"); if(bar) bar.classList.toggle("show", top);
+    document.body.classList.toggle("has-tabbar", top);
+    var tj=$("tabJournal"), tt=$("tabTapping");
+    if(tj) tj.classList.toggle("on", id==="home"||id==="journal");
+    if(tt) tt.classList.toggle("on", id==="tapping");
+    /* the journal footer line is journal-specific — hide it on Tapping */
+    var f=document.querySelector(".foot"); if(f) f.style.display=(id==="tapping")?"none":"";
+  };
+
+  function openTapping(){
+    if(window.Permission) window.Permission.showView("tapping");
+    if(state==="idle"||state==="error"){ loadFeed(); } else { render(); }
+    haptic();
+  }
+  function openJournal(){ if(window.Permission) window.Permission.showApp(); haptic(); }
+  function haptic(){ if(navigator.vibrate){ try{ navigator.vibrate(8); }catch(e){} } }
+
+  /* ---- feed ---- */
+  function loadFeed(){
+    if(!FEED_URL){ state="empty"; render(); return; }
+    state="loading"; render();
+    var done=false, ctrl=("AbortController" in window)?new AbortController():null;
+    var to=setTimeout(function(){ if(!done && ctrl) ctrl.abort(); },12000);
+    fetch(FEED_URL,{ cache:"no-store", signal:ctrl?ctrl.signal:undefined })
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(data){ done=true; clearTimeout(to);
+        videos=normalize(data);
+        state=videos.length?"loaded":"empty";
+        render();
+      })
+      .catch(function(){ done=true; clearTimeout(to); state="error"; render(); });
+  }
+  function normalize(data){
+    var arr=Array.isArray(data)?data:(data&&Array.isArray(data.videos)?data.videos:[]);
+    var out=[];
+    arr.forEach(function(v){
+      if(!v) return;
+      var url=v.videoUrl||v.embedUrl||v.url||v.video||"";
+      if(!url) return;
+      out.push({
+        title:(v.title||v.name||"Untitled"),
+        description:(v.description||v.desc||""),
+        url:String(url).trim(),
+        thumb:String(v.thumbnailUrl||v.thumbnail||v.thumb||"").trim(),
+        date:(v.publishedAt||v.date||v.published||"")
+      });
+    });
+    return out;
+  }
+
+  /* ---- video kind detection ---- */
+  function ytId(u){ var m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); return m?m[1]:null; }
+  function vimeoId(u){ var m=u.match(/player\.vimeo\.com\/video\/(\d+)/)||u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return m?m[1]:null; }
+  function isFile(u){ return /\.(mp4|m4v|mov|webm|ogg|ogv)(\?|#|$)/i.test(u); }
+  function thumbFor(v){ if(v.thumb) return v.thumb; var y=ytId(v.url); if(y) return "https://img.youtube.com/vi/"+y+"/hqdefault.jpg"; return ""; }
+  function prettyDate(d){ try{ var dt=new Date(d); if(isNaN(dt.getTime())) return ""; var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return m[dt.getMonth()]+" "+dt.getDate()+", "+dt.getFullYear(); }catch(e){ return ""; } }
+
+  /* ---- render ---- */
+  function applyCopy(){ if(CFG.TITLE) $("tapTitle").textContent=CFG.TITLE; if(CFG.SUBTITLE) $("tapSub").textContent=CFG.SUBTITLE; }
+  function render(){
+    applyCopy();
+    var list=$("tapList"); if(!list) return;
+    if(state==="loading"){
+      list.innerHTML='<div class="empty"><div class="big"><span class="tap-spin"></span></div><div class="s" style="margin-top:14px;">Loading…</div></div>';
+      return;
+    }
+    if(state==="error"){
+      list.innerHTML=stateBlock(ICON_ERROR, CFG.ERROR_HEADLINE||"Couldn’t load the videos", CFG.ERROR_SUB||"Please check your connection and try again.", true, "var(--muted)");
+      var b=$("tapRetry"); if(b) b.addEventListener("click", loadFeed);
+      return;
+    }
+    if(state==="empty"||!videos.length){
+      list.innerHTML=stateBlock(ICON_EMPTY, CFG.EMPTY_HEADLINE||"New tapping videos are on the way", CFG.EMPTY_SUB||"Check back soon.", false, "var(--faint)");
+      return;
+    }
+    var grid=document.createElement("div"); grid.className="tap-grid";
+    videos.forEach(function(v){ grid.appendChild(card(v)); });
+    list.innerHTML=""; list.appendChild(grid);
+  }
+  var ICON_EMPTY='<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l1.7 4.6L18.3 9.5l-4.6 1.7L12 15.8l-1.7-4.6L5.7 9.5l4.6-1.7z"/><path d="M18.6 14.4l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>';
+  var ICON_ERROR='<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17.5a4 4 0 0 1-.5-7.97A5 5 0 0 1 16 9a3.5 3.5 0 0 1 1.2 6.8"/><path d="M8.5 20.5l1-2M12 21l1-2M15.5 20.5l1-2"/></svg>';
+  function stateBlock(icon,h,s,retry,color){
+    return '<div class="empty"><div class="big" style="line-height:1;'+(color?'color:'+color+';':'')+'">'+icon+'</div><div class="t">'+esc(h)+'</div><div class="s">'+esc(s)+'</div>'+
+      (retry?'<div class="tap-retry"><button class="btn primary small" id="tapRetry" type="button" style="width:auto;">Try again</button></div>':'')+'</div>';
+  }
+  function card(v){
+    var el=document.createElement("div"); el.className="tap-card"; el.setAttribute("role","button"); el.tabIndex=0;
+    var t=thumbFor(v);
+    var secondary = v.description ? esc(v.description) : (v.date? esc(prettyDate(v.date)) : "");
+    el.innerHTML=
+      '<div class="tap-thumb">'+
+        (t?'<img loading="lazy" src="'+esc(t)+'" alt="" onerror="this.style.display=\'none\'">':'')+
+        '<div class="play"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>'+
+      '</div>'+
+      '<div class="tap-cap"><div class="t">'+esc(v.title)+'</div>'+
+        (secondary?'<div class="s">'+secondary+'</div>':'')+
+      '</div>';
+    el.addEventListener("click", function(){ openPlayer(v); });
+    el.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openPlayer(v); } });
+    return el;
+  }
+
+  /* ---- full-screen player ---- */
+  function openPlayer(v){
+    var frame=$("tapFrame"); frame.innerHTML="";
+    var y=ytId(v.url), vm=vimeoId(v.url);
+    if(y){
+      var f=document.createElement("iframe");
+      f.src="https://www.youtube-nocookie.com/embed/"+y+"?playsinline=1&rel=0&autoplay=1&modestbranding=1";
+      f.allow="autoplay; encrypted-media; picture-in-picture; fullscreen";
+      f.setAttribute("allowfullscreen",""); frame.appendChild(f);
+    } else if(vm){
+      var fv=document.createElement("iframe");
+      fv.src="https://player.vimeo.com/video/"+vm+"?autoplay=1&playsinline=1";
+      fv.allow="autoplay; fullscreen; picture-in-picture";
+      fv.setAttribute("allowfullscreen",""); frame.appendChild(fv);
+    } else if(isFile(v.url) || !/^https?:/i.test(v.url)){
+      var vid=document.createElement("video");
+      vid.src=v.url; vid.controls=true; vid.autoplay=true; vid.preload="metadata";
+      vid.setAttribute("playsinline",""); vid.setAttribute("webkit-playsinline","");
+      frame.appendChild(vid);
+      try{ var p=vid.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){}
+    } else {
+      var fe=document.createElement("iframe");
+      fe.src=v.url; fe.allow="autoplay; fullscreen; encrypted-media; picture-in-picture";
+      fe.setAttribute("allowfullscreen",""); frame.appendChild(fe);
+    }
+    $("tapPlayerTitle").textContent=v.title||"";
+    $("tapPlayerDesc").textContent=v.description||"";
+    $("tapPlayer").classList.add("show");
+    haptic();
+  }
+  function closePlayer(){ var p=$("tapPlayer"); if(p) p.classList.remove("show"); var fr=$("tapFrame"); if(fr) fr.innerHTML=""; }
+
+  /* ---- wire ---- */
+  function wire(){
+    applyCopy();
+    var tj=$("tabJournal"); if(tj) tj.addEventListener("click", openJournal);
+    var tt=$("tabTapping"); if(tt) tt.addEventListener("click", openTapping);
+    var c=$("tapPlayerClose"); if(c) c.addEventListener("click", closePlayer);
+    var pl=$("tapPlayer"); if(pl) pl.addEventListener("click", function(e){ if(e.target===pl) closePlayer(); });
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && $("tapPlayer") && $("tapPlayer").classList.contains("show")) closePlayer(); });
+  }
+  wire();
 })();
 </script>
 </body>
