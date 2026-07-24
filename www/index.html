@@ -12,15 +12,29 @@
 <meta name="apple-mobile-web-app-title" content="Permission" />
 <title>Permission</title>
 <style>
+  /* ============================================================
+     THEME SYSTEM
+     Colors are semantic tokens. Light + dark are defined below.
+     The user's chosen ACCENT overrides --accent / --accent-deep only,
+     so both themes stay legible whatever accent is picked.
+     ============================================================ */
   :root{
+    /* accent — customizable (see ACCENTS in JS). Soft accent stays theme-driven. */
+    --accent:#FF2D78; --accent-deep:#E4216E; --on-accent:#FFFFFF;
+
+    /* light theme surfaces + ink */
     --bg:#FFF8F1; --bg2:#FDECE5;
     --surface:#FFFFFF; --surface-tint:#FFFDFB; --surface2:#FBEFE9;
-    --ink:#3A0E2E; --ink-soft:#7A4A66; --muted:#AC8FA4; --faint:#CBB3C4;
+    --ink:#3A0E2E; --ink-soft:#7A4A66; --muted:#96738A; --faint:#B79FB0;
     --line:#F3E1D8; --line2:#EBD5CA;
-    --rose:#FF2D78; --rose-deep:#E4216E; --rose-soft:#FFD6E6;
-    --coral:#5A1E47; --coral-deep:#38112E; --coral-soft:#E9D2DF;
-    --gold:#FF42B3; --plum:#5A1E47;
-    --on-accent:#FFFFFF;
+    --accent-soft:#FFD6E6;
+    --secondary:#5A1E47; --secondary-deep:#38112E; --secondary-soft:#E9D2DF;
+    /* soft-tinted panel used for prompt cards etc. */
+    --panel:#FFFFFF; --panel-tint:#FFF3F9;
+    --paper:#FFFFFF;               /* drawing paper — white in both themes */
+    --paper-ink:#3A0E2E;
+    --on-accent-shadow:rgba(255,45,120,.34);
+
     --display:'Oswald','Helvetica Neue','Arial Narrow',Arial,sans-serif;
     --body:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     --script:'Caveat','Brush Script MT',cursive;
@@ -28,13 +42,26 @@
     --shadow:0 12px 34px rgba(58,14,46,.13);
     --shadow-soft:0 6px 18px rgba(58,14,46,.09);
   }
+  :root[data-theme="dark"]{
+    --bg:#160512; --bg2:#0C0410;
+    --surface:#241023; --surface-tint:#2B1429; --surface2:#341A31;
+    --ink:#FBEAF3; --ink-soft:#D8B7CB; --muted:#A886A0; --faint:#7A5E73;
+    --line:#3A1F35; --line2:#4A2A43;
+    --accent-soft:#4A2440;
+    --secondary:#B98CAB; --secondary-deep:#8E6480; --secondary-soft:#3A2033;
+    --panel:#2B1429; --panel-tint:#331A30;
+    --paper:#FBF6F1; --paper-ink:#2A0E22;   /* warm off-white paper, still high contrast */
+    --shadow:0 12px 34px rgba(0,0,0,.55);
+    --shadow-soft:0 6px 18px rgba(0,0,0,.4);
+    --on-accent-shadow:rgba(0,0,0,.5);
+  }
+
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; height:100%;}
   body{
     font-family:var(--body);
     background:
-      radial-gradient(1100px 520px at 50% -6%, rgba(255,45,120,.10) 0%, rgba(255,45,120,0) 58%),
-      radial-gradient(900px 620px at 92% 4%, rgba(255,188,140,.08) 0%, rgba(255,188,140,0) 60%),
+      radial-gradient(1100px 520px at 50% -6%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 58%),
       linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
     background-attachment:fixed;
     color:var(--ink);
@@ -42,6 +69,7 @@
     padding:max(14px,env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
     max-width:540px; margin:0 auto; min-height:100%;
     touch-action:manipulation;
+    transition:background-color .3s, color .3s;
   }
   .serif{font-family:var(--display);}
   h1,h2,h3{font-family:var(--display); font-weight:600; letter-spacing:.2px;}
@@ -50,12 +78,12 @@
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:13px; border-bottom:1px solid var(--line);}
   .brand{display:flex; align-items:center; gap:11px;}
   .logo{width:40px; height:40px; border-radius:13px; flex:none; overflow:hidden;
-    box-shadow:0 6px 16px rgba(255,45,120,.30), inset 0 1px 1px rgba(255,255,255,.5);}
+    box-shadow:0 6px 16px var(--on-accent-shadow), inset 0 1px 1px rgba(255,255,255,.5);}
   .brand h1{font-size:20px; margin:0; color:var(--ink); letter-spacing:.6px; text-transform:uppercase;}
-  .brand .sub{font-size:10px; color:var(--rose); letter-spacing:3px; text-transform:uppercase; margin-top:1px; font-family:-apple-system,sans-serif; font-weight:700;}
+  .brand .sub{font-size:10px; color:var(--accent); letter-spacing:3px; text-transform:uppercase; margin-top:1px; font-family:-apple-system,sans-serif; font-weight:700;}
   .hbtns{display:flex; gap:8px;}
   .iconbtn{width:40px; height:40px; border-radius:12px; border:1px solid var(--line2); background:var(--surface-tint);
-    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--plum); transition:transform .06s, background .2s;}
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--secondary); transition:transform .06s, background .2s;}
   .iconbtn:active{transform:scale(.93);}
   .iconbtn svg{width:19px; height:19px;}
 
@@ -73,30 +101,49 @@
   .greet .hi{font-size:27px; color:var(--ink); line-height:1.15; text-transform:uppercase; letter-spacing:.5px; font-weight:700;}
   .greet .date{font-size:13px; color:var(--muted); margin-top:5px; letter-spacing:.3px; font-weight:600;}
 
+  /* mode (prompt depth) chips */
+  .depths{display:flex; gap:8px; margin:0 2px 12px; flex-wrap:wrap;}
+  .depth{border:1px solid var(--line2); background:var(--surface-tint); color:var(--ink-soft);
+    border-radius:999px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+    letter-spacing:.2px; transition:transform .06s, background .2s, color .2s, border-color .2s;}
+  .depth:active{transform:scale(.95);}
+  .depth.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); border-color:transparent;}
+
   /* prompt card */
-  .prompt{position:relative; background:
-      radial-gradient(120% 120% at 0% 0%, rgba(250,209,229,.7) 0%, rgba(250,209,229,0) 55%),
-      linear-gradient(180deg,#FFFFFF,#FFF3F9);
-    border:1px solid var(--rose-soft); border-radius:var(--radius); padding:22px 20px 18px; margin-bottom:16px; box-shadow:var(--shadow);}
-  .prompt .kick{font-family:var(--script); font-size:20px; color:#FF42B3; letter-spacing:0; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:7px;}
+  .prompt{position:relative; background:linear-gradient(180deg,var(--panel),var(--panel-tint));
+    border:1px solid var(--accent-soft); border-radius:var(--radius); padding:22px 20px 18px; margin-bottom:16px; box-shadow:var(--shadow);}
+  .prompt .kick{font-family:var(--script); font-size:20px; color:var(--accent); letter-spacing:0; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:7px;}
   .prompt .q{font-size:22px; line-height:1.36; color:var(--ink); font-weight:500; letter-spacing:.2px;}
-  .prompt .quotemark{position:absolute; top:8px; right:16px; font-size:66px; line-height:1; color:var(--rose-soft); font-family:var(--display); opacity:.7; pointer-events:none; user-select:none;}
+  .prompt .quotemark{position:absolute; top:8px; right:16px; font-size:66px; line-height:1; color:var(--accent-soft); font-family:var(--display); opacity:.7; pointer-events:none; user-select:none;}
   .prompt .another{margin-top:14px;}
-  .textlink{background:none; border:0; color:var(--rose-deep); font-weight:700; font-size:13px; padding:4px 0; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px;}
+  .textlink{background:none; border:0; color:var(--accent-deep); font-weight:700; font-size:13px; padding:4px 0; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px;}
   .textlink:active{opacity:.6;}
 
   /* mode buttons */
-  .modes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-bottom:18px;}
+  .modes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-bottom:14px;}
   .mode{background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line2);
     border-radius:var(--radius-sm); padding:16px 8px 13px; text-align:center; cursor:pointer; transition:transform .07s, box-shadow .2s, border-color .2s; box-shadow:var(--shadow-soft);}
   .mode:active{transform:scale(.95);}
   .mode .ic{width:46px; height:46px; margin:0 auto 9px; border-radius:14px; display:flex; align-items:center; justify-content:center;}
   .mode .ic svg{width:23px; height:23px; color:var(--on-accent);}
-  .mode.write .ic{background:linear-gradient(155deg,var(--rose),var(--rose-deep));}
-  .mode.speak .ic{background:linear-gradient(155deg,var(--coral),var(--coral-deep));}
-  .mode.draw  .ic{background:linear-gradient(155deg,var(--gold),#D81E96);}
+  .mode.write .ic{background:linear-gradient(155deg,var(--accent),var(--accent-deep));}
+  .mode.speak .ic{background:linear-gradient(155deg,var(--secondary),var(--secondary-deep));}
+  .mode.draw  .ic{background:linear-gradient(155deg,var(--accent),var(--accent-deep)); filter:hue-rotate(12deg);}
   .mode .nm{font-size:14px; font-weight:700; color:var(--ink); letter-spacing:.2px;}
   .mode .dsc{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  /* notebook home card */
+  .bigcard{display:flex; align-items:center; gap:14px; background:linear-gradient(180deg,var(--surface),var(--surface-tint));
+    border:1px solid var(--line2); border-radius:var(--radius-sm); padding:15px 16px; margin-bottom:18px; cursor:pointer;
+    box-shadow:var(--shadow-soft); transition:transform .07s, box-shadow .2s;}
+  .bigcard:active{transform:scale(.985);}
+  .bigcard .ic{width:46px; height:46px; border-radius:13px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent);}
+  .bigcard .ic svg{width:23px; height:23px;}
+  .bigcard .tx{flex:1; min-width:0;}
+  .bigcard .tx .a{font-size:15px; font-weight:700; color:var(--ink);}
+  .bigcard .tx .b{font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4;}
+  .bigcard .go{color:var(--faint); flex:none;}
 
   /* section header row */
   .sechead{display:flex; align-items:baseline; justify-content:space-between; margin:6px 2px 11px;}
@@ -109,11 +156,11 @@
   .entry .badge{width:44px; height:44px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden;}
   .entry .badge svg{width:20px; height:20px; color:var(--on-accent);}
   .entry .badge img{width:100%; height:100%; object-fit:cover;}
-  .badge.write{background:linear-gradient(155deg,var(--rose),var(--rose-deep));}
-  .badge.speak{background:linear-gradient(155deg,var(--coral),var(--coral-deep));}
-  .badge.draw{background:linear-gradient(155deg,var(--gold),#D81E96);}
+  .badge.write{background:linear-gradient(155deg,var(--accent),var(--accent-deep));}
+  .badge.speak{background:linear-gradient(155deg,var(--secondary),var(--secondary-deep));}
+  .badge.draw{background:linear-gradient(155deg,var(--accent),var(--accent-deep)); filter:hue-rotate(12deg);}
   .entry .meta{flex:1; min-width:0;}
-  .entry .meta .d{font-size:12.5px; color:var(--rose-deep); font-weight:700; letter-spacing:.2px;}
+  .entry .meta .d{font-size:12.5px; color:var(--accent-deep); font-weight:700; letter-spacing:.2px;}
   .entry .meta .p{font-size:13.5px; color:var(--ink-soft); margin-top:2px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
   .entry .chev{color:var(--faint); flex:none;}
 
@@ -127,32 +174,41 @@
     padding:15px 18px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; transition:transform .06s, box-shadow .2s; width:100%; display:flex; align-items:center; justify-content:center; gap:9px;}
   .btn:active{transform:scale(.98);}
   .btn svg{width:19px; height:19px;}
-  .btn.primary{background:linear-gradient(180deg,var(--rose),var(--rose-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px rgba(255,45,120,.34);}
-  .btn.coral{background:linear-gradient(180deg,var(--coral),var(--coral-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px rgba(90,33,73,.30);}
+  .btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px var(--on-accent-shadow);}
+  .btn.coral{background:linear-gradient(180deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent); border-color:transparent; box-shadow:0 8px 22px rgba(90,33,73,.30);}
   .btn.ghost{background:transparent; color:var(--muted); border-color:transparent;}
-  .btn.danger{background:transparent; color:#C42163; border-color:rgba(196,33,99,.45);}
+  .btn.danger{background:transparent; color:var(--accent-deep); border-color:color-mix(in srgb, var(--accent-deep) 45%, transparent);}
   .btn.small{padding:11px 14px; font-size:14px; width:auto;}
+  .btn.tiny{padding:9px 12px; font-size:13px; width:auto;}
   .btnrow{display:flex; gap:11px; margin-top:14px;}
   .btnrow .btn{width:auto; flex:1;}
 
   /* editor */
   .editor-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
   .editor-head .back{flex:none;}
-  .editor-head .ttl{font-size:20px; color:var(--ink); font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.6px;}
-  .promptmini{background:linear-gradient(180deg,#FFFFFF,#FFF3F9); border:1px solid var(--rose-soft); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:14px;}
-  .promptmini .k{font-size:10px; color:var(--rose-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800; margin-bottom:6px;}
+  .editor-head .ttl{font-size:20px; color:var(--ink); font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.6px; flex:1; min-width:0;}
+  .promptmini{background:linear-gradient(180deg,var(--panel),var(--panel-tint)); border:1px solid var(--accent-soft); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:14px;}
+  .promptmini .k{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800; margin-bottom:6px;}
   .promptmini .q{font-size:17px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display);}
 
-  textarea{width:100%; min-height:230px; border:1px solid var(--line2); border-radius:var(--radius-sm); background:var(--surface);
+  /* quick-reply chips (low-effort responses) */
+  .quickchips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .chip{border:1px solid var(--line2); background:var(--surface-tint); color:var(--ink); border-radius:999px;
+    padding:9px 13px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:transform .06s, background .2s; display:inline-flex; align-items:center; gap:6px;}
+  .chip:active{transform:scale(.94);}
+  .chip.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); border-color:transparent;}
+  .chip-hint{font-size:12px; color:var(--muted); margin:-4px 2px 10px;}
+
+  textarea{width:100%; min-height:200px; border:1px solid var(--line2); border-radius:var(--radius-sm); background:var(--surface);
     padding:16px; font-size:17px; line-height:1.6; color:var(--ink); font-family:var(--body); resize:none; outline:none; transition:border-color .2s, box-shadow .2s;}
-  textarea:focus{border-color:var(--rose); box-shadow:0 0 0 3px rgba(255,45,120,.18);}
+  textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);}
   textarea::placeholder{color:var(--faint); font-style:italic;}
   .count{font-size:12px; color:var(--muted); text-align:right; margin-top:7px; letter-spacing:.3px;}
 
   /* voice recorder */
   .rec-wrap{text-align:center; padding:12px 0 6px;}
   .rec-btn{width:106px; height:106px; border-radius:50%; border:0; margin:6px auto 4px; cursor:pointer; position:relative;
-    background:linear-gradient(160deg,var(--coral),var(--coral-deep)); box-shadow:0 12px 30px rgba(206,108,78,.36); display:flex; align-items:center; justify-content:center; transition:transform .12s;}
+    background:linear-gradient(160deg,var(--secondary),var(--secondary-deep)); box-shadow:0 12px 30px rgba(90,33,73,.36); display:flex; align-items:center; justify-content:center; transition:transform .12s;}
   .rec-btn:active{transform:scale(.96);}
   .rec-btn svg{width:38px; height:38px; color:#fff;}
   .rec-btn.recording{background:linear-gradient(160deg,#D8586A,#B2394C);}
@@ -162,139 +218,134 @@
   .rec-time{font-size:34px; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:300; letter-spacing:1px; margin:12px 0 4px; font-family:var(--display);}
   .rec-hint{font-size:13.5px; color:var(--muted); line-height:1.5; margin-top:2px;}
   .wave{height:40px; display:flex; align-items:center; justify-content:center; gap:4px; margin:14px 0 2px;}
-  .wave span{width:4px; height:10px; border-radius:3px; background:var(--coral-soft); transition:height .1s;}
-  .wave.on span{background:var(--coral);}
+  .wave span{width:4px; height:10px; border-radius:3px; background:var(--secondary-soft); transition:height .1s;}
+  .wave.on span{background:var(--secondary);}
   audio{width:100%; margin-top:14px;}
 
-  /* draw canvas */
-  .canvas-wrap{border:1px solid var(--line2); border-radius:var(--radius-sm); overflow:hidden; background:#FFFFFF; box-shadow:inset 0 1px 4px rgba(58,14,46,.06); position:relative;}
-  canvas{display:block; width:100%; touch-action:none; background:#FFFFFF;}
-  .canvas-tools{display:flex; align-items:center; gap:9px; margin-top:12px; flex-wrap:wrap;}
-  .pen{width:34px; height:34px; border-radius:50%; border:2px solid rgba(255,255,255,.85); cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.12); transition:transform .08s;}
+  /* ============================================================
+     DRAWING TOOLBAR (shared by Draw + Notebook)
+     ============================================================ */
+  .canvas-wrap{border:1px solid var(--line2); border-radius:var(--radius-sm); overflow:hidden; background:var(--paper); box-shadow:inset 0 1px 4px rgba(58,14,46,.06); position:relative;}
+  canvas.pad{display:block; width:100%; touch-action:none; background:var(--paper);}
+  .tools{display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .swatches{display:flex; gap:8px; align-items:center;}
+  .pen{width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.85); cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.18); transition:transform .08s;}
   .pen:active{transform:scale(.9);}
   .pen.on{outline:2.5px solid var(--ink); outline-offset:2px;}
+  .toolbtn{width:40px; height:40px; border-radius:11px; border:1px solid var(--line2); background:var(--surface-tint); color:var(--secondary);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .07s, background .2s, border-color .2s;}
+  .toolbtn:active{transform:scale(.9);}
+  .toolbtn.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); border-color:transparent;}
+  .toolbtn svg{width:19px; height:19px;}
+  .toolbtn.dis{opacity:.35; pointer-events:none;}
+  .sizes{display:flex; gap:6px; align-items:center;}
+  .sizedot{width:34px; height:34px; border-radius:11px; border:1px solid var(--line2); background:var(--surface-tint);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .07s, background .2s;}
+  .sizedot:active{transform:scale(.9);}
+  .sizedot.on{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--surface-tint));}
+  .sizedot i{display:block; border-radius:50%; background:var(--ink);}
   .spacer{flex:1;}
 
+  /* notebook chrome */
+  .nb-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
+  .nb-page{font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.3px; font-variant-numeric:tabular-nums;}
+  .nb-nav{display:flex; gap:8px; align-items:center;}
+  .nb-meta{font-size:12px; color:var(--faint); text-align:center; margin-top:10px; letter-spacing:.2px;}
+
   /* entry viewer */
-  .viewer .date{font-size:13px; color:var(--rose-deep); font-weight:700; letter-spacing:.4px; text-transform:uppercase; margin-bottom:4px;}
   .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
   .viewer .body{font-size:17px; line-height:1.68; color:var(--ink-soft); font-family:var(--body); white-space:pre-wrap; word-wrap:break-word;}
-  .viewer img.draw{width:100%; border-radius:var(--radius-sm); border:1px solid var(--line); background:#FFFFFF;}
+  .viewer img.draw{width:100%; border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--paper);}
 
   /* lock screen */
   #lock{position:fixed; inset:0; z-index:60; background:
-      radial-gradient(1100px 560px at 50% 8%, rgba(255,45,120,.20) 0%, rgba(255,45,120,0) 60%),
+      radial-gradient(1100px 560px at 50% 8%, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 60%),
       linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
     display:none; flex-direction:column; align-items:center; justify-content:center; padding:32px 26px calc(32px + env(safe-area-inset-bottom)); text-align:center;}
   #lock.show{display:flex;}
-  .locklogo{width:78px; height:78px; border-radius:24px; margin-bottom:20px; box-shadow:0 14px 40px rgba(255,45,120,.4);}
+  .locklogo{width:78px; height:78px; border-radius:24px; margin-bottom:20px; box-shadow:0 14px 40px var(--on-accent-shadow);}
   #lock h2{font-size:32px; margin:0 0 6px; color:var(--ink); text-transform:uppercase; letter-spacing:1.5px;}
   #lock .tagline{font-size:15px; color:var(--ink-soft); font-family:var(--body); font-style:italic; line-height:1.5; max-width:300px; margin-bottom:26px;}
   #lock .lk-label{font-size:13px; color:var(--muted); margin-bottom:16px; letter-spacing:.3px; min-height:19px;}
   .dots{display:flex; gap:16px; justify-content:center; margin-bottom:28px;}
-  .dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--rose); background:transparent; transition:transform .15s, background .15s;}
-  .dot.fill{background:var(--rose); transform:scale(1.12);}
-  .dot.err{border-color:#C42163; background:#C42163;}
-  .pad{display:grid; grid-template-columns:repeat(3,74px); gap:16px; justify-content:center;}
+  .dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); background:transparent; transition:transform .15s, background .15s;}
+  .dot.fill{background:var(--accent); transform:scale(1.12);}
+  .dot.err{border-color:var(--accent-deep); background:var(--accent-deep);}
+  .pad-grid{display:grid; grid-template-columns:repeat(3,74px); gap:16px; justify-content:center;}
   .key{width:74px; height:74px; border-radius:50%; border:1px solid var(--line2); background:linear-gradient(180deg,var(--surface),var(--surface-tint));
     font-size:28px; color:var(--ink); font-weight:500; cursor:pointer; font-family:var(--display); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-soft); transition:transform .08s, background .15s;}
   .key:active{transform:scale(.92); background:var(--surface2);}
   .key.blank{background:transparent; border:0; box-shadow:none; cursor:default;}
-  .key.fn{font-size:14px; font-weight:700; font-family:-apple-system,sans-serif; color:var(--rose-deep); background:transparent; border:0; box-shadow:none;}
+  .key.fn{font-size:14px; font-weight:700; font-family:-apple-system,sans-serif; color:var(--accent-deep); background:transparent; border:0; box-shadow:none;}
   .key.fn svg{width:26px; height:26px;}
   .lk-foot{margin-top:22px; font-size:12px; color:var(--muted); line-height:1.5; max-width:280px; display:flex; align-items:center; gap:7px; justify-content:center;}
   .lk-foot svg{width:14px; height:14px; flex:none;}
 
+  /* onboarding / profile overlay */
+  #onboard{position:fixed; inset:0; z-index:65; background:linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    display:none; flex-direction:column; padding:calc(26px + env(safe-area-inset-top)) 22px calc(26px + env(safe-area-inset-bottom)); overflow-y:auto;}
+  #onboard.show{display:flex;}
+  #onboard .ob-logo{width:56px; height:56px; border-radius:18px; margin-bottom:16px; box-shadow:0 10px 26px var(--on-accent-shadow);}
+  #onboard h2{font-size:26px; margin:0 0 6px; color:var(--ink); text-transform:uppercase; letter-spacing:.8px;}
+  #onboard .ob-sub{font-size:14px; color:var(--ink-soft); line-height:1.55; margin-bottom:22px; max-width:440px;}
+  .ob-label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1.4px; font-weight:800; margin:14px 2px 10px;}
+  .opts{display:flex; flex-wrap:wrap; gap:9px;}
+  .opt{border:1px solid var(--line2); background:var(--surface-tint); color:var(--ink); border-radius:999px;
+    padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:transform .06s, background .2s, border-color .2s;}
+  .opt:active{transform:scale(.95);}
+  .opt.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); border-color:transparent;}
+  .ob-input{width:100%; border:1px solid var(--line2); border-radius:var(--radius-sm); background:var(--surface);
+    padding:13px 15px; font-size:16px; color:var(--ink); font-family:var(--body); outline:none; margin-top:10px;}
+  .ob-input:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);}
+  .ob-input.hidden{display:none;}
+  #onboard .ob-actions{margin-top:26px;}
+  #onboard .ob-foot{font-size:12px; color:var(--muted); line-height:1.55; margin-top:16px; display:flex; gap:8px; align-items:flex-start;}
+  #onboard .ob-foot svg{width:15px;height:15px;flex:none;margin-top:2px;}
+
   /* modal / sheet */
-  #sheet-scrim{position:fixed; inset:0; background:rgba(58,14,46,.42); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:70; opacity:0; pointer-events:none; transition:opacity .28s;}
+  #sheet-scrim{position:fixed; inset:0; background:rgba(20,4,16,.55); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:70; opacity:0; pointer-events:none; transition:opacity .28s;}
   #sheet-scrim.show{opacity:1; pointer-events:auto;}
   .sheet{position:fixed; left:0; right:0; bottom:0; z-index:71; max-width:540px; margin:0 auto; background:linear-gradient(180deg,var(--surface),var(--surface-tint));
-    border-radius:26px 26px 0 0; padding:12px 20px calc(24px + env(safe-area-inset-bottom)); box-shadow:0 -12px 44px rgba(58,14,46,.24); transform:translateY(110%); transition:transform .34s cubic-bezier(.22,1,.36,1);}
+    border-radius:26px 26px 0 0; padding:12px 20px calc(24px + env(safe-area-inset-bottom)); box-shadow:0 -12px 44px rgba(0,0,0,.34); transform:translateY(110%); transition:transform .34s cubic-bezier(.22,1,.36,1); max-height:88vh; overflow-y:auto;}
   .sheet.show{transform:none;}
   .grab{width:42px; height:5px; border-radius:3px; background:var(--line2); margin:2px auto 16px;}
   .sheet h3{font-size:21px; margin:0 0 4px; color:var(--ink); text-transform:uppercase; letter-spacing:.5px;}
   .sheet .sub{font-size:13.5px; color:var(--muted); line-height:1.55; margin-bottom:16px;}
   .setrow{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 4px; border-top:1px solid var(--line);}
   .setrow:first-of-type{border-top:0;}
-  .setrow .l{display:flex; align-items:center; gap:12px;}
-  .setrow .l .si{width:38px;height:38px;border-radius:11px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--plum);flex:none;}
+  .setrow .l{display:flex; align-items:center; gap:12px; min-width:0;}
+  .setrow .l .si{width:38px;height:38px;border-radius:11px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--secondary);flex:none;}
   .setrow .l .si svg{width:18px;height:18px;}
+  .setrow .l .tx{min-width:0;}
   .setrow .l .tx .a{font-size:15px; font-weight:700; color:var(--ink);}
   .setrow .l .tx .b{font-size:12px; color:var(--muted); margin-top:1px;}
-  .setrow .go{color:var(--faint);}
+  .setrow .go{color:var(--faint); flex:none;}
+  /* segmented control */
+  .seg{display:flex; gap:4px; background:var(--surface2); border-radius:999px; padding:4px; flex:none;}
+  .seg button{border:0; background:transparent; color:var(--ink-soft); font-family:inherit; font-weight:700; font-size:13px;
+    padding:7px 12px; border-radius:999px; cursor:pointer; transition:background .2s, color .2s;}
+  .seg button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
+  /* accent swatch row */
+  .accentrow{display:flex; gap:11px; padding:14px 4px 6px; flex-wrap:wrap;}
+  .aswatch{width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent; box-shadow:0 2px 6px rgba(0,0,0,.18); transition:transform .08s;}
+  .aswatch:active{transform:scale(.9);}
+  .aswatch.on{border-color:var(--ink); outline:2px solid var(--ink); outline-offset:2px;}
   /* toggle */
   .toggle{width:50px; height:30px; border-radius:16px; background:var(--line2); position:relative; cursor:pointer; transition:background .2s; flex:none;}
-  .toggle.on{background:var(--rose);}
+  .toggle.on{background:var(--accent);}
   .toggle .kn{position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.2); transition:transform .2s;}
   .toggle.on .kn{transform:translateX(20px);}
 
   /* toast */
   #toast{position:fixed; left:50%; bottom:calc(28px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(16px);
-    background:linear-gradient(180deg,var(--ink),#2A1023); color:var(--on-accent); padding:13px 20px; border-radius:14px; font-weight:700; font-size:14px;
-    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; box-shadow:0 10px 30px rgba(58,14,46,.34); z-index:90; display:flex; align-items:center; gap:9px; max-width:88%;}
+    background:linear-gradient(180deg,var(--ink),color-mix(in srgb, var(--ink) 70%, #000)); color:var(--bg); padding:13px 20px; border-radius:14px; font-weight:700; font-size:14px;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; box-shadow:0 10px 30px rgba(0,0,0,.34); z-index:90; display:flex; align-items:center; gap:9px; max-width:88%;}
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-  #toast svg{width:17px; height:17px; color:var(--rose-soft); flex:none;}
+  #toast svg{width:17px; height:17px; color:var(--accent-soft); flex:none;}
 
   .foot{text-align:center; color:var(--faint); font-size:11px; margin:20px 0 4px; letter-spacing:.4px;}
+  .foot a{color:var(--accent); text-decoration:none; font-weight:700; letter-spacing:.2px;}
   .hidden{display:none !important;}
-
-  /* ============================================================
-     TAPPING TAB  (audience-facing video library; reads a JSON feed)
-     ============================================================ */
-  /* bottom tab bar */
-  body.has-tabbar{ padding-bottom:calc(86px + env(safe-area-inset-bottom)); }
-  .tabbar{position:fixed; left:0; right:0; bottom:0; z-index:50; max-width:540px; margin:0 auto; display:none;
-    background:linear-gradient(180deg, rgba(255,253,251,.86), rgba(255,246,239,.98));
-    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-top:1px solid var(--line2); box-shadow:0 -8px 26px rgba(58,14,46,.08);
-    padding:9px 16px calc(7px + env(safe-area-inset-bottom));}
-  .tabbar.show{display:flex;}
-  .tabitem{flex:1; background:none; border:0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding:5px 4px; color:var(--muted); font-family:inherit; transition:transform .07s, color .2s;}
-  .tabitem:active{transform:scale(.9);}
-  .tabitem svg{width:23px; height:23px;}
-  .tabitem .tl{font-size:11px; font-weight:700; letter-spacing:.5px;}
-  .tabitem.on{color:var(--rose-deep);}
-
-  /* tapping header */
-  .tap-head{margin:2px 2px 16px;}
-  .tap-title{font-size:27px; color:var(--ink); line-height:1.12; text-transform:uppercase; letter-spacing:.5px; font-weight:700; display:inline-block;}
-  .tap-sub{font-size:13px; color:var(--muted); margin-top:5px; letter-spacing:.3px; font-weight:600;}
-
-  /* video grid */
-  .tap-grid{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
-  .tap-card{position:relative; background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line);
-    border-radius:var(--radius-sm); overflow:hidden; cursor:pointer; box-shadow:var(--shadow-soft); transition:transform .07s, box-shadow .2s;}
-  .tap-card:active{transform:scale(.97);}
-  .tap-card:focus-visible{outline:2.5px solid var(--rose); outline-offset:2px;}
-  .tap-thumb{position:relative; width:100%; aspect-ratio:16/10; overflow:hidden;
-    background:radial-gradient(120% 120% at 20% 0%, rgba(255,143,192,.55), rgba(255,143,192,0) 60%), linear-gradient(150deg,var(--coral),var(--coral-deep));}
-  .tap-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
-  .tap-thumb .play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
-  .tap-thumb .play span{width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,.94);
-    display:flex; align-items:center; justify-content:center; box-shadow:0 5px 16px rgba(0,0,0,.28);}
-  .tap-thumb .play svg{width:20px; height:20px; color:var(--rose-deep); margin-left:3px;}
-  .tap-cap{padding:11px 11px 13px;}
-  .tap-cap .t{font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.3;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .tap-cap .s{font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.4;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .tap-retry{margin-top:16px; display:flex; justify-content:center;}
-
-  /* full-screen player */
-  #tapPlayer{position:fixed; inset:0; z-index:100; background:#0B0410; display:none; flex-direction:column;}
-  #tapPlayer.show{display:flex;}
-  .tap-player-stage{flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#000;}
-  .tap-frame{width:100%; aspect-ratio:16/9; max-height:100%; background:#000;}
-  .tap-frame > video, .tap-frame > iframe{width:100%; height:100%; border:0; display:block; background:#000; object-fit:contain;}
-  .tap-player-close{position:absolute; top:calc(10px + env(safe-area-inset-top)); right:14px; z-index:3; width:42px; height:42px; border-radius:50%;
-    border:0; background:rgba(255,255,255,.16); color:#fff; font-size:22px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .08s;}
-  .tap-player-close:active{transform:scale(.92);}
-  .tap-player-meta{padding:15px 20px calc(20px + env(safe-area-inset-bottom)); color:#fff; flex:none;}
-  .tap-player-meta .t{font-size:18px; font-weight:700; font-family:var(--display); letter-spacing:.4px; text-transform:uppercase;}
-  .tap-player-meta .d{font-size:13.5px; color:rgba(255,255,255,.74); margin-top:6px; line-height:1.55; white-space:pre-wrap;}
-  .tap-spin{width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,45,120,.30); border-top-color:var(--rose); animation:tapspin .7s linear infinite; display:inline-block; vertical-align:middle;}
-  @keyframes tapspin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -308,10 +359,34 @@
   <div class="dots" id="dots">
     <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
   </div>
-  <div class="pad" id="pad"></div>
+  <div class="pad-grid" id="pad"></div>
   <div class="lk-foot" id="lockFoot">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <span>Your passcode &amp; journal stay only on this phone.</span>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING / PROFILE ============ -->
+<div id="onboard">
+  <img class="ob-logo" id="obLogo" alt="Permission" />
+  <h2 class="serif" id="obTitle">A little about you</h2>
+  <div class="ob-sub" id="obSub">So Permission can speak to you in a way that feels true. This stays on your phone, and you can change it any time.</div>
+
+  <div class="ob-label">How do you identify? <span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--faint);">(optional)</span></div>
+  <div class="opts" id="obGender"></div>
+  <input class="ob-input hidden" id="obGenderText" placeholder="In your own words…" maxlength="40" autocapitalize="sentences" />
+
+  <div class="ob-label">Which pronouns feel right?</div>
+  <div class="opts" id="obPronoun"></div>
+  <input class="ob-input hidden" id="obPronounText" placeholder="e.g. ze/zir" maxlength="24" autocapitalize="none" />
+
+  <div class="ob-actions">
+    <button class="btn primary" id="obSave">Save &amp; continue</button>
+    <button class="btn ghost" id="obSkip" style="margin-top:8px;">Prefer not to say</button>
+  </div>
+  <div class="ob-foot">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>Never uploaded. Used only to gently phrase your prompts. Leave it blank and everything stays warm and neutral.</span>
   </div>
 </div>
 
@@ -325,6 +400,9 @@
     </div>
   </div>
   <div class="hbtns">
+    <button class="iconbtn" id="btnNotebook" aria-label="Notebook">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2z"/><path d="M9 2v20"/></svg>
+    </button>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -341,11 +419,18 @@
     <div class="date" id="greetDate"></div>
   </div>
 
+  <div class="depths" id="depths">
+    <button class="depth" data-depth="mix">Mix</button>
+    <button class="depth" data-depth="quick">Quick</button>
+    <button class="depth" data-depth="deep">Deep</button>
+    <button class="depth" data-depth="playful">Playful</button>
+  </div>
+
   <div class="prompt">
     <div class="quotemark">&rdquo;</div>
     <div class="kick">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3 1.5 4.5S8 17 8 17h8s.5-2 .5-3.5S18 11 18 9a6 6 0 0 0-6-6z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg>
-      Today&rsquo;s invitation
+      <span id="promptKick">Today&rsquo;s invitation</span>
     </div>
     <div class="q serif" id="promptText">&hellip;</div>
     <div class="another">
@@ -374,6 +459,12 @@
     </div>
   </div>
 
+  <div class="bigcard" id="cardNotebook">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2z"/><path d="M9 2v20"/><path d="M13 7h4M13 11h4"/></svg></div>
+    <div class="tx"><div class="a">Notebook</div><div class="b">Free pages to write by hand — save &amp; export as PDF</div></div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+  </div>
+
   <div class="sechead">
     <h3 class="serif">Your journal</h3>
     <button class="textlink" id="viewAll" style="display:none;">See all &rsaquo;</button>
@@ -397,6 +488,8 @@
     <div class="ttl serif">Write</div>
   </div>
   <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="tPrompt"></div></div>
+  <div class="chip-hint">Tap a word to answer in one touch — or write as much as you like.</div>
+  <div class="quickchips" id="tChips"></div>
   <textarea id="tArea" placeholder="Let it come as it comes. No one will read this but you&hellip;"></textarea>
   <div class="count" id="tCount">0 words</div>
   <div class="btnrow">
@@ -429,27 +522,46 @@
   </div>
 </div>
 
-<!-- DRAW EDITOR -->
+<!-- DRAW EDITOR (doodle tied to today's prompt) -->
 <div class="view" id="v-draw">
   <div class="editor-head">
     <button class="iconbtn back" data-discard="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="ttl serif">Draw</div>
   </div>
   <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="dPrompt"></div></div>
-  <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
-  <div class="canvas-tools">
-    <div class="pen" data-color="#3A0E2E" style="background:#3A0E2E;"></div>
-    <div class="pen" data-color="#FF2D78" style="background:#FF2D78;"></div>
-    <div class="pen" data-color="#FF42B3" style="background:#FF42B3;"></div>
-    <div class="pen" data-color="#9A5B80" style="background:#9A5B80;"></div>
-    <div class="spacer"></div>
-    <button class="btn small ghost" id="undoBtn" style="color:var(--plum);"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.6-6.4L3 9"/></svg>Undo</button>
-    <button class="btn small ghost" id="clearBtn" style="color:var(--plum);">Clear</button>
-  </div>
+  <div class="canvas-wrap" id="drawWrap"><canvas id="drawCanvas" class="pad"></canvas></div>
+  <div class="tools" id="drawTools"></div>
   <div class="btnrow">
     <button class="btn ghost" data-discard="1">Discard</button>
-    <button class="btn primary" id="dSave" style="background:linear-gradient(180deg,var(--gold),#D81E96); box-shadow:0 8px 22px rgba(150,39,95,.34);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+    <button class="btn primary" id="dSave" style="filter:hue-rotate(12deg);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
   </div>
+</div>
+
+<!-- NOTEBOOK (freehand writing pad, multi-page) -->
+<div class="view" id="v-notebook">
+  <div class="editor-head">
+    <button class="iconbtn back" data-back="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Notebook</div>
+    <button class="iconbtn" id="nbSaveTop" aria-label="Save notebook" title="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
+  </div>
+  <div class="nb-bar">
+    <div class="nb-nav">
+      <button class="toolbtn" id="nbPrev" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="nb-page" id="nbPageLabel">Page 1 / 1</div>
+      <button class="toolbtn" id="nbNext" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="nb-nav">
+      <button class="toolbtn" id="nbAdd" aria-label="Add page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="toolbtn" id="nbDel" aria-label="Delete page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+    </div>
+  </div>
+  <div class="canvas-wrap" id="nbWrap"><canvas id="nbCanvas" class="pad"></canvas></div>
+  <div class="tools" id="nbTools"></div>
+  <div class="btnrow">
+    <button class="btn small ghost" id="nbExportPage" style="color:var(--secondary);"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Page PNG</button>
+    <button class="btn small coral" id="nbExportPdf"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Export PDF</button>
+  </div>
+  <div class="nb-meta" id="nbMeta">Your pages save privately on this phone.</div>
 </div>
 
 <!-- ENTRY VIEWER -->
@@ -459,7 +571,7 @@
     <div class="ttl serif">Entry</div>
   </div>
   <div class="prompt" style="margin-bottom:16px;">
-    <div class="date" style="font-size:12px; color:var(--rose-deep); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:8px;" id="eDate"></div>
+    <div style="font-size:12px; color:var(--accent-deep); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:8px;" id="eDate"></div>
     <div class="vq serif" id="ePrompt"></div>
   </div>
   <div class="card" id="eContent"></div>
@@ -469,16 +581,10 @@
   </div>
 </div>
 
-<!-- TAPPING (audience-facing video library) -->
-<div class="view" id="v-tapping">
-  <div class="tap-head">
-    <div class="tap-title serif" id="tapTitle">Tapping</div>
-    <div class="tap-sub" id="tapSub">Guided EFT tapping with Jessica</div>
-  </div>
-  <div id="tapList" aria-live="polite"></div>
+<div class="foot" id="appFoot">
+  <a id="siteLink" href="https://jessicaleighbiles.com" target="_blank" rel="noopener">A gift from Jessica Leigh Biles &#8599;</a>
+  <div style="margin-top:6px;">your words never leave this phone</div>
 </div>
-
-<div class="foot"><a href="https://jessicaleighbiles.com" target="_blank" rel="noopener" style="color:var(--rose); text-decoration:none; font-weight:700; letter-spacing:.2px;">A gift from Jessica Leigh Biles &#8599;</a><div style="margin-top:6px;">your words never leave this phone</div></div>
 
 <!-- SETTINGS SHEET -->
 <div id="sheet-scrim"></div>
@@ -486,6 +592,31 @@
   <div class="grab"></div>
   <h3 class="serif">Settings</h3>
   <div class="sub">Permission keeps everything private, on this phone. Nothing is ever uploaded or shared unless you choose to export it.</div>
+
+  <div class="setrow">
+    <div class="l">
+      <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></div>
+      <div class="tx"><div class="a">Appearance</div><div class="b">Light, dark, or follow your phone</div></div>
+    </div>
+    <div class="seg" id="themeSeg">
+      <button data-theme="system">Auto</button>
+      <button data-theme="light">Light</button>
+      <button data-theme="dark">Dark</button>
+    </div>
+  </div>
+  <div style="padding:2px 4px 4px;">
+    <div class="b" style="font-size:12px; color:var(--muted); margin-bottom:2px;">Accent color</div>
+    <div class="accentrow" id="accentRow"></div>
+  </div>
+
+  <div class="setrow" id="setProfile">
+    <div class="l">
+      <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      <div class="tx"><div class="a">You</div><div class="b" id="profileSub">Identity &amp; pronouns</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+  </div>
+
   <div class="setrow" id="setFace">
     <div class="l">
       <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M20 8V6a2 2 0 0 0-2-2h-2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M9 10v1M15 10v1M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></div>
@@ -500,137 +631,42 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <a class="setrow" id="setSite" href="https://jessicaleighbiles.com" target="_blank" rel="noopener" style="text-decoration:none;">
+  <div class="setrow" id="setSite" style="cursor:pointer;">
     <div class="l">
-      <div class="si" style="color:var(--rose);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
+      <div class="si" style="color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
       <div class="tx"><div class="a">Visit Jessica&rsquo;s website</div><div class="b">jessicaleighbiles.com</div></div>
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
-  </a>
+  </div>
   <div class="setrow" id="setErase">
     <div class="l">
-      <div class="si" style="color:var(--coral-deep);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></div>
-      <div class="tx"><div class="a" style="color:var(--coral-deep);">Erase everything</div><div class="b">Permanently delete all entries</div></div>
+      <div class="si" style="color:var(--secondary-deep);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></div>
+      <div class="tx"><div class="a" style="color:var(--secondary-deep);">Erase everything</div><div class="b">Permanently delete all entries &amp; notebook</div></div>
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; v1.0</div>
-</div>
-
-<!-- BOTTOM TAB BAR (audience navigation) -->
-<nav class="tabbar" id="permTabbar" role="tablist" aria-label="Sections">
-  <button class="tabitem" id="tabJournal" type="button" role="tab" aria-label="Journal">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H7a2 2 0 0 0-2 2z"/><path d="M9 2v18"/></svg>
-    <span class="tl">Journal</span>
-  </button>
-  <button class="tabitem" id="tabTapping" type="button" role="tab" aria-label="Tapping">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V13a7 7 0 0 1-7 7 7 7 0 0 1-6.06-3.48l-1.9-3.3a1.6 1.6 0 0 1 2.77-1.6L9 13.5"/></svg>
-    <span class="tl">Tapping</span>
-  </button>
-</nav>
-
-<!-- TAPPING FULL-SCREEN PLAYER -->
-<div id="tapPlayer" role="dialog" aria-modal="true" aria-label="Video player">
-  <button class="tap-player-close" id="tapPlayerClose" type="button" aria-label="Close player">&times;</button>
-  <div class="tap-player-stage"><div class="tap-frame" id="tapFrame"></div></div>
-  <div class="tap-player-meta"><div class="t" id="tapPlayerTitle"></div><div class="d" id="tapPlayerDesc"></div></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.2</span></div>
 </div>
 
 <!-- TOAST -->
 <div id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg">Saved</span></div>
 
-<script src="tapping-config.js"></script>
 <script>
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
+  var APP_VERSION = "1.2";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
      ============================================================ */
   var LOGO_SVG = '<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8FC0"/><stop offset=".55" stop-color="#FF42B3"/><stop offset="1" stop-color="#E01E7E"/></linearGradient><radialGradient id="sn" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FBD6E7"/></radialGradient><clipPath id="ab"><rect x="0" y="0" width="100" height="64"/></clipPath></defs><rect width="100" height="100" rx="26" fill="url(#lg)"/><g clip-path="url(#ab)"><line x1="31.4" y1="45.0" x2="22.6" y2="43.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="34.2" y1="38.4" x2="26.8" y2="33.3" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="39.4" y1="33.2" x2="34.3" y2="25.8" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="46.0" y1="30.4" x2="44.2" y2="21.6" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="53.3" y1="30.3" x2="54.9" y2="21.4" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="60.1" y1="32.9" x2="64.8" y2="25.3" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="65.4" y1="37.8" x2="72.7" y2="32.5" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><line x1="68.4" y1="44.4" x2="77.2" y2="42.2" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".92"/><circle cx="50" cy="49" r="14.5" fill="url(#sn)"/></g><path d="M20 64 Q50 61 80 64" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".95"/><path d="M29 72 Q50 70 71 72" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".55"/></svg>';
   $("hdrLogo").innerHTML = LOGO_SVG;
-  (function(){ // lock logo as data image via svg blob
+  (function(){
     var svg = LOGO_SVG.replace('width="100%" height="100%"','width="160" height="160"');
     var url = 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
-    $("lockLogo").src = url;
+    $("lockLogo").src = url; $("obLogo").src = url;
   })();
-
-  /* ============================================================
-     PROMPTS — written in Jessica's voice (gentle growth + tasteful body/desire)
-     ============================================================ */
-  var PROMPTS = [
-    "Where in your body do you feel most at home right now? Breathe there for a moment.",
-    "What is one thing your body did for you today that you can quietly thank it for?",
-    "You are not broken. What part of you have you been calling “too much” that is actually just alive?",
-    "Name one “should” you inherited about your body. Whose voice is it in?",
-    "What might change today if you believed your desire was good?",
-    "Recall a moment you said yes when you meant no. What were you trying to protect?",
-    "What does your softer, kinder inner voice want to tell you this morning?",
-    "Where are you waiting for permission? What if you gave it to yourself, right here?",
-    "What is one small want you can honor today, simply because it is yours?",
-    "Describe a time you felt fully at ease in your own skin. What made it feel safe?",
-    "What story about yourself are you ready to begin, slowly, to rewrite?",
-    "Where do you tend to make yourself smaller? What would taking up space feel like?",
-    "What are you allowed to receive today without having to earn it?",
-    "Finish this gently: “It is safe for me to want…”",
-    "What does real rest look like for you? When did you last let yourself have it?",
-    "Name a boundary you’d like to hold this week. Picture yourself keeping it with love.",
-    "What part of your body have you been at war with? Offer it one kind sentence.",
-    "When do you feel most like yourself? How could you invite a little more of that in?",
-    "What did you learn about pleasure growing up? What do you want to believe now?",
-    "Who would you be if shame no longer got a say?",
-    "What is one desire you’ve kept quiet? You don’t have to act on it — just name it here.",
-    "Where in your life are you giving without receiving? What would balance feel like?",
-    "What does your body need more of? What does it need less of?",
-    "Recall something that made you feel alive this week. Let yourself relive it slowly.",
-    "What would you do differently if you trusted yourself completely?",
-    "Name one way you’ve grown that your younger self would be proud of.",
-    "What are you finally ready to forgive yourself for?",
-    "Where do you crave more tenderness — from others, or from yourself?",
-    "What feels good and true to you in this exact moment?",
-    "What have you been told is “selfish” that might actually be self-honoring?",
-    "Write yourself a permission slip. What does it allow you to feel or do?",
-    "What is one thing you long for in your intimate life? Speak it gently to this page.",
-    "When you imagine feeling free in your body, what do you see?",
-    "What emotion have you been carrying in your body? Where does it seem to live?",
-    "What would change if you stopped performing and simply let yourself be?",
-    "Name a pleasure that has nothing to do with anyone else’s approval.",
-    "What does “enough” feel like? Is it possible you are already there?",
-    "Whose expectations are you carrying that were never yours to hold?",
-    "What does your intuition already know that you’ve been talking yourself out of?",
-    "Describe the woman you are becoming. What is she learning to allow herself?",
-    "What touch, taste, sound, or sight brought you comfort today?",
-    "Where have you mistaken numbness for peace? What might waking up feel like?",
-    "What is one honest thing you’d say to a partner if fear weren’t in the room?",
-    "What have you been taught to apologize for that needs no apology?",
-    "How do you want to feel by the end of today? What’s one gentle step toward it?",
-    "What part of your story deserves more compassion than you’ve been giving it?",
-    "Name something your body simply enjoys. When can you give it that this week?",
-    "Where are you ready to trade “good girl” for “whole woman”?",
-    "What longing have you been afraid to admit? It is safe on this page.",
-    "What would tenderness toward yourself look like in the next hour?",
-    "What did you make mean something bad about you that simply wasn’t true?",
-    "When did you last feel wanted — or want yourself? Describe it.",
-    "What is one way you can come home to your body today?",
-    "What are you unlearning right now, and what is quietly taking its place?",
-    "Where do you need to say a clear, kind “no” this week?",
-    "What has felt like awakening in your life lately, even in the smallest way?",
-    "What do you most want your desire to know — perhaps, that it is welcome here?",
-    "Name three things about yourself that are simply not up for debate.",
-    "What would you reach for today if you knew you couldn’t get it “wrong”?",
-    "Close your eyes and take one slow breath. What is the first true thing you notice?"
-  ];
-
-  function dayNumber(d){ var s=new Date(d.getFullYear(),0,0); return Math.floor((d-s)/86400000); }
-  var todayPrompt = "";
-  function setDailyPrompt(){ todayPrompt = PROMPTS[ dayNumber(new Date()) % PROMPTS.length ]; renderPrompt(); }
-  function renderPrompt(){ $("promptText").textContent = todayPrompt; }
-  function anotherPrompt(){
-    var cur = todayPrompt, next = cur;
-    while(next===cur){ next = PROMPTS[Math.floor(Math.random()*PROMPTS.length)]; }
-    todayPrompt = next; renderPrompt(); haptic();
-  }
 
   /* ============================================================
      LITTLE HELPERS
@@ -640,6 +676,7 @@
     clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove("show"); }, 1900); }
   function pad2(n){ return (n<10?"0":"")+n; }
   function fmtTime(s){ var m=Math.floor(s/60); return m+":"+pad2(Math.floor(s%60)); }
+  function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function fmtDate(ts){
     var d=new Date(ts), now=new Date();
     var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -654,35 +691,288 @@
   }
   function greeting(){ var h=new Date().getHours();
     if(h<12) return "Good morning"; if(h<17) return "Good afternoon"; if(h<21) return "Good evening"; return "Rest well tonight"; }
+  function longDate(){ var d=new Date();
+    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var mons=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return days[d.getDay()]+", "+mons[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
 
   /* ============================================================
-     STORAGE — IndexedDB for entries (text/audio/drawings). On-device only.
+     PROFILE + PRONOUN TEMPLATING
+     Stored only in localStorage. Language across the app resolves
+     tokens ({they}/{them}/{their}/{theirs}/{themself}) from here,
+     defaulting to warm, gender-neutral they/them when unset.
+     ============================================================ */
+  var LSK_PROFILE="perm_profile";
+  var GENDER_OPTS=[
+    {id:"woman",label:"Woman",pron:"she"},
+    {id:"man",label:"Man",pron:"he"},
+    {id:"nonbinary",label:"Non-binary",pron:"they"},
+    {id:"genderfluid",label:"Genderfluid",pron:"they"},
+    {id:"agender",label:"Agender",pron:"they"},
+    {id:"self",label:"Self-describe",pron:"they"},
+    {id:"na",label:"Prefer not to say",pron:"they"}
+  ];
+  var PRONOUN_OPTS=[
+    {id:"she",label:"she / her"},
+    {id:"he",label:"he / him"},
+    {id:"they",label:"they / them"},
+    {id:"self",label:"self-describe"}
+  ];
+  function loadProfile(){ try{ return JSON.parse(localStorage.getItem(LSK_PROFILE))||{}; }catch(e){ return {}; } }
+  function saveProfile(p){ localStorage.setItem(LSK_PROFILE, JSON.stringify(p||{})); }
+  function hasProfile(){ return !!localStorage.getItem(LSK_PROFILE); }
+
+  var PRON_TABLE={
+    she:{subj:"she",obj:"her",poss:"her",possp:"hers",refl:"herself"},
+    he:{subj:"he",obj:"him",poss:"his",possp:"his",refl:"himself"},
+    they:{subj:"they",obj:"them",poss:"their",possp:"theirs",refl:"themself"}
+  };
+  function currentPronouns(){
+    var p=loadProfile();
+    if(p.pronoun==="she"||p.pronoun==="he"||p.pronoun==="they") return PRON_TABLE[p.pronoun];
+    if(p.pronoun==="self" && p.pronounText){
+      // Expect forms like "ze/zir" — best-effort split, fall back to neutral.
+      var parts=String(p.pronounText).split(/[\/,\s]+/).filter(Boolean);
+      if(parts.length>=2){
+        return {subj:parts[0],obj:parts[1],poss:parts[2]||parts[1],possp:parts[3]||(parts[2]||parts[1]),refl:parts[4]||(parts[1]+"self")};
+      }
+    }
+    return PRON_TABLE.they; // warm neutral default (also for "prefer not to say" / unset)
+  }
+  function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+  // Resolve {they}/{Them}/{their}… tokens. Case of the token's first letter is preserved.
+  function fillTokens(str){
+    if(str.indexOf("{")<0) return str;
+    var pr=currentPronouns();
+    var map={they:pr.subj, them:pr.obj, their:pr.poss, theirs:pr.possp, themself:pr.refl};
+    return str.replace(/\{(they|them|their|theirs|themself)\}/gi, function(m, key){
+      var val=map[key.toLowerCase()];
+      return (m.charAt(1)===m.charAt(1).toUpperCase()) ? cap(val) : val;
+    });
+  }
+
+  /* ============================================================
+     PROMPTS — tagged by depth: quick | deep | playful.
+     Swept for inclusive, open-ended, non-heteronormative phrasing.
+     Tokens ({they}…) adapt to the reader's pronouns; default they/them.
+     ============================================================ */
+  var PROMPTS=[
+    /* ---------- DEEP (kept + de-gendered from the original set) ---------- */
+    {t:"deep", q:"Where in your body do you feel most at home right now? Breathe there for a moment."},
+    {t:"deep", q:"What is one thing your body did for you today that you can quietly thank it for?"},
+    {t:"deep", q:"You are not broken. What part of you have you been calling “too much” that is actually just alive?"},
+    {t:"deep", q:"Name one “should” you inherited about your body. Whose voice is it in?"},
+    {t:"deep", q:"What might change today if you believed your desire was good?"},
+    {t:"deep", q:"Recall a moment you said yes when you meant no. What were you trying to protect?"},
+    {t:"deep", q:"What does your softer, kinder inner voice want to tell you this morning?"},
+    {t:"deep", q:"Where are you waiting for permission? What if you gave it to yourself, right here?"},
+    {t:"deep", q:"What is one small want you can honor today, simply because it is yours?"},
+    {t:"deep", q:"Describe a time you felt fully at ease in your own skin. What made it feel safe?"},
+    {t:"deep", q:"What story about yourself are you ready to begin, slowly, to rewrite?"},
+    {t:"deep", q:"Where do you tend to make yourself smaller? What would taking up space feel like?"},
+    {t:"deep", q:"What are you allowed to receive today without having to earn it?"},
+    {t:"deep", q:"Finish this gently: “It is safe for me to want…”"},
+    {t:"deep", q:"What does real rest look like for you? When did you last let yourself have it?"},
+    {t:"deep", q:"Name a boundary you’d like to hold this week. Picture yourself keeping it with love."},
+    {t:"deep", q:"What part of your body have you been at war with? Offer it one kind sentence."},
+    {t:"deep", q:"When do you feel most like yourself? How could you invite a little more of that in?"},
+    {t:"deep", q:"What did you learn about pleasure growing up? What do you want to believe now?"},
+    {t:"deep", q:"Who would you be if shame no longer got a say?"},
+    {t:"deep", q:"What is one desire you’ve kept quiet? You don’t have to act on it — just name it here."},
+    {t:"deep", q:"Where in your life are you giving without receiving? What would balance feel like?"},
+    {t:"deep", q:"What does your body need more of? What does it need less of?"},
+    {t:"deep", q:"Recall something that made you feel alive this week. Let yourself relive it slowly."},
+    {t:"deep", q:"What would you do differently if you trusted yourself completely?"},
+    {t:"deep", q:"Name one way you’ve grown that your younger self would be proud of."},
+    {t:"deep", q:"What are you finally ready to forgive yourself for?"},
+    {t:"deep", q:"Where do you crave more tenderness — from others, or from yourself?"},
+    {t:"deep", q:"What feels good and true to you in this exact moment?"},
+    {t:"deep", q:"What have you been told is “selfish” that might actually be self-honoring?"},
+    {t:"deep", q:"Write yourself a permission slip. What does it allow you to feel or do?"},
+    {t:"deep", q:"What is one thing you long for in your intimate life? Speak it gently to this page."},
+    {t:"deep", q:"When you imagine feeling free in your body, what do you see?"},
+    {t:"deep", q:"What emotion have you been carrying in your body? Where does it seem to live?"},
+    {t:"deep", q:"What would change if you stopped performing and simply let yourself be?"},
+    {t:"deep", q:"Name a pleasure that has nothing to do with anyone else’s approval."},
+    {t:"deep", q:"What does “enough” feel like? Is it possible you are already there?"},
+    {t:"deep", q:"Whose expectations are you carrying that were never yours to hold?"},
+    {t:"deep", q:"What does your intuition already know that you’ve been talking yourself out of?"},
+    {t:"deep", q:"Describe the person you are becoming. What are they learning to allow themselves?"},
+    {t:"deep", q:"What touch, taste, sound, or sight brought you comfort today?"},
+    {t:"deep", q:"Where have you mistaken numbness for peace? What might waking up feel like?"},
+    {t:"deep", q:"What is one honest thing you’d say to someone you love if fear weren’t in the room?"},
+    {t:"deep", q:"What have you been taught to apologize for that needs no apology?"},
+    {t:"deep", q:"How do you want to feel by the end of today? What’s one gentle step toward it?"},
+    {t:"deep", q:"What part of your story deserves more compassion than you’ve been giving it?"},
+    {t:"deep", q:"Name something your body simply enjoys. When can you give it that this week?"},
+    {t:"deep", q:"Where are you ready to trade “being good” for being whole and free?"},
+    {t:"deep", q:"What longing have you been afraid to admit? It is safe on this page."},
+    {t:"deep", q:"What would tenderness toward yourself look like in the next hour?"},
+    {t:"deep", q:"What did you make mean something bad about you that simply wasn’t true?"},
+    {t:"deep", q:"When did you last feel wanted — or want yourself? Describe it."},
+    {t:"deep", q:"What is one way you can come home to your body today?"},
+    {t:"deep", q:"What are you unlearning right now, and what is quietly taking its place?"},
+    {t:"deep", q:"Where do you need to say a clear, kind “no” this week?"},
+    {t:"deep", q:"What has felt like awakening in your life lately, even in the smallest way?"},
+    {t:"deep", q:"What do you most want your desire to know — perhaps, that it is welcome here?"},
+    {t:"deep", q:"Name three things about yourself that are simply not up for debate."},
+    {t:"deep", q:"What did purity culture teach you to fear? What feels true to you now instead?"},
+    {t:"deep", q:"Picture the you of a year from now. What have {they} finally let {themself} have?"},
+    {t:"deep", q:"If your future self wrote you a note today, what would {they} most want you to hear?"},
+    /* ---------- QUICK (short, direct, low burden) ---------- */
+    {t:"quick", q:"One word for how your body feels right now."},
+    {t:"quick", q:"What do you want more of today?"},
+    {t:"quick", q:"Name one thing you’re allowing yourself right now."},
+    {t:"quick", q:"Where is there tension? Put a hand there for one breath."},
+    {t:"quick", q:"What’s one “yes” and one “no” for today?"},
+    {t:"quick", q:"Finish the line: today I deserve…"},
+    {t:"quick", q:"What color is your mood?"},
+    {t:"quick", q:"One thing you’re grateful your body did today."},
+    {t:"quick", q:"What would feel good in the next five minutes?"},
+    {t:"quick", q:"Name a boundary you’re holding today."},
+    {t:"quick", q:"What are you ready to put down?"},
+    {t:"quick", q:"One small pleasure you can give yourself later."},
+    {t:"quick", q:"How full is your cup, 1 to 10? What would raise it by one?"},
+    {t:"quick", q:"What does your gut already know?"},
+    {t:"quick", q:"Say one kind thing to yourself. Write it here."},
+    {t:"quick", q:"What are you proud of, even a little, today?"},
+    {t:"quick", q:"One word you want to feel more of."},
+    {t:"quick", q:"What can wait until tomorrow?"},
+    /* ---------- PLAYFUL (light, silly, permission to not be deep) ---------- */
+    {t:"playful", q:"If your mood were a snack, what would it be?"},
+    {t:"playful", q:"Give your inner critic a ridiculous nickname."},
+    {t:"playful", q:"What tiny pleasure would eight-year-old you high-five you for?"},
+    {t:"playful", q:"Describe today as a weather report for your heart."},
+    {t:"playful", q:"If your body could text you right now, what emoji would it send?"},
+    {t:"playful", q:"You get a day with zero shoulds. What’s the first thing you do?"},
+    {t:"playful", q:"Cast the movie of your day. Who plays you, and what’s the genre?"},
+    {t:"playful", q:"What would you wear if comfort and confidence were the only rules?"},
+    {t:"playful", q:"Invent a tiny holiday just for you. What does it celebrate?"},
+    {t:"playful", q:"If your desire were an animal, what would it be — and what does it want?"},
+    {t:"playful", q:"Write a one-line love note to your future self."},
+    {t:"playful", q:"What song is your permission slip today? Play it in your head."},
+    {t:"playful", q:"Rename this feeling something friendlier. Go."},
+    {t:"playful", q:"If today had a theme song, what’s the title?"},
+    {t:"playful", q:"What’s the most delicious “no” you could say this week?"}
+  ];
+
+  /* prompt selection + depth mode */
+  var LSK_MODE="perm_promptmode";
+  var promptMode = localStorage.getItem(LSK_MODE) || "mix";
+  var currentPrompt = "";      // resolved (token-filled) text shown to user
+  var currentTemplate = "";    // raw template with tokens (stored on the entry)
+  function poolFor(mode){
+    if(mode==="mix"||!mode) return PROMPTS;
+    var p=PROMPTS.filter(function(x){ return x.t===mode; });
+    return p.length?p:PROMPTS;
+  }
+  function dayNumber(d){ var s=new Date(d.getFullYear(),0,0); return Math.floor((d-s)/86400000); }
+  function pickPrompt(random){
+    var pool=poolFor(promptMode), item;
+    if(random){ item=pool[Math.floor(Math.random()*pool.length)]; }
+    else { item=pool[ dayNumber(new Date()) % pool.length ]; }
+    currentTemplate=item.q; currentPrompt=fillTokens(item.q); renderPrompt();
+  }
+  function renderPrompt(){
+    $("promptText").textContent = currentPrompt;
+    var label = promptMode==="quick" ? "A quick check-in" :
+                promptMode==="playful" ? "A little play" :
+                promptMode==="deep" ? "Today’s invitation" : "Today’s invitation";
+    $("promptKick").textContent = label;
+  }
+  function anotherPrompt(){
+    var prev=currentTemplate, guard=0;
+    do{ pickPrompt(true); guard++; } while(currentTemplate===prev && guard<8);
+    haptic();
+  }
+  function setMode(mode){
+    promptMode=mode; localStorage.setItem(LSK_MODE, mode);
+    document.querySelectorAll(".depth").forEach(function(b){ b.classList.toggle("on", b.dataset.depth===mode); });
+    pickPrompt(true);
+  }
+
+  /* ============================================================
+     THEME + ACCENT
+     ============================================================ */
+  var LSK_THEME="perm_theme", LSK_ACCENT="perm_accent";
+  var ACCENTS=[
+    {id:"rose", a:"#FF2D78", d:"#E4216E"},
+    {id:"plum", a:"#A05CE6", d:"#7E3FC7"},
+    {id:"amber",a:"#F4820B", d:"#D2680A"},
+    {id:"teal", a:"#0FB5AE", d:"#0A8C86"},
+    {id:"sky",  a:"#2D8CFF", d:"#1C6FE0"},
+    {id:"leaf", a:"#3FB56B", d:"#2E9455"}
+  ];
+  var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function themePref(){ return localStorage.getItem(LSK_THEME) || "system"; }
+  function applyTheme(){
+    var pref=themePref();
+    var dark = pref==="dark" || (pref==="system" && mq && mq.matches);
+    document.documentElement.setAttribute("data-theme", dark?"dark":"light");
+    var tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute("content", dark?"#160512":"#FCE9F0");
+    document.querySelectorAll("#themeSeg button").forEach(function(b){ b.classList.toggle("on", b.dataset.theme===pref); });
+  }
+  function applyAccent(){
+    var id=localStorage.getItem(LSK_ACCENT)||"rose";
+    var ac=ACCENTS.filter(function(x){return x.id===id;})[0]||ACCENTS[0];
+    var r=document.documentElement;
+    r.style.setProperty("--accent", ac.a);
+    r.style.setProperty("--accent-deep", ac.d);
+    document.querySelectorAll(".aswatch").forEach(function(s){ s.classList.toggle("on", s.dataset.accent===ac.id); });
+  }
+  if(mq){ try{ mq.addEventListener("change", applyTheme); }catch(e){ try{ mq.addListener(applyTheme); }catch(e2){} } }
+
+  function buildThemeControls(){
+    document.querySelectorAll("#themeSeg button").forEach(function(b){
+      b.addEventListener("click", function(){ localStorage.setItem(LSK_THEME, b.dataset.theme); applyTheme(); haptic(6); });
+    });
+    var row=$("accentRow"); row.innerHTML="";
+    ACCENTS.forEach(function(ac){
+      var s=document.createElement("div"); s.className="aswatch"; s.dataset.accent=ac.id;
+      s.style.background="linear-gradient(160deg,"+ac.a+","+ac.d+")";
+      s.setAttribute("role","button"); s.setAttribute("aria-label","Accent "+ac.id);
+      s.addEventListener("click", function(){ localStorage.setItem(LSK_ACCENT, ac.id); applyAccent(); haptic(6); });
+      row.appendChild(s);
+    });
+  }
+
+  /* ============================================================
+     STORAGE — IndexedDB for entries + notebook. On-device only.
+     DB name kept as "awaken_db" so existing live users keep entries.
      ============================================================ */
   var DB=null;
   function openDB(){ return new Promise(function(res,rej){
     if(DB) return res(DB);
-    var req=indexedDB.open("awaken_db",1);
+    var req=indexedDB.open("awaken_db",2);
     req.onupgradeneeded=function(e){ var db=e.target.result;
-      if(!db.objectStoreNames.contains("entries")){ db.createObjectStore("entries",{keyPath:"id"}); } };
+      if(!db.objectStoreNames.contains("entries")){ db.createObjectStore("entries",{keyPath:"id"}); }
+      if(!db.objectStoreNames.contains("notebook")){ db.createObjectStore("notebook",{keyPath:"id"}); } };
     req.onsuccess=function(e){ DB=e.target.result; res(DB); };
     req.onerror=function(e){ rej(e); };
   }); }
-  function txStore(mode){ return openDB().then(function(db){ return db.transaction("entries",mode).objectStore("entries"); }); }
-  function dbPut(entry){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+  function store(name,mode){ return openDB().then(function(db){ return db.transaction(name,mode).objectStore(name); }); }
+  function dbPut(entry){ return store("entries","readwrite").then(function(st){ return new Promise(function(res,rej){
     var r=st.put(entry); r.onsuccess=function(){res(entry);}; r.onerror=function(e){rej(e);}; }); }); }
-  function dbAll(){ return txStore("readonly").then(function(st){ return new Promise(function(res,rej){
+  function dbAll(){ return store("entries","readonly").then(function(st){ return new Promise(function(res,rej){
     var out=[]; var c=st.openCursor(); c.onsuccess=function(e){ var cur=e.target.result;
       if(cur){ out.push(cur.value); cur.continue(); } else { out.sort(function(a,b){return b.ts-a.ts;}); res(out); } };
     c.onerror=function(e){rej(e);}; }); }); }
-  function dbGet(id){ return txStore("readonly").then(function(st){ return new Promise(function(res,rej){
+  function dbGet(id){ return store("entries","readonly").then(function(st){ return new Promise(function(res,rej){
     var r=st.get(id); r.onsuccess=function(){res(r.result);}; r.onerror=function(e){rej(e);}; }); }); }
-  function dbDel(id){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+  function dbDel(id){ return store("entries","readwrite").then(function(st){ return new Promise(function(res,rej){
     var r=st.delete(id); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
-  function dbClear(){ return txStore("readwrite").then(function(st){ return new Promise(function(res,rej){
+  function dbClear(){ return store("entries","readwrite").then(function(st){ return new Promise(function(res,rej){
+    var r=st.clear(); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
+  function nbLoad(){ return store("notebook","readonly").then(function(st){ return new Promise(function(res,rej){
+    var r=st.get("notebook"); r.onsuccess=function(){res(r.result||null);}; r.onerror=function(e){rej(e);}; }); }); }
+  function nbSaveDoc(doc){ return store("notebook","readwrite").then(function(st){ return new Promise(function(res,rej){
+    var r=st.put(doc); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
+  function nbClear(){ return store("notebook","readwrite").then(function(st){ return new Promise(function(res,rej){
     var r=st.clear(); r.onsuccess=function(){res();}; r.onerror=function(e){rej(e);}; }); }); }
 
   /* ============================================================
      PASSCODE — hashed, stored only in localStorage on this device.
+     (kept verbatim in behavior from the shipped app)
      ============================================================ */
   var LSK_PIN="awaken_pin", LSK_FACE="awaken_face";
   function randHex(n){ var a=new Uint8Array(n); (crypto.getRandomValues?crypto.getRandomValues(a):a.forEach(function(_,i){a[i]=Math.floor(Math.random()*256);}));
@@ -750,8 +1040,8 @@
   /* ============================================================
      LOCK SCREEN LOGIC
      ============================================================ */
-  var lockMode="enter"; // "set" | "confirm" | "enter" | "change-old" | "change-new" | "change-confirm"
-  var buf="", firstPin="", onUnlock=null, changeCtx=null;
+  var lockMode="enter";
+  var buf="", firstPin="", onUnlock=null;
   function buildPad(){
     var pad=$("pad"); pad.innerHTML="";
     var keys=["1","2","3","4","5","6","7","8","9","face","0","del"];
@@ -811,6 +1101,7 @@
     faceUnlock().then(function(){ haptic(12); afterAuth(); })
       .catch(function(){ $("lockLabel").textContent="Enter your passcode"; });
   }
+  var afterAuthGoesToOnboarding=false;
   function afterAuth(){
     var cb=onUnlock; onUnlock=null; buf=""; firstPin="";
     $("lock").classList.remove("show");
@@ -823,8 +1114,76 @@
     else { $("lockTagline").textContent="A private place to come home to yourself."; $("lockLabel").textContent="Enter your passcode"; }
     paintDots(); updateFaceKey();
     $("lock").classList.add("show");
-    // If entering and Face ID is on, offer it right away
     if(mode==="enter" && faceEnabled()){ setTimeout(tryFaceUnlock, 350); }
+  }
+
+  /* ============================================================
+     ONBOARDING / PROFILE EDITOR
+     ============================================================ */
+  var obDraft={gender:"", genderText:"", pronoun:"", pronounText:""};
+  function buildOnboard(){
+    var g=$("obGender"); g.innerHTML="";
+    GENDER_OPTS.forEach(function(o){
+      var b=document.createElement("button"); b.className="opt"; b.type="button"; b.textContent=o.label; b.dataset.id=o.id;
+      b.addEventListener("click", function(){
+        obDraft.gender=o.id;
+        document.querySelectorAll("#obGender .opt").forEach(function(x){ x.classList.toggle("on", x.dataset.id===o.id); });
+        $("obGenderText").classList.toggle("hidden", o.id!=="self");
+        // Helpfully pre-select matching pronouns if the user hasn't chosen yet.
+        if(!obDraft.pronoun && o.pron){ selectPronoun(o.pron); }
+        haptic(6);
+      });
+      g.appendChild(b);
+    });
+    var p=$("obPronoun"); p.innerHTML="";
+    PRONOUN_OPTS.forEach(function(o){
+      var b=document.createElement("button"); b.className="opt"; b.type="button"; b.textContent=o.label; b.dataset.id=o.id;
+      b.addEventListener("click", function(){ selectPronoun(o.id); haptic(6); });
+      p.appendChild(b);
+    });
+    $("obGenderText").addEventListener("input", function(){ obDraft.genderText=this.value; });
+    $("obPronounText").addEventListener("input", function(){ obDraft.pronounText=this.value; });
+    $("obSave").addEventListener("click", function(){
+      saveProfile({ gender:obDraft.gender, genderText:obDraft.genderText, pronoun:obDraft.pronoun, pronounText:obDraft.pronounText });
+      closeOnboard(); toast("Saved"); haptic(12);
+    });
+    $("obSkip").addEventListener("click", function(){
+      saveProfile({ gender:"na", genderText:"", pronoun:"they", pronounText:"" });
+      closeOnboard(); haptic(8);
+    });
+  }
+  function selectPronoun(id){
+    obDraft.pronoun=id;
+    document.querySelectorAll("#obPronoun .opt").forEach(function(x){ x.classList.toggle("on", x.dataset.id===id); });
+    $("obPronounText").classList.toggle("hidden", id!=="self");
+  }
+  function openOnboard(isEdit){
+    var p=loadProfile();
+    obDraft={gender:p.gender||"", genderText:p.genderText||"", pronoun:p.pronoun||"", pronounText:p.pronounText||""};
+    $("obTitle").textContent = isEdit ? "You" : "A little about you";
+    $("obSkip").style.display = isEdit ? "none" : "";
+    $("obSave").textContent = isEdit ? "Save" : "Save & continue";
+    buildOnboardState();
+    $("onboard").classList.add("show");
+  }
+  function buildOnboardState(){
+    document.querySelectorAll("#obGender .opt").forEach(function(x){ x.classList.toggle("on", x.dataset.id===obDraft.gender); });
+    document.querySelectorAll("#obPronoun .opt").forEach(function(x){ x.classList.toggle("on", x.dataset.id===obDraft.pronoun); });
+    $("obGenderText").value=obDraft.genderText||""; $("obGenderText").classList.toggle("hidden", obDraft.gender!=="self");
+    $("obPronounText").value=obDraft.pronounText||""; $("obPronounText").classList.toggle("hidden", obDraft.pronoun!=="self");
+  }
+  function closeOnboard(){
+    $("onboard").classList.remove("show");
+    updateProfileSub();
+    if(afterAuthGoesToOnboarding){ afterAuthGoesToOnboarding=false; showApp(); }
+    else { pickPrompt(false); } // refresh language if pronouns changed
+  }
+  function updateProfileSub(){
+    var p=loadProfile(); var sub="Identity & pronouns";
+    if(p.pronoun==="she") sub="she/her"; else if(p.pronoun==="he") sub="he/him"; else if(p.pronoun==="they") sub="they/them";
+    else if(p.pronoun==="self" && p.pronounText) sub=p.pronounText;
+    else if(p.gender==="na") sub="Warm & neutral";
+    $("profileSub").textContent=sub;
   }
 
   /* ============================================================
@@ -835,13 +1194,16 @@
     for(var i=0;i<vs.length;i++) vs[i].classList.remove("active");
     $("v-"+id).classList.add("active");
     window.scrollTo(0,0);
-    if(window.__permTab){ try{ window.__permTab(id); }catch(e){} }
+    $("appFoot").style.display = (id==="home") ? "" : "none";
   }
-  function showApp(){ setDailyPrompt(); $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate(); refreshLists(); showView("home"); }
-  function longDate(){ var d=new Date();
-    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-    var mons=["January","February","March","April","May","June","July","August","September","October","November","December"];
-    return days[d.getDay()]+", "+mons[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear(); }
+  function showApp(){
+    applyTheme(); applyAccent();
+    document.querySelectorAll(".depth").forEach(function(b){ b.classList.toggle("on", b.dataset.depth===promptMode); });
+    pickPrompt(false);
+    $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate();
+    updateProfileSub();
+    refreshLists(); showView("home");
+  }
 
   /* ============================================================
      ENTRY LISTS
@@ -867,14 +1229,12 @@
     el.addEventListener("click", function(){ openEntry(e.id); });
     return el;
   }
-  function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function emptyState(sub){ return '<div class="empty"><div class="big">🭻</div><div class="t">Your journal is waiting.</div><div class="s">'+sub+'</div></div>'; }
 
   function refreshLists(){
     dbAll().then(function(list){
       var home=$("homeList"), all=$("allList");
       home.innerHTML=""; all.innerHTML="";
-      if(list.length===0){ home.innerHTML=emptyState("Choose Write, Speak, or Draw above to begin."); $("viewAll").style.display="none"; }
+      if(list.length===0){ home.innerHTML='<div class="empty"><div class="big">✨</div><div class="t">Your journal is waiting.</div><div class="s">Choose Quick, Deep, or Playful above, then Write, Speak, or Draw.</div></div>'; $("viewAll").style.display="none"; }
       else {
         list.slice(0,3).forEach(function(e){ home.appendChild(entryRow(e)); });
         $("viewAll").style.display = list.length>3 ? "inline" : "none";
@@ -884,23 +1244,38 @@
   }
 
   /* ============================================================
-     TEXT ENTRY
+     TEXT ENTRY (+ quick-reply chips for low-effort responses)
      ============================================================ */
-  function startText(){ $("tPrompt").textContent=todayPrompt; $("tArea").value=""; $("tCount").textContent="0 words"; showView("text"); setTimeout(function(){$("tArea").focus();},250); }
+  var QUICK_CHIPS=["🤍 Yes","🌱 Growing","🔥 Alive","😌 At ease","😢 Tender","💪 Proud","🫧 Enough","🌙 Rest","✨ Free","🤗 Kind to myself"];
+  function buildChips(){
+    var wrap=$("tChips"); wrap.innerHTML="";
+    QUICK_CHIPS.forEach(function(txt){
+      var b=document.createElement("button"); b.className="chip"; b.type="button"; b.textContent=txt;
+      b.addEventListener("click", function(){
+        var ta=$("tArea"); var cur=ta.value.trim();
+        ta.value = cur ? (cur+ (/[.!?…]$/.test(cur)?" ":". ") + txt) : txt;
+        ta.dispatchEvent(new Event("input"));
+        b.classList.add("on"); setTimeout(function(){ b.classList.remove("on"); }, 500);
+        haptic(6);
+      });
+      wrap.appendChild(b);
+    });
+  }
+  function startText(){ $("tPrompt").textContent=currentPrompt; $("tArea").value=""; $("tCount").textContent="0 words"; showView("text"); setTimeout(function(){$("tArea").focus();},250); }
   $("tArea").addEventListener("input", function(){ var w=$("tArea").value.trim(); var n=w?w.split(/\s+/).length:0; $("tCount").textContent=n+(n===1?" word":" words"); });
   $("tSave").addEventListener("click", function(){
     var txt=$("tArea").value.trim();
-    if(!txt){ toast("Write a little something first"); return; }
-    saveEntry({ type:"text", prompt:todayPrompt, text:txt }).then(function(){ toast("Saved to your journal"); haptic(14); showApp(); });
+    if(!txt){ toast("Tap a word above, or write a little something"); return; }
+    saveEntry({ type:"text", prompt:currentPrompt, promptTemplate:currentTemplate, text:txt }).then(function(){ toast("Saved to your journal"); haptic(14); afterSaveSuccess(); showApp(); });
   });
 
   /* ============================================================
-     VOICE ENTRY
+     VOICE ENTRY  (native VoiceRecorder + MediaRecorder fallback)
      ============================================================ */
   var mediaRec=null, chunks=[], recTimer=null, recSeconds=0, recBlob=null, recStream=null, analyser=null, rafId=null, audioCtx=null;
   function buildWave(){ var w=$("wave"); w.innerHTML=""; for(var i=0;i<13;i++){ w.appendChild(document.createElement("span")); } }
   function startVoice(){
-    $("vPrompt").textContent=todayPrompt; recSeconds=0; recBlob=null; chunks=[]; nativeRec=false;
+    $("vPrompt").textContent=currentPrompt; recSeconds=0; recBlob=null; chunks=[]; nativeRec=false;
     $("recTime").textContent="0:00"; $("recHint").textContent="Tap to begin recording your voice.";
     $("playbackWrap").classList.add("hidden"); $("recBtn").classList.remove("recording");
     $("recIcon").outerHTML='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
@@ -968,53 +1343,396 @@
   $("recBtn").addEventListener("click", toggleRecord);
   $("vSave").addEventListener("click", function(){
     if(!recBlob){ toast("Record something first"); return; }
-    saveEntry({ type:"voice", prompt:todayPrompt, audio:recBlob, mime:recBlob.type, duration:recSeconds })
-      .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); showApp(); });
+    saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds })
+      .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); afterSaveSuccess(); showApp(); });
   });
   function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; }
 
   /* ============================================================
-     DRAW ENTRY
+     DRAWING ENGINE (shared by Draw + Notebook)
+     Correct coordinate mapping: pointer coords are translated by the
+     canvas bounding-rect offset AND scaled from on-screen CSS size to
+     the logical drawing size, so ink lands exactly under the finger at
+     any screen size, DPR, or scroll position. Backing store is sized
+     for retina (CSS size × devicePixelRatio).
      ============================================================ */
-  var ctx=null, drawing=false, penColor="#3A0E2E", strokes=[], curStroke=null, dpr=1, cw=0, ch=0;
-  function setupCanvas(){
-    var c=$("canvas"); var wrap=c.parentNode; dpr=window.devicePixelRatio||1;
-    cw=wrap.clientWidth; ch=Math.round(cw*1.15);
-    c.width=cw*dpr; c.height=ch*dpr; c.style.height=ch+"px";
-    ctx=c.getContext("2d"); ctx.scale(dpr,dpr); ctx.lineCap="round"; ctx.lineJoin="round";
-    fillCanvas(); strokes=[];
+  function createPad(canvas, opts){
+    opts=opts||{};
+    var ctx=null, dpr=1, cw=0, ch=0;
+    var strokes=[], redo=[], cur=null, drawing=false, pid=null;
+    var color="#3A0E2E", size=3.6, erasing=false;
+    var baseImg=null;              // committed prior content (notebook pages)
+    var onChange=opts.onChange||function(){};
+
+    function paperColor(){ var c=getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(); return c||"#FFFFFF"; }
+
+    function resize(preserve){
+      var rect=canvas.getBoundingClientRect();
+      cw=Math.max(1, Math.round(rect.width));
+      ch=Math.max(1, Math.round(opts.height ? opts.height(cw) : rect.height));
+      dpr=window.devicePixelRatio||1;
+      canvas.style.height=ch+"px";
+      canvas.width=Math.round(cw*dpr); canvas.height=Math.round(ch*dpr);
+      ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      render();
+    }
+    function render(){
+      if(!ctx) return;
+      ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.fillStyle=paperColor(); ctx.fillRect(0,0,cw,ch);
+      if(baseImg){ try{ ctx.drawImage(baseImg,0,0,cw,ch); }catch(e){} }
+      strokes.forEach(drawStroke);
+      ctx.restore();
+    }
+    function drawStroke(s){
+      if(!s.pts.length) return;
+      ctx.strokeStyle = s.erase ? paperColor() : s.color;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = s.w;
+      if(s.pts.length===1){ ctx.beginPath(); ctx.arc(s.pts[0].x,s.pts[0].y,s.w/2,0,Math.PI*2); ctx.fill(); return; }
+      ctx.beginPath(); ctx.moveTo(s.pts[0].x,s.pts[0].y);
+      for(var i=1;i<s.pts.length;i++){ ctx.lineTo(s.pts[i].x,s.pts[i].y); }
+      ctx.stroke();
+    }
+    function pt(e){
+      var rect=canvas.getBoundingClientRect();
+      var sx = cw / (rect.width||cw);
+      var sy = ch / (rect.height||ch);
+      var cx = (e.clientX!=null? e.clientX : (e.touches&&e.touches[0]? e.touches[0].clientX:0));
+      var cy = (e.clientY!=null? e.clientY : (e.touches&&e.touches[0]? e.touches[0].clientY:0));
+      return { x:(cx-rect.left)*sx, y:(cy-rect.top)*sy };
+    }
+    function down(e){
+      e.preventDefault();
+      drawing=true; redo=[];
+      cur={ color:color, w:(erasing? size*3.2 : size), erase:erasing, pts:[pt(e)] };
+      strokes.push(cur); drawStroke(cur);
+      if(canvas.setPointerCapture && e.pointerId!=null){ pid=e.pointerId; try{ canvas.setPointerCapture(pid); }catch(_){} }
+    }
+    function move(e){
+      if(!drawing||!cur) return; e.preventDefault();
+      var p=pt(e); cur.pts.push(p);
+      // draw just the last segment for smoothness
+      ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.strokeStyle=cur.erase?paperColor():cur.color; ctx.lineWidth=cur.w; ctx.lineCap="round"; ctx.lineJoin="round";
+      var n=cur.pts.length; ctx.beginPath(); ctx.moveTo(cur.pts[n-2].x,cur.pts[n-2].y); ctx.lineTo(p.x,p.y); ctx.stroke();
+      ctx.restore();
+    }
+    function up(){ if(!drawing) return; drawing=false; cur=null; onChange(); if(pid!=null && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(pid); }catch(_){} pid=null; } }
+
+    if(window.PointerEvent){
+      canvas.addEventListener("pointerdown",down);
+      canvas.addEventListener("pointermove",move);
+      canvas.addEventListener("pointerup",up);
+      canvas.addEventListener("pointercancel",up);
+      canvas.addEventListener("pointerleave",up);
+    } else {
+      canvas.addEventListener("mousedown",down); canvas.addEventListener("mousemove",move); window.addEventListener("mouseup",up);
+      canvas.addEventListener("touchstart",down,{passive:false}); canvas.addEventListener("touchmove",move,{passive:false}); canvas.addEventListener("touchend",up);
+    }
+
+    return {
+      resize:resize, render:render,
+      setColor:function(c){ color=c; erasing=false; },
+      setSize:function(s){ size=s; },
+      setErasing:function(on){ erasing=on; },
+      isErasing:function(){ return erasing; },
+      undo:function(){ if(strokes.length){ redo.push(strokes.pop()); render(); onChange(); } },
+      redoOp:function(){ if(redo.length){ strokes.push(redo.pop()); render(); onChange(); } },
+      clear:function(){ strokes=[]; redo=[]; baseImg=null; render(); onChange(); },
+      hasInk:function(){ return strokes.length>0 || !!baseImg; },
+      hasStrokes:function(){ return strokes.length>0; },
+      canUndo:function(){ return strokes.length>0; },
+      canRedo:function(){ return redo.length>0; },
+      resetStrokes:function(){ strokes=[]; redo=[]; },
+      loadImage:function(dataUrl, cb){
+        strokes=[]; redo=[];
+        if(!dataUrl){ baseImg=null; render(); if(cb) cb(); return; }
+        var img=new Image();
+        img.onload=function(){ baseImg=img; render(); if(cb) cb(); };
+        img.onerror=function(){ baseImg=null; render(); if(cb) cb(); };
+        img.src=dataUrl;
+      },
+      toDataURL:function(type,q){ return canvas.toDataURL(type||"image/png", q); },
+      dims:function(){ return {w:canvas.width, h:canvas.height, cw:cw, ch:ch}; }
+    };
   }
-  function fillCanvas(){ ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,cw,ch); }
-  function redraw(){ fillCanvas(); strokes.forEach(function(s){ drawStroke(s); }); }
-  function drawStroke(s){ if(s.pts.length<1) return; ctx.strokeStyle=s.color; ctx.lineWidth=s.w;
-    ctx.beginPath(); ctx.moveTo(s.pts[0].x,s.pts[0].y);
-    for(var i=1;i<s.pts.length;i++){ ctx.lineTo(s.pts[i].x,s.pts[i].y); } ctx.stroke();
-    if(s.pts.length===1){ ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.pts[0].x,s.pts[0].y,s.w/2,0,7); ctx.fill(); } }
-  function ptFrom(e){ var c=$("canvas"), r=c.getBoundingClientRect();
-    var t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left), y:(t.clientY-r.top)}; }
-  function startDraw(e){ e.preventDefault(); drawing=true; curStroke={color:penColor,w:3.2,pts:[ptFrom(e)]}; strokes.push(curStroke); drawStroke(curStroke); }
-  function moveDraw(e){ if(!drawing) return; e.preventDefault(); curStroke.pts.push(ptFrom(e)); drawStroke(curStroke); }
-  function endDraw(){ drawing=false; curStroke=null; }
-  function startDrawView(){ $("dPrompt").textContent=todayPrompt; showView("draw"); setTimeout(setupCanvas,60); }
-  function bindCanvas(){ var c=$("canvas");
-    c.addEventListener("mousedown",startDraw); c.addEventListener("mousemove",moveDraw); window.addEventListener("mouseup",endDraw);
-    c.addEventListener("touchstart",startDraw,{passive:false}); c.addEventListener("touchmove",moveDraw,{passive:false}); c.addEventListener("touchend",endDraw);
+
+  /* build a color/tool toolbar into a container, bound to a pad */
+  var PALETTE=["#3A0E2E","#111111","#FF2D78","#F4820B","#3FB56B","#2D8CFF","#A05CE6","#8A5A2B"];
+  var SIZES=[2.4,4,7,12];
+  function buildTools(container, pad, opts){
+    opts=opts||{};
+    container.innerHTML="";
+    var sw=document.createElement("div"); sw.className="swatches";
+    PALETTE.forEach(function(col,idx){
+      var p=document.createElement("div"); p.className="pen"+(idx===0?" on":""); p.style.background=col; p.dataset.color=col;
+      p.setAttribute("role","button"); p.setAttribute("aria-label","Ink color");
+      p.addEventListener("click", function(){
+        pad.setColor(col); eraserBtn.classList.remove("on");
+        sw.querySelectorAll(".pen").forEach(function(x){x.classList.remove("on");}); p.classList.add("on"); haptic(6); syncTools();
+      });
+      sw.appendChild(p);
+    });
+    container.appendChild(sw);
+
+    var sizes=document.createElement("div"); sizes.className="sizes";
+    SIZES.forEach(function(sz,idx){
+      var d=document.createElement("div"); d.className="sizedot"+(idx===1?" on":"");
+      var dot=document.createElement("i"); var px=Math.max(4,Math.min(18,sz*1.4)); dot.style.width=px+"px"; dot.style.height=px+"px"; d.appendChild(dot);
+      d.setAttribute("role","button"); d.setAttribute("aria-label","Brush size");
+      d.addEventListener("click", function(){ pad.setSize(sz); sizes.querySelectorAll(".sizedot").forEach(function(x){x.classList.remove("on");}); d.classList.add("on"); haptic(6); });
+      sizes.appendChild(d);
+    });
+    pad.setSize(SIZES[1]);
+    container.appendChild(sizes);
+
+    var eraserBtn=document.createElement("button"); eraserBtn.className="toolbtn"; eraserBtn.type="button"; eraserBtn.setAttribute("aria-label","Eraser");
+    eraserBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 0 1 0-3l9-9a2 2 0 0 1 3 0l5 5a2 2 0 0 1 0 3l-8 8"/><path d="M9 11l5 5"/></svg>';
+    eraserBtn.addEventListener("click", function(){ var on=!pad.isErasing(); pad.setErasing(on); eraserBtn.classList.toggle("on",on); haptic(6); });
+    container.appendChild(eraserBtn);
+
+    var spacer=document.createElement("div"); spacer.className="spacer"; container.appendChild(spacer);
+
+    var undoBtn=document.createElement("button"); undoBtn.className="toolbtn"; undoBtn.type="button"; undoBtn.setAttribute("aria-label","Undo");
+    undoBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.6-6.4L3 9"/></svg>';
+    undoBtn.addEventListener("click", function(){ pad.undo(); haptic(6); syncTools(); });
+    container.appendChild(undoBtn);
+
+    var redoBtn=document.createElement("button"); redoBtn.className="toolbtn"; redoBtn.type="button"; redoBtn.setAttribute("aria-label","Redo");
+    redoBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M20.5 13a9 9 0 1 1-2.6-6.4L21 9"/></svg>';
+    redoBtn.addEventListener("click", function(){ pad.redoOp(); haptic(6); syncTools(); });
+    container.appendChild(redoBtn);
+
+    var clearBtn=document.createElement("button"); clearBtn.className="toolbtn"; clearBtn.type="button"; clearBtn.setAttribute("aria-label","Clear");
+    clearBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
+    clearBtn.addEventListener("click", function(){ if(opts.onClear) opts.onClear(); else pad.clear(); haptic(8); syncTools(); });
+    container.appendChild(clearBtn);
+
+    function syncTools(){
+      undoBtn.classList.toggle("dis", !pad.canUndo());
+      redoBtn.classList.toggle("dis", !pad.canRedo());
+    }
+    pad._syncTools=syncTools;
+    syncTools();
+    return { eraserBtn:eraserBtn, sync:syncTools };
   }
-  document.querySelectorAll(".pen").forEach(function(p){ p.addEventListener("click", function(){
-    penColor=p.dataset.color; document.querySelectorAll(".pen").forEach(function(x){x.classList.remove("on");}); p.classList.add("on"); haptic(6); }); });
-  document.querySelector(".pen").classList.add("on");
-  $("undoBtn").addEventListener("click", function(){ strokes.pop(); redraw(); haptic(6); });
-  $("clearBtn").addEventListener("click", function(){ strokes=[]; redraw(); haptic(6); });
+
+  /* ---- Draw editor (prompt doodle) ---- */
+  var drawPad=null, drawTools=null;
+  function startDrawView(){
+    $("dPrompt").textContent=currentPrompt; showView("draw");
+    setTimeout(function(){
+      if(!drawPad){
+        drawPad=createPad($("drawCanvas"), { height:function(w){ return Math.round(w*1.15); }, onChange:function(){ if(drawTools) drawTools.sync(); } });
+        drawTools=buildTools($("drawTools"), drawPad);
+      }
+      drawPad.clear(); drawPad.resize();
+    },60);
+  }
   $("dSave").addEventListener("click", function(){
-    if(strokes.length===0){ toast("Make a mark first"); return; }
-    var dataUrl=$("canvas").toDataURL("image/png");
-    saveEntry({ type:"draw", prompt:todayPrompt, image:dataUrl }).then(function(){ toast("Saved to your journal"); haptic(14); showApp(); });
+    if(!drawPad || !drawPad.hasStrokes()){ toast("Make a mark first"); return; }
+    var dataUrl=drawPad.toDataURL("image/png");
+    saveEntry({ type:"draw", prompt:currentPrompt, promptTemplate:currentTemplate, image:dataUrl }).then(function(){ toast("Saved to your journal"); haptic(14); afterSaveSuccess(); showApp(); });
   });
 
   /* ============================================================
-     SAVE
+     NOTEBOOK — multi-page handwriting pad
+     Pages persist locally (IndexedDB). Export current page as PNG or
+     the whole notebook as a multi-page PDF, shared via the system
+     share sheet (Capacitor) or downloaded on the web.
      ============================================================ */
+  var nbPad=null, nbTools=null, nbPages=[""], nbIndex=0, nbDirty=false, nbLoaded=false;
+  function nbUpdateLabel(){ $("nbPageLabel").textContent="Page "+(nbIndex+1)+" / "+nbPages.length; }
+  function commitCurrentPage(){
+    if(!nbPad) return;
+    // flatten current page (base + new strokes) into its stored image
+    if(nbPad.hasStrokes()){ nbPages[nbIndex]=nbPad.toDataURL("image/png"); nbDirty=true; }
+  }
+  function loadPageIntoPad(){
+    nbPad.loadImage(nbPages[nbIndex]||"", function(){ if(nbTools) nbTools.sync(); });
+    nbUpdateLabel();
+  }
+  function openNotebook(){
+    showView("notebook");
+    setTimeout(function(){
+      if(!nbPad){
+        nbPad=createPad($("nbCanvas"), { height:function(w){ return Math.round(w*1.38); }, onChange:function(){ nbDirty=true; if(nbTools) nbTools.sync(); } });
+        nbTools=buildTools($("nbTools"), nbPad, { onClear:function(){ nbPad.clear(); nbPages[nbIndex]=""; nbDirty=true; } });
+      }
+      nbPad.resize();
+      if(!nbLoaded){
+        nbLoad().then(function(doc){
+          if(doc && doc.pages && doc.pages.length){ nbPages=doc.pages.slice(); } else { nbPages=[""]; }
+          nbIndex=0; nbLoaded=true; loadPageIntoPad();
+        }).catch(function(){ nbPages=[""]; nbIndex=0; nbLoaded=true; loadPageIntoPad(); });
+      } else {
+        loadPageIntoPad();
+      }
+    },60);
+  }
+  function nbGoto(i){
+    if(i<0||i>=nbPages.length) return;
+    commitCurrentPage(); nbIndex=i; loadPageIntoPad(); haptic(8);
+  }
+  $("nbPrev").addEventListener("click", function(){ nbGoto(nbIndex-1); });
+  $("nbNext").addEventListener("click", function(){ nbGoto(nbIndex+1); });
+  $("nbAdd").addEventListener("click", function(){
+    commitCurrentPage(); nbPages.splice(nbIndex+1,0,""); nbIndex++; nbDirty=true; loadPageIntoPad(); toast("New page"); haptic(10);
+  });
+  $("nbDel").addEventListener("click", function(){
+    if(nbPages.length<=1){ nbPad.clear(); nbPages[0]=""; nbDirty=true; toast("Page cleared"); return; }
+    if(!confirm("Delete this page?")) return;
+    nbPages.splice(nbIndex,1); if(nbIndex>=nbPages.length) nbIndex=nbPages.length-1; nbDirty=true; loadPageIntoPad(); toast("Page deleted"); haptic(10);
+  });
+  function nbSave(){
+    commitCurrentPage();
+    return nbSaveDoc({ id:"notebook", pages:nbPages.slice(), ts:Date.now() }).then(function(){ nbDirty=false; toast("Notebook saved"); haptic(12); });
+  }
+  $("nbSaveTop").addEventListener("click", nbSave);
+
+  /* export helpers */
+  function dataUrlToBytes(dataUrl){
+    var i=dataUrl.indexOf(","); var bin=atob(dataUrl.slice(i+1)); var a=new Uint8Array(bin.length);
+    for(var j=0;j<bin.length;j++) a[j]=bin.charCodeAt(j); return a;
+  }
+  // Build a multi-page PDF from JPEG data-URLs. Hand-rolled (no library),
+  // DCTDecode image XObjects, one full-bleed image per page.
+  function buildPdf(jpegPages){
+    var enc=new TextEncoder();
+    var parts=[], offset=0, offsets=[];
+    function push(bytes){ parts.push(bytes); offset+=bytes.length; }
+    function pushStr(s){ push(enc.encode(s)); }
+    function obj(n){ offsets[n]=offset; }
+    pushStr("%PDF-1.3\n%âãÏÓ\n");
+    // object numbering: 1 catalog, 2 pages, then per page: pageObj, imgObj, contentObj
+    var N=jpegPages.length;
+    var pageIds=[], imgIds=[], contentIds=[];
+    var id=3;
+    for(var i=0;i<N;i++){ pageIds.push(id++); imgIds.push(id++); contentIds.push(id++); }
+    // 1 catalog
+    obj(1); pushStr("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+    // 2 pages
+    obj(2); pushStr("2 0 obj\n<< /Type /Pages /Kids ["+pageIds.map(function(p){return p+" 0 R";}).join(" ")+"] /Count "+N+" >>\nendobj\n");
+    for(var k=0;k<N;k++){
+      var pg=jpegPages[k]; var w=pg.w, h=pg.h; var bytes=pg.bytes;
+      // page object
+      obj(pageIds[k]);
+      pushStr(pageIds[k]+" 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+w+" "+h+"] "+
+        "/Resources << /XObject << /Im0 "+imgIds[k]+" 0 R >> >> /Contents "+contentIds[k]+" 0 R >>\nendobj\n");
+      // image xobject
+      obj(imgIds[k]);
+      pushStr(imgIds[k]+" 0 obj\n<< /Type /XObject /Subtype /Image /Width "+w+" /Height "+h+
+        " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+bytes.length+" >>\nstream\n");
+      push(bytes);
+      pushStr("\nendstream\nendobj\n");
+      // content stream: draw image to fill page
+      var content="q "+w+" 0 0 "+h+" 0 0 cm /Im0 Do Q\n";
+      obj(contentIds[k]);
+      pushStr(contentIds[k]+" 0 obj\n<< /Length "+content.length+" >>\nstream\n"+content+"endstream\nendobj\n");
+    }
+    // xref
+    var xrefStart=offset;
+    var total=id; // objects 1..id-1
+    pushStr("xref\n0 "+total+"\n");
+    pushStr("0000000000 65535 f \n");
+    for(var o=1;o<total;o++){
+      var off=offsets[o]||0; var s=("0000000000"+off).slice(-10);
+      pushStr(s+" 00000 n \n");
+    }
+    pushStr("trailer\n<< /Size "+total+" /Root 1 0 R >>\nstartxref\n"+xrefStart+"\n%%EOF\n");
+    // concat
+    var len=0; parts.forEach(function(p){ len+=p.length; });
+    var out=new Uint8Array(len), pos=0; parts.forEach(function(p){ out.set(p,pos); pos+=p.length; });
+    return out;
+  }
+  // Rasterize all notebook pages to JPEG at a consistent size for the PDF.
+  function pagesToJpegs(){
+    commitCurrentPage();
+    var dims=nbPad.dims(); var W=dims.w||1000, H=dims.h||1400;
+    var tmp=document.createElement("canvas"); tmp.width=W; tmp.height=H; var tctx=tmp.getContext("2d");
+    var out=[]; var done=0;
+    return new Promise(function(resolve){
+      if(!nbPages.length){ resolve([]); return; }
+      nbPages.forEach(function(pageData, idx){
+        var img=new Image();
+        img.onload=function(){ finish(img); };
+        img.onerror=function(){ finish(null); };
+        if(pageData){ img.src=pageData; } else { finish(null); }
+        function finish(image){
+          tctx.fillStyle="#FFFFFF"; tctx.fillRect(0,0,W,H);
+          if(image){ try{ tctx.drawImage(image,0,0,W,H); }catch(e){} }
+          var jpeg=tmp.toDataURL("image/jpeg",0.9);
+          out[idx]={ bytes:dataUrlToBytes(jpeg), w:W, h:H };
+          done++; if(done===nbPages.length){ resolve(out); }
+        }
+      });
+    });
+  }
+
+  /* Capacitor plugins for sharing/saving (guarded) */
+  function capPlugin(name){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; }catch(e){ return null; } }
+  function bytesToB64(bytes){ var s="",CH=0x8000; for(var i=0;i<bytes.length;i+=CH){ s+=String.fromCharCode.apply(null, bytes.subarray(i,i+CH)); } return btoa(s); }
+  function shareFile(bytes, filename, mime, title){
+    var Filesystem=capPlugin("Filesystem"), Share=capPlugin("Share");
+    if(capNative() && Filesystem && Share){
+      return Filesystem.writeFile({ path:filename, data:bytesToB64(bytes), directory:"CACHE" }).then(function(res){
+        return Share.share({ title:title||"Permission", url:res.uri, dialogTitle:title||"Share" });
+      }).then(function(){ toast("Ready to share"); }).catch(function(){ downloadBytes(bytes, filename, mime); });
+    }
+    // web fallback
+    try{
+      var blob=new Blob([bytes],{type:mime});
+      var file=new File([blob], filename, {type:mime});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ return navigator.share({files:[file], title:title||"Permission"}).catch(function(){ downloadBytes(bytes, filename, mime); }); }
+    }catch(e){}
+    downloadBytes(bytes, filename, mime);
+    return Promise.resolve();
+  }
+  function downloadBytes(bytes, name, mime){
+    var blob=new Blob([bytes],{type:mime||"application/octet-stream"});
+    downloadBlob(blob, name);
+  }
+  $("nbExportPage").addEventListener("click", function(){
+    commitCurrentPage();
+    var data=nbPages[nbIndex];
+    if(!data){ toast("This page is empty"); return; }
+    var bytes=dataUrlToBytes(data);
+    shareFile(bytes, "permission-notebook-page-"+(nbIndex+1)+".png", "image/png", "Notebook page");
+  });
+  $("nbExportPdf").addEventListener("click", function(){
+    var anyInk = nbPages.some(function(p){ return !!p; }) || (nbPad && nbPad.hasStrokes());
+    if(!anyInk){ toast("Write something first"); return; }
+    toast("Preparing PDF…");
+    pagesToJpegs().then(function(jpegs){
+      var pdf=buildPdf(jpegs);
+      shareFile(pdf, "permission-notebook.pdf", "application/pdf", "My Permission notebook");
+    });
+  });
+
+  /* ============================================================
+     SAVE + RATING PROMPT (fires after a success moment, never first launch)
+     ============================================================ */
+  var LSK_SAVES="perm_saves", LSK_RATED="perm_rated";
   function saveEntry(e){ e.id="e_"+Date.now()+"_"+Math.floor(Math.random()*9999); e.ts=Date.now(); return dbPut(e); }
+  function afterSaveSuccess(){
+    var n=(parseInt(localStorage.getItem(LSK_SAVES)||"0",10)||0)+1;
+    localStorage.setItem(LSK_SAVES, String(n));
+    // Ask for a rating after the 3rd saved entry — a genuine success moment,
+    // and never on first launch / first save.
+    if(n===3 && !localStorage.getItem(LSK_RATED)){
+      setTimeout(requestReview, 1400);
+    }
+  }
+  function requestReview(){
+    localStorage.setItem(LSK_RATED, "1");
+    var RateApp=capPlugin("RateApp") || capPlugin("InAppReview");
+    if(capNative() && RateApp){
+      try{ Promise.resolve(RateApp.requestReview()).catch(function(){}); }catch(e){}
+    }
+    // On web there is no store review; silently no-op.
+  }
 
   /* ============================================================
      ENTRY VIEWER
@@ -1046,23 +1764,38 @@
       else { toast("Export not supported here"); }
     } else if(e.type==="draw"){
       fetch(e.image).then(function(r){return r.blob();}).then(function(blob){
-        var file=new File([blob],"awaken-drawing.png",{type:"image/png"});
+        var file=new File([blob],"permission-drawing.png",{type:"image/png"});
         if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission drawing"}).catch(function(){}); }
-        else { downloadBlob(blob,"awaken-drawing.png"); toast("Saved image"); }
+        else { downloadBlob(blob,"permission-drawing.png"); toast("Saved image"); }
       });
     } else if(e.type==="voice"){
       var ext=(e.mime&&e.mime.indexOf("webm")>-1)?"webm":"m4a";
-      var file=new File([e.audio],"awaken-voice."+ext,{type:e.mime||"audio/mp4"});
+      var file=new File([e.audio],"permission-voice."+ext,{type:e.mime||"audio/mp4"});
       if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission voice note"}).catch(function(){}); }
-      else { downloadBlob(e.audio,"awaken-voice."+ext); toast("Saved audio"); }
+      else { downloadBlob(e.audio,"permission-voice."+ext); toast("Saved audio"); }
     }
   }
   function downloadBlob(blob,name){ var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },500); }
 
   /* ============================================================
+     EXTERNAL WEBSITE LINK — Capacitor Browser.open with window.open
+     fallback, so the link works inside the native WKWebView shell.
+     ============================================================ */
+  var SITE_URL="https://jessicaleighbiles.com";
+  function openSite(){
+    var Browser=capPlugin("Browser");
+    if(capNative() && Browser){
+      try{ Promise.resolve(Browser.open({ url:SITE_URL })).catch(function(){ window.open(SITE_URL,"_blank"); }); return; }catch(e){}
+    }
+    try{ window.open(SITE_URL,"_blank","noopener"); }catch(e){ location.href=SITE_URL; }
+  }
+  $("siteLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(); });
+  $("setSite").addEventListener("click", function(){ openSite(); });
+
+  /* ============================================================
      SETTINGS SHEET
      ============================================================ */
-  function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); }
+  function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); updateProfileSub(); }
   function closeSheet(){ $("sheet-scrim").classList.remove("show"); $("settingsSheet").classList.remove("show"); }
   $("btnSettings").addEventListener("click", openSheet);
   $("sheet-scrim").addEventListener("click", closeSheet);
@@ -1075,11 +1808,12 @@
     else { enableFace().then(function(){ toast("Face ID enabled"); syncFaceToggle(); })
       .catch(function(){ toast("Couldn’t enable Face ID"); syncFaceToggle(); }); }
   });
+  $("setProfile").addEventListener("click", function(){ closeSheet(); openOnboard(true); });
   $("setPin").addEventListener("click", function(){ closeSheet(); showLock("change-old", showApp); });
   $("setErase").addEventListener("click", function(){
-    if(confirm("Erase ALL entries permanently? This cannot be undone.")){
-      if(confirm("Are you sure? Every entry will be gone forever.")){
-        dbClear().then(function(){ toast("Everything erased"); closeSheet(); showApp(); }); } }
+    if(confirm("Erase ALL entries and notebook pages permanently? This cannot be undone.")){
+      if(confirm("Are you sure? Everything will be gone forever.")){
+        Promise.all([dbClear(), nbClear()]).then(function(){ nbPages=[""]; nbIndex=0; nbLoaded=false; toast("Everything erased"); closeSheet(); showApp(); }); } }
   });
 
   /* ============================================================
@@ -1089,192 +1823,39 @@
     haptic(10); var mode=m.dataset.mode;
     if(mode==="text") startText(); else if(mode==="voice") startVoice(); else startDrawView();
   }); });
+  document.querySelectorAll(".depth").forEach(function(b){ b.addEventListener("click", function(){ setMode(b.dataset.depth); haptic(6); }); });
   $("anotherPrompt").addEventListener("click", anotherPrompt);
   $("viewAll").addEventListener("click", function(){ showView("journal"); });
-  document.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ showApp(); }); });
+  $("cardNotebook").addEventListener("click", openNotebook);
+  $("btnNotebook").addEventListener("click", openNotebook);
+  document.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ if($("v-notebook").classList.contains("active") && nbDirty){ nbSave().then(showApp); } else { showApp(); } }); });
   document.querySelectorAll("[data-discard]").forEach(function(b){ b.addEventListener("click", function(){
     if(mediaRec && mediaRec.state==="recording") stopRecord(); cleanupVoice(); showApp(); }); });
   $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
 
-  bindCanvas();
-  window.addEventListener("resize", function(){ if($("v-draw").classList.contains("active")){ var snap=strokes.slice(); setupCanvas(); strokes=snap; redraw(); } });
+  window.addEventListener("resize", function(){
+    if($("v-draw").classList.contains("active") && drawPad){ setTimeout(function(){ drawPad.resize(); },50); }
+    if($("v-notebook").classList.contains("active") && nbPad){ commitCurrentPage(); setTimeout(function(){ nbPad.resize(); loadPageIntoPad(); },50); }
+  });
 
   /* ============================================================
      BOOT
      ============================================================ */
-  buildPad();
-  if(hasPin()){ showLock("enter", showApp); }
-  else { showLock("set", function(){ showApp(); }); }
+  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad();
 
-  /* bridge so the Tapping module can drive navigation */
-  window.Permission = { showView: showView, showApp: showApp, refreshLists: refreshLists };
-})();
-</script>
-
-<script>
-/* ============================================================
-   TAPPING TAB MODULE
-   Audience-facing. Reads a public JSON feed of tapping videos
-   (published on Jessica's site) and plays them natively.
-   No admin, no backend, no upload — management lives on the site.
-   ============================================================ */
-(function(){
-  "use strict";
-  var $=function(id){ return document.getElementById(id); };
-  var CFG=window.TAPPING_CONFIG||{};
-  var FEED_URL=(CFG.FEED_URL||"").trim();
-  var videos=[], state="idle"; /* idle | loading | loaded | empty | error */
-
-  function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-
-  /* ---- tab bar + chrome visibility (called by core showView) ---- */
-  window.__permTab=function(id){
-    var top=(id==="home"||id==="journal"||id==="tapping");
-    var bar=$("permTabbar"); if(bar) bar.classList.toggle("show", top);
-    document.body.classList.toggle("has-tabbar", top);
-    var tj=$("tabJournal"), tt=$("tabTapping");
-    if(tj) tj.classList.toggle("on", id==="home"||id==="journal");
-    if(tt) tt.classList.toggle("on", id==="tapping");
-    /* the journal footer line is journal-specific — hide it on Tapping */
-    var f=document.querySelector(".foot"); if(f) f.style.display=(id==="tapping")?"none":"";
-  };
-
-  function openTapping(){
-    if(window.Permission) window.Permission.showView("tapping");
-    if(state==="idle"||state==="error"){ loadFeed(); } else { render(); }
-    haptic();
-  }
-  function openJournal(){ if(window.Permission) window.Permission.showApp(); haptic(); }
-  function haptic(){ if(navigator.vibrate){ try{ navigator.vibrate(8); }catch(e){} } }
-
-  /* ---- feed ---- */
-  function loadFeed(){
-    if(!FEED_URL){ state="empty"; render(); return; }
-    state="loading"; render();
-    var done=false, ctrl=("AbortController" in window)?new AbortController():null;
-    var to=setTimeout(function(){ if(!done && ctrl) ctrl.abort(); },12000);
-    fetch(FEED_URL,{ cache:"no-store", signal:ctrl?ctrl.signal:undefined })
-      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-      .then(function(data){ done=true; clearTimeout(to);
-        videos=normalize(data);
-        state=videos.length?"loaded":"empty";
-        render();
-      })
-      .catch(function(){ done=true; clearTimeout(to); state="error"; render(); });
-  }
-  function normalize(data){
-    var arr=Array.isArray(data)?data:(data&&Array.isArray(data.videos)?data.videos:[]);
-    var out=[];
-    arr.forEach(function(v){
-      if(!v) return;
-      var url=v.videoUrl||v.embedUrl||v.url||v.video||"";
-      if(!url) return;
-      out.push({
-        title:(v.title||v.name||"Untitled"),
-        description:(v.description||v.desc||""),
-        url:String(url).trim(),
-        thumb:String(v.thumbnailUrl||v.thumbnail||v.thumb||"").trim(),
-        date:(v.publishedAt||v.date||v.published||"")
-      });
-    });
-    return out;
-  }
-
-  /* ---- video kind detection ---- */
-  function ytId(u){ var m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/); return m?m[1]:null; }
-  function vimeoId(u){ var m=u.match(/player\.vimeo\.com\/video\/(\d+)/)||u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return m?m[1]:null; }
-  function isFile(u){ return /\.(mp4|m4v|mov|webm|ogg|ogv)(\?|#|$)/i.test(u); }
-  function thumbFor(v){ if(v.thumb) return v.thumb; var y=ytId(v.url); if(y) return "https://img.youtube.com/vi/"+y+"/hqdefault.jpg"; return ""; }
-  function prettyDate(d){ try{ var dt=new Date(d); if(isNaN(dt.getTime())) return ""; var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return m[dt.getMonth()]+" "+dt.getDate()+", "+dt.getFullYear(); }catch(e){ return ""; } }
-
-  /* ---- render ---- */
-  function applyCopy(){ if(CFG.TITLE) $("tapTitle").textContent=CFG.TITLE; if(CFG.SUBTITLE) $("tapSub").textContent=CFG.SUBTITLE; }
-  function render(){
-    applyCopy();
-    var list=$("tapList"); if(!list) return;
-    if(state==="loading"){
-      list.innerHTML='<div class="empty"><div class="big"><span class="tap-spin"></span></div><div class="s" style="margin-top:14px;">Loading…</div></div>';
-      return;
-    }
-    if(state==="error"){
-      list.innerHTML=stateBlock(ICON_ERROR, CFG.ERROR_HEADLINE||"Couldn’t load the videos", CFG.ERROR_SUB||"Please check your connection and try again.", true, "var(--muted)");
-      var b=$("tapRetry"); if(b) b.addEventListener("click", loadFeed);
-      return;
-    }
-    if(state==="empty"||!videos.length){
-      list.innerHTML=stateBlock(ICON_EMPTY, CFG.EMPTY_HEADLINE||"New tapping videos are on the way", CFG.EMPTY_SUB||"Check back soon.", false, "var(--faint)");
-      return;
-    }
-    var grid=document.createElement("div"); grid.className="tap-grid";
-    videos.forEach(function(v){ grid.appendChild(card(v)); });
-    list.innerHTML=""; list.appendChild(grid);
-  }
-  var ICON_EMPTY='<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l1.7 4.6L18.3 9.5l-4.6 1.7L12 15.8l-1.7-4.6L5.7 9.5l4.6-1.7z"/><path d="M18.6 14.4l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>';
-  var ICON_ERROR='<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17.5a4 4 0 0 1-.5-7.97A5 5 0 0 1 16 9a3.5 3.5 0 0 1 1.2 6.8"/><path d="M8.5 20.5l1-2M12 21l1-2M15.5 20.5l1-2"/></svg>';
-  function stateBlock(icon,h,s,retry,color){
-    return '<div class="empty"><div class="big" style="line-height:1;'+(color?'color:'+color+';':'')+'">'+icon+'</div><div class="t">'+esc(h)+'</div><div class="s">'+esc(s)+'</div>'+
-      (retry?'<div class="tap-retry"><button class="btn primary small" id="tapRetry" type="button" style="width:auto;">Try again</button></div>':'')+'</div>';
-  }
-  function card(v){
-    var el=document.createElement("div"); el.className="tap-card"; el.setAttribute("role","button"); el.tabIndex=0;
-    var t=thumbFor(v);
-    var secondary = v.description ? esc(v.description) : (v.date? esc(prettyDate(v.date)) : "");
-    el.innerHTML=
-      '<div class="tap-thumb">'+
-        (t?'<img loading="lazy" src="'+esc(t)+'" alt="" onerror="this.style.display=\'none\'">':'')+
-        '<div class="play"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>'+
-      '</div>'+
-      '<div class="tap-cap"><div class="t">'+esc(v.title)+'</div>'+
-        (secondary?'<div class="s">'+secondary+'</div>':'')+
-      '</div>';
-    el.addEventListener("click", function(){ openPlayer(v); });
-    el.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openPlayer(v); } });
-    return el;
-  }
-
-  /* ---- full-screen player ---- */
-  function openPlayer(v){
-    var frame=$("tapFrame"); frame.innerHTML="";
-    var y=ytId(v.url), vm=vimeoId(v.url);
-    if(y){
-      var f=document.createElement("iframe");
-      f.src="https://www.youtube-nocookie.com/embed/"+y+"?playsinline=1&rel=0&autoplay=1&modestbranding=1";
-      f.allow="autoplay; encrypted-media; picture-in-picture; fullscreen";
-      f.setAttribute("allowfullscreen",""); frame.appendChild(f);
-    } else if(vm){
-      var fv=document.createElement("iframe");
-      fv.src="https://player.vimeo.com/video/"+vm+"?autoplay=1&playsinline=1";
-      fv.allow="autoplay; fullscreen; picture-in-picture";
-      fv.setAttribute("allowfullscreen",""); frame.appendChild(fv);
-    } else if(isFile(v.url) || !/^https?:/i.test(v.url)){
-      var vid=document.createElement("video");
-      vid.src=v.url; vid.controls=true; vid.autoplay=true; vid.preload="metadata";
-      vid.setAttribute("playsinline",""); vid.setAttribute("webkit-playsinline","");
-      frame.appendChild(vid);
-      try{ var p=vid.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){}
+  function bootAfterPin(firstRun){
+    if(firstRun && !hasProfile()){
+      afterAuthGoesToOnboarding=true;
+      openOnboard(false);   // onboarding, then showApp() via closeOnboard
     } else {
-      var fe=document.createElement("iframe");
-      fe.src=v.url; fe.allow="autoplay; fullscreen; encrypted-media; picture-in-picture";
-      fe.setAttribute("allowfullscreen",""); frame.appendChild(fe);
+      showApp();
     }
-    $("tapPlayerTitle").textContent=v.title||"";
-    $("tapPlayerDesc").textContent=v.description||"";
-    $("tapPlayer").classList.add("show");
-    haptic();
   }
-  function closePlayer(){ var p=$("tapPlayer"); if(p) p.classList.remove("show"); var fr=$("tapFrame"); if(fr) fr.innerHTML=""; }
+  if(hasPin()){ showLock("enter", function(){ bootAfterPin(false); }); }
+  else { showLock("set", function(){ bootAfterPin(true); }); }
 
-  /* ---- wire ---- */
-  function wire(){
-    applyCopy();
-    var tj=$("tabJournal"); if(tj) tj.addEventListener("click", openJournal);
-    var tt=$("tabTapping"); if(tt) tt.addEventListener("click", openTapping);
-    var c=$("tapPlayerClose"); if(c) c.addEventListener("click", closePlayer);
-    var pl=$("tapPlayer"); if(pl) pl.addEventListener("click", function(e){ if(e.target===pl) closePlayer(); });
-    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && $("tapPlayer") && $("tapPlayer").classList.contains("show")) closePlayer(); });
-  }
-  wire();
+  /* expose a tiny bridge for debugging / potential future modules */
+  window.Permission = { showView: showView, showApp: showApp, refreshLists: refreshLists, version: APP_VERSION };
 })();
 </script>
 </body>
