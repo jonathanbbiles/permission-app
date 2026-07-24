@@ -62,9 +62,9 @@ workflows:
           NEXT=$(date +%s)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
           # Bump the marketing version: the 1.1 "Tapping" train may be closed in review,
-          # so this Tapping-removed release ships as 1.2.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.2" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.2" ios/App/App/Info.plist
-          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing); CFBundleShortVersionString = 1.2"
+          # so this Tapping-removed release ships as 1.2.0.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.2.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.2.0" ios/App/App/Info.plist
+          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing); CFBundleShortVersionString=1.2.0"
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true
