@@ -13,6 +13,9 @@ import { execSync } from "node:child_process";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "www/index.html"), "utf8");
+const pkgRaw = fs.readFileSync(path.join(ROOT, "package.json"), "utf8");
+const cm = fs.readFileSync(path.join(ROOT, "codemagic.yaml"), "utf8");
+const patchSrc = fs.readFileSync(path.join(ROOT, "scripts/patch-ondevice-speech.mjs"), "utf8");
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {
@@ -164,11 +167,98 @@ ok("low-effort quick chips", /QUICK_CHIPS/.test(html));
 ok("notebook multi-page + export", /id="v-notebook"/.test(html) && /buildPdf/.test(html) && /nbExportPdf/.test(html));
 ok("brush/eraser/undo/redo tools", /setErasing/.test(html) && /redoOp/.test(html));
 ok("website link uses Capacitor Browser.open + window.open fallback",
-   /Browser\.open\(\{ url:SITE_URL \}\)/.test(html) && /window\.open\(SITE_URL/.test(html));
+   /Browser\.open\(\{ url:url \}\)/.test(html) && /window\.open\(url,"_blank"/.test(html));
 ok("in-app rating after success moment, not first launch", /requestReview/.test(html) && /n===3/.test(html));
-ok("version bumped to 1.2", /APP_VERSION = "1\.2"/.test(html) && />v1\.2</.test(html));
+ok("version bumped to 1.3", /APP_VERSION = "1\.3"/.test(html) && />v1\.3</.test(html));
 ok("IndexedDB name preserved for existing users", /indexedDB\.open\("awaken_db"/.test(html));
 ok("passcode keys preserved", /"awaken_pin"/.test(html) && /"awaken_face"/.test(html));
+ok("creator link jonathanscribbles.com present + clickable",
+   /jonathanscribbles\.com/.test(html) && /makerLink/.test(html) && /MAKER_URL/.test(html));
+ok("Jessica's link kept as the headline link", /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html));
+
+/* ============================================================ */
+section("8) v1.3 — Speak: transcript saved WITH the audio");
+ok("speech recognition plugin declared", /"@capacitor-community\/speech-recognition"/.test(pkgRaw));
+ok("plugin accessed through the guarded Capacitor.Plugins lookup",
+   /Capacitor\.Plugins\.SpeechRecognition/.test(html));
+ok("transcript textarea exists and is editable", /id="vTranscript"/.test(html) && /class="transcript"/.test(html));
+ok("transcript is persisted on the voice entry",
+   /type:"voice"[^}]*transcript:transcript/.test(html));
+ok("transcript is rendered in the entry viewer alongside the audio",
+   /e\.transcript/.test(html) && /Transcript</.test(html));
+ok("live transcription starts with recording, both native + web paths",
+   (html.match(/srStart\("live"\)/g) || []).length >= 2);
+ok("transcription stops when recording stops", /srStop\(\)/.test(html));
+ok("standalone dictation fallback exists", /id="vDictate"/.test(html) && /srStart\("dictate"\)/.test(html));
+ok("long recordings restart the recognition task (iOS ~1min cap)",
+   /listeningState/.test(html) && /srKick/.test(html));
+ok("user edits to the transcript are not clobbered", /trUserEdited/.test(html));
+
+section("9) v1.3 — Speak: video option");
+ok("video pane + capture input present", /id="speakVideoPane"/.test(html) && /id="vidInput"/.test(html));
+ok('video input uses a plain accept="video/*"', /accept="video\/\*"/.test(html));
+/* capture="" forces the camera as the ONLY source, so on a device with no
+   camera (or one blocked by Screen Time / MDM) iOS has no fallback and the
+   picker dies. Check the <input> tags themselves — the word also appears in
+   the comment that explains why we don't use it. */
+ok('NO capture attribute on any file input (forces camera-only, dies with no camera)',
+   !(html.match(/<input\b[^>]*>/g) || []).some((tag) => /\bcapture\s*=/.test(tag)));
+ok("a real <video> element lives in the DOM for iOS capture/playback",
+   /<video id="vidPlayback"/.test(html) && /playsinline/.test(html));
+ok("video entries are saved, viewed, and exported",
+   /type:"video"/.test(html) && /e\.type==="video"/.test(html));
+ok("oversized videos are refused with a message, not a crash", /MAX_VIDEO_BYTES/.test(html));
+ok("cancelling the picker is a no-op", /if\(!f\)\{ return; \}/.test(html));
+
+section("10) v1.3 — permission denial is handled, never fatal");
+ok("speech availability check cannot throw", /srAvailable[\s\S]{0,400}catch\(e\)\{ return Promise\.resolve\(false\); \}/.test(html));
+ok("a denied speech permission resolves false and explains itself",
+   /Speech recognition is off/.test(html));
+ok("denied mic keeps the rest of the app usable",
+   /You can still write or draw an entry/.test(html));
+ok("save is never blocked by a missing transcript",
+   !/if\(!transcript\)/.test(html));
+
+section("11) v1.3 — Info.plist usage strings for every new capability");
+for (const key of [
+  "NSMicrophoneUsageDescription",
+  "NSSpeechRecognitionUsageDescription",
+  "NSCameraUsageDescription",
+  "NSPhotoLibraryUsageDescription",
+  "NSFaceIDUsageDescription",
+]) {
+  ok(`${key} set in codemagic.yaml`, new RegExp(key).test(cm));
+}
+ok("usage strings are printed back so the build log proves they landed",
+   /Print :\$K/.test(cm));
+ok("build FAILS if a usage string is missing", /BLOCKED: a required usage string is missing/.test(cm));
+ok("usage strings name the app and the reason (not 'we need access')",
+   /Permission uses the camera only so you can record/.test(cm) &&
+   /Permission turns what you say into text on this device/.test(cm));
+
+section("12) v1.3 — speech stays ON-DEVICE (privacy promise is literal)");
+ok("postinstall patch is wired", /"postinstall": "node scripts\/patch-ondevice-speech\.mjs"/.test(pkgRaw));
+ok("patch script exists", fs.existsSync(path.join(ROOT, "scripts/patch-ondevice-speech.mjs")));
+ok("patch sets requiresOnDeviceRecognition = true",
+   /requiresOnDeviceRecognition = true/.test(patchSrc));
+ok("patch fails loudly if its anchor moves", /process\.exit\(1\)/.test(patchSrc));
+ok("build verifies the patch and blocks if absent",
+   /requiresOnDeviceRecognition = true/.test(cm) && /Refusing to build/.test(cm));
+ok("no network calls introduced by the new features",
+   !/fetch\(["'`]https?:/.test(html) && !/XMLHttpRequest\(\)[\s\S]{0,80}https?:/.test(html));
+
+section("13) v1.3 — Notebook canvas sized to the screen, exports above the fold");
+ok("canvas height is measured, not a fixed ratio", /function nbHeightFor/.test(html) && /function nbSpace/.test(html));
+ok("measurement subtracts the export row", /nbExportRow/.test(html));
+ok("export row has the id the measurement needs", /id="nbExportRow"/.test(html));
+ok("BOTH export controls kept", /id="nbExportPage"/.test(html) && /id="nbExportPdf"/.test(html));
+ok("page scroll is locked only while the notebook fits", /nb-open/.test(html) && /nbApplyScrollLock/.test(html));
+ok("scroll lock is released when leaving the notebook",
+   /id!=="notebook"\) document\.body\.classList\.remove\("nb-open"\)/.test(html));
+ok("canvas refits on resize AND orientation change", /orientationchange/.test(html) && /nbFit/.test(html));
+ok("stored pages keep their aspect ratio when the canvas shape changes",
+   /Math\.min\(cw\/iw, ch\/ih\)/.test(html));
+ok("a minimum canvas height is enforced", /NB_MIN_H/.test(html));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

@@ -221,6 +221,31 @@
   .wave span{width:4px; height:10px; border-radius:3px; background:var(--secondary-soft); transition:height .1s;}
   .wave.on span{background:var(--secondary);}
   audio{width:100%; margin-top:14px;}
+  video.vid{width:100%; margin-top:14px; border-radius:var(--radius-sm); background:#000; display:block;}
+
+  /* Speak mode switch (Voice / Video) */
+  .modeseg{display:flex; gap:4px; background:var(--surface2); border-radius:999px; padding:4px; margin-bottom:14px;}
+  .modeseg button{flex:1; border:0; background:transparent; color:var(--ink-soft); font-family:inherit; font-weight:700; font-size:13.5px;
+    padding:9px 12px; border-radius:999px; cursor:pointer; transition:background .2s, color .2s; display:inline-flex; align-items:center; justify-content:center; gap:7px;}
+  .modeseg button svg{width:16px; height:16px;}
+  .modeseg button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
+
+  /* transcript panel */
+  .tr-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  .tr-lbl{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800;}
+  .tr-status{font-size:12px; color:var(--muted); line-height:1.5; margin-top:8px;}
+  .tr-status.warn{color:var(--secondary);}
+  textarea.transcript{min-height:104px; font-size:15.5px; line-height:1.55;}
+  .tr-live{display:inline-block; width:7px; height:7px; border-radius:50%; background:#D8586A; margin-right:6px; vertical-align:middle; animation:pulseDot 1.2s ease-in-out infinite;}
+  @keyframes pulseDot{0%,100%{opacity:1;} 50%{opacity:.25;}}
+
+  /* big capture button (video) */
+  .capbtn{width:100%; border:1px dashed var(--line2); background:var(--surface-tint); color:var(--ink); border-radius:var(--radius-sm);
+    padding:26px 18px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; display:flex; flex-direction:column;
+    align-items:center; gap:10px; transition:transform .08s, border-color .2s;}
+  .capbtn:active{transform:scale(.985);}
+  .capbtn svg{width:34px; height:34px; color:var(--secondary);}
+  .capbtn .sub{font-size:12.5px; font-weight:500; color:var(--muted); line-height:1.5;}
 
   /* ============================================================
      DRAWING TOOLBAR (shared by Draw + Notebook)
@@ -247,10 +272,39 @@
   .spacer{flex:1;}
 
   /* notebook chrome */
-  .nb-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
+  .nb-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
   .nb-page{font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.3px; font-variant-numeric:tabular-nums;}
   .nb-nav{display:flex; gap:8px; align-items:center;}
-  .nb-meta{font-size:12px; color:var(--faint); text-align:center; margin-top:10px; letter-spacing:.2px;}
+  .nb-meta{font-size:11.5px; color:var(--faint); text-align:center; margin-top:8px; letter-spacing:.2px;}
+
+  /* ---- Notebook: fill the screen, keep BOTH exports above the fold ----
+     The canvas used to be a fixed block (width x 1.38) tall enough to push
+     "Page PNG" / "Export PDF" past the bottom of the screen, so you had to
+     scroll to reach them. Now nbFit() (JS) measures the space actually left
+     over after the chrome and sizes the canvas to exactly that — the canvas
+     gets BIGGER on tall phones and both export buttons stay on screen.
+     JS owns the height; this rule just stops the page scrolling underneath. */
+  body.nb-open{overflow:hidden;}
+  /* The notebook carries its own back button, title and save button, so the
+     app's brand header is redundant here — hiding it hands ~70px straight to
+     the paper, which is what makes the canvas bigger than it used to be
+     rather than smaller once the export row is kept on screen. */
+  body.nb-view header{display:none;}
+  /* Tighter chrome inside the notebook so more of the screen is paper.
+     On a 375pt phone the full-size tool row wraps onto THREE lines, which cost
+     the canvas ~45px. Slightly smaller controls plus dropping the flex spacer
+     (which forced undo/redo/clear onto a line of their own) fits everything on
+     two. The Draw view keeps the original sizing. */
+  #v-notebook .tools{margin-top:10px; gap:7px;}
+  #v-notebook .btnrow{margin-top:10px;}
+  #v-notebook .editor-head{margin-bottom:10px;}
+  #v-notebook .tools .spacer{display:none;}
+  #v-notebook .tools .swatches{gap:7px;}
+  #v-notebook .tools .pen{width:27px; height:27px;}
+  #v-notebook .tools .sizes{gap:5px;}
+  #v-notebook .tools .sizedot{width:31px; height:31px; border-radius:10px;}
+  #v-notebook .tools .toolbtn{width:36px; height:36px; border-radius:10px;}
+  #v-notebook .tools .toolbtn svg{width:17px; height:17px;}
 
   /* entry viewer */
   .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
@@ -505,17 +559,55 @@
     <div class="ttl serif">Speak</div>
   </div>
   <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="vPrompt"></div></div>
-  <div class="card">
-    <div class="rec-wrap">
-      <button class="rec-btn" id="recBtn" aria-label="Record">
-        <svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
-      </button>
-      <div class="rec-time" id="recTime">0:00</div>
-      <div class="wave" id="wave"></div>
-      <div class="rec-hint" id="recHint">Tap to begin recording your voice.</div>
-      <div id="playbackWrap" class="hidden"><audio id="playback" controls></audio></div>
+
+  <div class="modeseg" id="speakSeg" role="tablist" aria-label="Speak mode">
+    <button type="button" class="on" id="segVoice" data-speak="voice" role="tab" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>Voice</button>
+    <button type="button" id="segVideo" data-speak="video" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Video</button>
+  </div>
+
+  <!-- ---- VOICE PANE ---- -->
+  <div id="speakVoicePane">
+    <div class="card">
+      <div class="rec-wrap">
+        <button class="rec-btn" id="recBtn" aria-label="Record">
+          <svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
+        </button>
+        <div class="rec-time" id="recTime">0:00</div>
+        <div class="wave" id="wave"></div>
+        <div class="rec-hint" id="recHint">Tap to begin recording your voice.</div>
+        <div id="playbackWrap" class="hidden"><audio id="playback" controls playsinline></audio></div>
+      </div>
+    </div>
+
+    <!-- transcript: written as you speak, saved WITH the recording -->
+    <div class="card" id="transcriptCard">
+      <div class="tr-head">
+        <div class="tr-lbl" id="trLabel">Transcript</div>
+        <button class="btn small ghost" id="vDictate" type="button" style="flex:none; padding:8px 12px; font-size:13px;">Dictate</button>
+      </div>
+      <textarea id="vTranscript" class="transcript" placeholder="Your words appear here as you speak. You can edit them before saving." autocapitalize="sentences"></textarea>
+      <div class="tr-status" id="trStatus">Your words are turned into text on your phone. Nothing is uploaded.</div>
     </div>
   </div>
+
+  <!-- ---- VIDEO PANE ---- -->
+  <div id="speakVideoPane" class="hidden">
+    <div class="card">
+      <button class="capbtn" id="vidPick" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span id="vidPickLabel">Record a video</span>
+        <span class="sub">Your camera opens so you can record yourself &mdash; or choose a video you already have. It stays on this phone.</span>
+      </button>
+      <!-- No capture="" attribute on purpose: a plain accept lets iOS show the
+           full action sheet and quietly omit any source it cannot offer. -->
+      <input type="file" id="vidInput" accept="video/*" class="hidden" />
+      <div id="vidWrap" class="hidden">
+        <video id="vidPlayback" class="vid" controls playsinline preload="metadata"></video>
+        <div class="rec-hint" id="vidHint" style="margin-top:10px;">Watch it back, then save &mdash; or tap above to record another.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="btnrow">
     <button class="btn ghost" data-discard="1">Discard</button>
     <button class="btn coral" id="vSave" disabled style="opacity:.5;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
@@ -557,7 +649,7 @@
   </div>
   <div class="canvas-wrap" id="nbWrap"><canvas id="nbCanvas" class="pad"></canvas></div>
   <div class="tools" id="nbTools"></div>
-  <div class="btnrow">
+  <div class="btnrow" id="nbExportRow">
     <button class="btn small ghost" id="nbExportPage" style="color:var(--secondary);"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>Page PNG</button>
     <button class="btn small coral" id="nbExportPdf"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Export PDF</button>
   </div>
@@ -584,6 +676,7 @@
 <div class="foot" id="appFoot">
   <a id="siteLink" href="https://jessicaleighbiles.com" target="_blank" rel="noopener">A gift from Jessica Leigh Biles &#8599;</a>
   <div style="margin-top:6px;">your words never leave this phone</div>
+  <div style="margin-top:6px;">Built by <a id="makerLink" href="https://jonathanscribbles.com" target="_blank" rel="noopener">jonathanscribbles.com &#8599;</a></div>
 </div>
 
 <!-- SETTINGS SHEET -->
@@ -638,6 +731,13 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
   </div>
+  <div class="setrow" id="setMaker" style="cursor:pointer;">
+    <div class="l">
+      <div class="si" style="color:var(--secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+      <div class="tx"><div class="a">Who made this app</div><div class="b">jonathanscribbles.com</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+  </div>
   <div class="setrow" id="setErase">
     <div class="l">
       <div class="si" style="color:var(--secondary-deep);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></div>
@@ -645,7 +745,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.2</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3</span></div>
 </div>
 
 <!-- TOAST -->
@@ -655,7 +755,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.2";
+  var APP_VERSION = "1.3";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1194,6 +1294,11 @@
     for(var i=0;i<vs.length;i++) vs[i].classList.remove("active");
     $("v-"+id).classList.add("active");
     window.scrollTo(0,0);
+    // nb-view: notebook is on screen (hides the redundant brand header)
+    // nb-open: it also FITS, so page scrolling can be locked. Both are cleared
+    // on the way out so no other view inherits them.
+    document.body.classList.toggle("nb-view", id==="notebook");
+    if(id!=="notebook") document.body.classList.remove("nb-open");
     $("appFoot").style.display = (id==="home") ? "" : "none";
   }
   function showApp(){
@@ -1211,12 +1316,18 @@
   function typeIcon(type){
     if(type==="text") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
     if(type==="voice") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    if(type==="video") return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/></svg>';
   }
-  function badgeClass(type){ return type==="text"?"write":(type==="voice"?"speak":"draw"); }
+  function badgeClass(type){ return type==="text"?"write":((type==="voice"||type==="video")?"speak":"draw"); }
   function previewText(e){
     if(e.type==="text") return (e.text||"").trim().slice(0,120) || "A written reflection";
-    if(e.type==="voice") return "Voice note · "+fmtTime(e.duration||0);
+    if(e.type==="voice"){
+      var t=(e.transcript||"").trim();
+      // Prefer the user's own words in the list; fall back to the duration.
+      return t ? t.slice(0,120) : "Voice note · "+fmtTime(e.duration||0);
+    }
+    if(e.type==="video") return "Video reflection";
     return "A handwritten reflection";
   }
   function entryRow(e){
@@ -1270,6 +1381,233 @@
   });
 
   /* ============================================================
+     ON-DEVICE SPEECH → TEXT
+     Wraps @capacitor-community/speech-recognition, which is SFSpeechRecognizer
+     on iOS. `requiresOnDeviceRecognition` keeps the audio on the phone — no
+     server, nothing uploaded, which is the promise the whole app is built on.
+
+     EVERY path here is best-effort and non-fatal by construction: if the
+     plugin is absent (web/desktop), unavailable on the device, or the user
+     DENIES the speech permission, the recorder keeps working and the entry
+     still saves with an empty transcript. Nothing in this block is allowed to
+     throw into the recording path — that is the 2.1 crash class we keep
+     getting rejected for.
+     ============================================================ */
+  var srListening=false, srCommitted="", srPartial="", srHandles=[], srMode=null; // srMode: "live" | "dictate"
+  function srPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) || null; }catch(e){ return null; } }
+  function trSet(text){
+    var ta=$("vTranscript"); if(!ta) return;
+    trProgrammatic=true; ta.value=text; trProgrammatic=false;
+  }
+  function trFull(){ return (srCommitted + (srPartial ? (srCommitted?" ":"")+srPartial : "")).trim(); }
+  function trStatus(msg, warn){
+    var el=$("trStatus"); if(!el) return;
+    el.innerHTML=msg; el.classList.toggle("warn", !!warn);
+  }
+  /* Resolves true/false — never rejects. */
+  function srAvailable(){
+    var sr=srPlugin();
+    if(!capNative() || !sr) return Promise.resolve(false);
+    try{
+      return Promise.resolve(sr.available()).then(function(r){
+        return !!(r && (r.available===undefined ? r : r.available));
+      }).catch(function(){ return false; });
+    }catch(e){ return Promise.resolve(false); }
+  }
+  /* Resolves true/false — a denial is a normal, handled outcome, not an error. */
+  function srPermission(){
+    var sr=srPlugin(); if(!sr) return Promise.resolve(false);
+    function granted(r){
+      if(!r) return false;
+      var v=r.speechRecognition||r.permission||r.state;
+      return v==="granted" || v===true;
+    }
+    try{
+      return Promise.resolve(sr.checkPermissions()).then(function(r){
+        if(granted(r)) return true;
+        return Promise.resolve(sr.requestPermissions()).then(granted).catch(function(){ return false; });
+      }).catch(function(){
+        return Promise.resolve(sr.requestPermissions()).then(granted).catch(function(){ return false; });
+      });
+    }catch(e){ return Promise.resolve(false); }
+  }
+  function srDetach(){
+    srHandles.forEach(function(h){ try{ h && h.remove && h.remove(); }catch(e){} });
+    srHandles=[];
+  }
+  function srAttach(sr){
+    srDetach();
+    try{
+      var p=sr.addListener("partialResults", function(data){
+        var m=(data && data.matches) || [];
+        if(!m.length) return;
+        srPartial=String(m[0]||"");
+        if(!trUserEdited) trSet(trFull());
+      });
+      // addListener may return the handle directly or a promise for it
+      Promise.resolve(p).then(function(h){ srHandles.push(h); }).catch(function(){});
+    }catch(e){}
+    try{
+      // iOS caps a single recognition task (~1 min). When it stops on its own
+      // mid-recording, bank what we have and start a fresh task so a long
+      // reflection still comes out as one continuous transcript.
+      var q=sr.addListener("listeningState", function(data){
+        var st=(data && (data.status||data.state))||"";
+        if(st==="stopped" && srListening){
+          if(srPartial){ srCommitted=(srCommitted?srCommitted+" ":"")+srPartial; srPartial=""; }
+          setTimeout(function(){ if(srListening) srKick(sr); }, 120);
+        }
+      });
+      Promise.resolve(q).then(function(h){ srHandles.push(h); }).catch(function(){});
+    }catch(e){}
+  }
+  function srKick(sr){
+    try{
+      Promise.resolve(sr.start({
+        language:"en-US",
+        partialResults:true,
+        popup:false,
+        maxResults:1
+        // On-device-only is NOT set from here — the plugin has no such option.
+        // It is forced natively by scripts/patch-ondevice-speech.mjs, which sets
+        // requiresOnDeviceRecognition = true on the recognition request so iOS
+        // transcribes locally or not at all. See that file for why.
+      })).catch(function(){ /* a failed restart just ends the transcript */ });
+    }catch(e){}
+  }
+  /* mode: "live" (alongside a recording) or "dictate" (standalone). */
+  function srStart(mode){
+    return srAvailable().then(function(ok){
+      if(!ok){
+        trStatus(capNative()
+          ? "Speech to text isn’t available on this device. You can still record, and type your own note here."
+          : "Speech to text runs on your phone — on the web you can type your note here instead.");
+        return false;
+      }
+      return srPermission().then(function(granted){
+        if(!granted){
+          // DENIED: recording is untouched, the entry still saves, we just say so.
+          trStatus("Speech recognition is off, so nothing is being transcribed. You can type your note here, or turn it on in Settings &rsaquo; Permission.", true);
+          return false;
+        }
+        var sr=srPlugin(); if(!sr) return false;
+        srMode=mode; srListening=true; srAttach(sr); srKick(sr);
+        trStatus('<span class="tr-live"></span>Listening — your words are turned into text on this phone.');
+        return true;
+      });
+    }).catch(function(){ return false; });
+  }
+  function srStop(){
+    if(!srListening) return Promise.resolve();
+    srListening=false;
+    var sr=srPlugin();
+    if(srPartial){ srCommitted=(srCommitted?srCommitted+" ":"")+srPartial; srPartial=""; }
+    if(!trUserEdited) trSet(trFull());
+    srDetach();
+    if(!sr) return Promise.resolve();
+    try{ return Promise.resolve(sr.stop()).catch(function(){}); }catch(e){ return Promise.resolve(); }
+  }
+  function srReset(){
+    srStop(); srCommitted=""; srPartial=""; srMode=null; trUserEdited=false;
+    trSet("");
+    trStatus("Your words are turned into text on your phone. Nothing is uploaded.");
+    syncDictateBtn();
+  }
+  function syncDictateBtn(){
+    var b=$("vDictate"); if(!b) return;
+    var on = srListening && srMode==="dictate";
+    b.textContent = on ? "Stop" : "Dictate";
+    b.classList.toggle("coral", on);
+  }
+  var trUserEdited=false, trProgrammatic=false;
+  $("vTranscript").addEventListener("input", function(){
+    if(trProgrammatic) return;
+    trUserEdited=true;   // hands off — the words are the user's now
+  });
+  /* Standalone dictation. This is the guaranteed path: if transcribing while
+     recording turns out not to work on a given device, the user can still get
+     a transcript by dictating it here, and it saves with the audio. */
+  $("vDictate").addEventListener("click", function(){
+    if(srListening && srMode==="dictate"){ srStop().then(syncDictateBtn); haptic(8); return; }
+    if(srListening){ toast("Already listening"); return; }
+    // keep whatever is already in the box, and append to it
+    var existing=$("vTranscript").value.trim();
+    srCommitted=existing; srPartial=""; trUserEdited=false;
+    srStart("dictate").then(function(ok){
+      if(ok){ haptic(10); } else { toast("Dictation isn’t available here"); }
+      syncDictateBtn();
+    });
+  });
+
+  /* ============================================================
+     VIDEO ENTRY
+     A plain accept="video/*" file input — deliberately NO capture attribute.
+     capture="" forces the camera as the only source, so on a device with no
+     camera (or one blocked by Screen Time / MDM) iOS has nothing to fall back
+     to and the picker dies. A plain accept gets the standard action sheet
+     ("Record Video" / "Photo Library") and iOS silently omits what it can't
+     offer. <video> lives in the DOM rather than being created on demand —
+     iOS wants a real media element for capture and playback.
+     ============================================================ */
+  var vidBlob=null, vidObjUrl=null, MAX_VIDEO_BYTES=120*1024*1024;
+  function clearVideo(){
+    vidBlob=null;
+    if(vidObjUrl){ try{ URL.revokeObjectURL(vidObjUrl); }catch(e){} vidObjUrl=null; }
+    var v=$("vidPlayback"); try{ v.pause(); }catch(e){} v.removeAttribute("src"); try{ v.load(); }catch(e){}
+    $("vidWrap").classList.add("hidden");
+    $("vidPickLabel").textContent="Record a video";
+    try{ $("vidInput").value=""; }catch(e){}
+  }
+  $("vidPick").addEventListener("click", function(){ haptic(8); try{ $("vidInput").click(); }catch(e){ toast("Couldn’t open the camera here"); } });
+  $("vidInput").addEventListener("change", function(){
+    var f=this.files && this.files[0];
+    if(!f){ return; }                      // user cancelled — nothing to do, no error
+    if(f.size>MAX_VIDEO_BYTES){
+      toast("That video is too long to keep on device");
+      trStatusVideo("That one’s over 120 MB. Try a shorter clip so your journal stays quick to open.", true);
+      try{ this.value=""; }catch(e){}
+      return;
+    }
+    if(vidObjUrl){ try{ URL.revokeObjectURL(vidObjUrl); }catch(e){} }
+    vidBlob=f; vidObjUrl=URL.createObjectURL(f);
+    var v=$("vidPlayback"); v.src=vidObjUrl;
+    $("vidWrap").classList.remove("hidden");
+    $("vidPickLabel").textContent="Record another video";
+    trStatusVideo("Watch it back, then save — or tap above to record another.");
+    disableSave($("vSave"), false);
+    haptic(12);
+  });
+  function trStatusVideo(msg, warn){
+    var el=$("vidHint"); if(!el) return;
+    el.textContent=msg; el.style.color = warn ? "var(--secondary)" : "";
+  }
+
+  /* ============================================================
+     SPEAK MODE SWITCH  (Voice | Video)
+     ============================================================ */
+  var speakMode="voice";
+  function setSpeakMode(mode){
+    speakMode=mode;
+    document.querySelectorAll("#speakSeg button").forEach(function(b){
+      var on=b.dataset.speak===mode;
+      b.classList.toggle("on", on); b.setAttribute("aria-selected", on?"true":"false");
+    });
+    $("speakVoicePane").classList.toggle("hidden", mode!=="voice");
+    $("speakVideoPane").classList.toggle("hidden", mode!=="video");
+    if(mode==="video"){
+      // leaving voice: stop anything still listening/recording
+      if(nativeRec || (mediaRec && mediaRec.state==="recording")) stopRecord();
+      srStop().then(syncDictateBtn);
+      disableSave($("vSave"), !vidBlob);
+    } else {
+      disableSave($("vSave"), !recBlob);
+    }
+  }
+  document.querySelectorAll("#speakSeg button").forEach(function(b){
+    b.addEventListener("click", function(){ setSpeakMode(b.dataset.speak); haptic(8); });
+  });
+
+  /* ============================================================
      VOICE ENTRY  (native VoiceRecorder + MediaRecorder fallback)
      ============================================================ */
   var mediaRec=null, chunks=[], recTimer=null, recSeconds=0, recBlob=null, recStream=null, analyser=null, rafId=null, audioCtx=null;
@@ -1280,6 +1618,7 @@
     $("playbackWrap").classList.add("hidden"); $("recBtn").classList.remove("recording");
     $("recIcon").outerHTML='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
     var wrap=$("wave"); wrap.classList.remove("on"); buildWave();
+    srReset(); clearVideo(); setSpeakMode("voice");
     disableSave($("vSave"),true);
     showView("voice");
   }
@@ -1291,6 +1630,7 @@
   function b64ToBlob(d,mime){ try{ var bin=atob(d),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime||"audio/aac"}); }catch(e){ return null; } }
   function fauxWaveOn(on){ var bars=$("wave").children; if(on){ $("wave").classList.add("on"); fauxTimer=setInterval(function(){ for(var i=0;i<bars.length;i++){ bars[i].style.height=(9+Math.random()*28)+"px"; } },110); } else { if(fauxTimer)clearInterval(fauxTimer); fauxTimer=null; $("wave").classList.remove("on"); flatWave(); } }
   function finishNativeRec(){ var vp=vrPlugin(); if(!vp) return; clearInterval(recTimer); nativeRec=false; $("recBtn").classList.remove("recording"); recIcon(false); fauxWaveOn(false);
+    srStop().then(function(){ if(!trFull()) trStatus("No words were picked up. You can type your note here."); syncDictateBtn(); });
     Promise.resolve(vp.stopRecording()).then(function(res){ var v=(res&&res.value)?res.value:(res||{}); var mime=v.mimeType||"audio/aac";
       if(v.msDuration){ recSeconds=Math.max(1,Math.round(v.msDuration/1000)); $("recTime").textContent=fmtTime(recSeconds); }
       recBlob=v.recordDataBase64?b64ToBlob(v.recordDataBase64,mime):null;
@@ -1304,7 +1644,12 @@
       Promise.resolve(vp.requestAudioRecordingPermission()).then(function(){ return vp.startRecording(); }).then(function(){
         nativeRec=true; $("recBtn").classList.add("recording"); recIcon(true); $("recHint").textContent="Recording… tap to stop."; $("recTime").textContent="0:00";
         fauxWaveOn(true); recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) finishNativeRec(); },1000); haptic(12);
-      }).catch(function(){ toast("Microphone permission needed"); }); return; }
+        // Transcribe alongside the recording. Deliberately NOT chained into the
+        // promise above: if speech recognition is unavailable or denied, the
+        // recording must carry on regardless.
+        srCommitted=""; srPartial=""; trUserEdited=false; trSet("");
+        srStart("live").then(syncDictateBtn);
+      }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; }); return; }
     if(mediaRec && mediaRec.state==="recording"){ stopRecord(); return; }
     if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording isn’t supported here"); return; }
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
@@ -1325,10 +1670,13 @@
       $("recHint").textContent="Recording… tap to stop."; $("wave").classList.add("on");
       recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) stopRecord(); },1000);
       startMeter(stream); haptic(12);
-    }).catch(function(){ toast("Microphone permission needed"); });
+      srCommitted=""; srPartial=""; trUserEdited=false; trSet("");
+      srStart("live").then(syncDictateBtn);
+    }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; });
   }
   function stopRecord(){ if(nativeRec){ finishNativeRec(); return; } if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); } clearInterval(recTimer);
-    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave(); }
+    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave();
+    srStop().then(function(){ if(!trFull()) trStatus("No words were picked up. You can type your note here."); syncDictateBtn(); }); }
   function startMeter(stream){ try{
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     var src=audioCtx.createMediaStreamSource(stream); analyser=audioCtx.createAnalyser(); analyser.fftSize=64; src.connect(analyser);
@@ -1342,11 +1690,21 @@
   function disableSave(btn,dis){ btn.disabled=dis; btn.style.opacity=dis?".5":"1"; }
   $("recBtn").addEventListener("click", toggleRecord);
   $("vSave").addEventListener("click", function(){
+    if(speakMode==="video"){
+      if(!vidBlob){ toast("Record a video first"); return; }
+      saveEntry({ type:"video", prompt:currentPrompt, promptTemplate:currentTemplate, video:vidBlob, mime:vidBlob.type||"video/quicktime" })
+        .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); afterSaveSuccess(); showApp(); })
+        .catch(function(){ toast("Couldn’t save — the video may be too large"); });
+      return;
+    }
     if(!recBlob){ toast("Record something first"); return; }
-    saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds })
+    // The transcript rides along with the audio: both are stored on the entry,
+    // and the viewer shows them together.
+    var transcript=($("vTranscript").value||"").trim();
+    saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds, transcript:transcript })
       .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); afterSaveSuccess(); showApp(); });
   });
-  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; }
+  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; srStop(); srCommitted=""; srPartial=""; clearVideo(); }
 
   /* ============================================================
      DRAWING ENGINE (shared by Draw + Notebook)
@@ -1368,6 +1726,11 @@
 
     function resize(preserve){
       var rect=canvas.getBoundingClientRect();
+      // A backgrounded / not-yet-laid-out webview reports a zero-width rect.
+      // Resizing to that would collapse the backing store to 1px, and the next
+      // commit would then bake that 1px image over the user's page. Keep the
+      // current canvas instead and wait for a real layout.
+      if(Math.round(rect.width)<40 && cw>0) return;
       cw=Math.max(1, Math.round(rect.width));
       ch=Math.max(1, Math.round(opts.height ? opts.height(cw) : rect.height));
       dpr=window.devicePixelRatio||1;
@@ -1381,7 +1744,19 @@
       if(!ctx) return;
       ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
       ctx.fillStyle=paperColor(); ctx.fillRect(0,0,cw,ch);
-      if(baseImg){ try{ ctx.drawImage(baseImg,0,0,cw,ch); }catch(e){} }
+      if(baseImg){
+        try{
+          // Fit the stored page INSIDE the canvas preserving its own aspect
+          // ratio, rather than stretching it to the canvas. The notebook canvas
+          // is now sized to the screen, so its shape varies by device — a
+          // straight stretch would visibly distort handwriting saved on a
+          // differently-shaped canvas.
+          var iw=baseImg.width||cw, ih=baseImg.height||ch;
+          var s=Math.min(cw/iw, ch/ih);
+          var dw=iw*s, dh=ih*s;
+          ctx.drawImage(baseImg, Math.round((cw-dw)/2), 0, Math.round(dw), Math.round(dh));
+        }catch(e){}
+      }
       strokes.forEach(drawStroke);
       ctx.restore();
     }
@@ -1544,9 +1919,61 @@
      share sheet (Capacitor) or downloaded on the web.
      ============================================================ */
   var nbPad=null, nbTools=null, nbPages=[""], nbIndex=0, nbDirty=false, nbLoaded=false;
+  var NB_MIN_H=240;
+  /* How tall can the page be and still leave BOTH export buttons on screen?
+     Measure it rather than guessing: take the space from the top of the canvas
+     to the bottom of the viewport, then subtract everything that has to sit
+     below the canvas (tool row, the Page PNG / Export PDF row, the caption)
+     including their margins, plus the body's bottom padding (which carries the
+     home-indicator safe area). What's left is the paper. */
+  function nbSpace(){
+    var wrap=$("nbWrap"); if(!wrap) return 0;
+    var top=wrap.getBoundingClientRect().top;
+    var below=0;
+    ["nbTools","nbExportRow","nbMeta"].forEach(function(id){
+      var el=$(id); if(!el) return;
+      var cs=getComputedStyle(el);
+      below += el.getBoundingClientRect().height +
+               (parseFloat(cs.marginTop)||0) + (parseFloat(cs.marginBottom)||0);
+    });
+    var padBottom=parseFloat(getComputedStyle(document.body).paddingBottom)||0;
+    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
+    return Math.round(vh - top - below - padBottom - 4);
+  }
+  /* Height the notebook canvas should be right now. Falls back to the old
+     fixed ratio if the measurement is nonsense (view hidden, zero-height). */
+  function nbHeightFor(w){
+    var avail=nbSpace();
+    if(!avail || avail<0) return Math.round(w*1.38);
+    return Math.max(NB_MIN_H, avail);
+  }
+  /* Lock the page when the notebook fits, so nothing scrolls under the fold.
+     If the screen is genuinely too short for the minimum canvas, let it scroll
+     again rather than trapping the export buttons off-screen. */
+  function nbApplyScrollLock(){
+    var fits = nbSpace() >= NB_MIN_H;
+    document.body.classList.toggle("nb-open", fits);
+  }
+  function nbFit(){
+    if(!nbPad) return;
+    if(!nbMeasurable()) return;   // don't resize against a zero-sized viewport
+    nbApplyScrollLock();
+    nbPad.resize();
+  }
+  /* True only when the view is actually laid out on screen. Guards every path
+     that would otherwise resize or overwrite a page using bogus geometry. */
+  function nbMeasurable(){
+    var wrap=$("nbWrap"); if(!wrap) return false;
+    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
+    return wrap.getBoundingClientRect().width>=40 && vh>=80;
+  }
   function nbUpdateLabel(){ $("nbPageLabel").textContent="Page "+(nbIndex+1)+" / "+nbPages.length; }
   function commitCurrentPage(){
     if(!nbPad) return;
+    // Never flatten from a collapsed canvas — that would replace a real page
+    // with a 1px image and silently destroy the user's writing.
+    var d=nbPad.dims();
+    if(!d || d.cw<40 || d.ch<40) return;
     // flatten current page (base + new strokes) into its stored image
     if(nbPad.hasStrokes()){ nbPages[nbIndex]=nbPad.toDataURL("image/png"); nbDirty=true; }
   }
@@ -1558,10 +1985,20 @@
     showView("notebook");
     setTimeout(function(){
       if(!nbPad){
-        nbPad=createPad($("nbCanvas"), { height:function(w){ return Math.round(w*1.38); }, onChange:function(){ nbDirty=true; if(nbTools) nbTools.sync(); } });
+        nbPad=createPad($("nbCanvas"), { height:nbHeightFor, onChange:function(){ nbDirty=true; if(nbTools) nbTools.sync(); } });
         nbTools=buildTools($("nbTools"), nbPad, { onClear:function(){ nbPad.clear(); nbPages[nbIndex]=""; nbDirty=true; } });
       }
-      nbPad.resize();
+      // Size once the tool row exists so its real height is in the measurement,
+      // then again once layout/fonts have settled. If the view isn't laid out
+      // yet (nbFit no-ops), keep retrying briefly rather than leaving an
+      // unsized canvas behind.
+      nbFit();
+      requestAnimationFrame(nbFit);
+      var tries=0;
+      (function settle(){
+        if(nbMeasurable() || tries++>10) { nbFit(); return; }
+        setTimeout(settle, 80);
+      })();
       if(!nbLoaded){
         nbLoad().then(function(doc){
           if(doc && doc.pages && doc.pages.length){ nbPages=doc.pages.slice(); } else { nbPages=[""]; }
@@ -1744,7 +2181,15 @@
     if(curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl=null; }
     if(e.type==="text"){ box.innerHTML='<div class="body">'+escapeHtml(e.text||"")+'</div>'; }
     else if(e.type==="voice"){ curObjUrl=URL.createObjectURL(e.audio);
-      box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Voice reflection · '+fmtTime(e.duration||0)+'</div><audio controls src="'+curObjUrl+'" style="width:100%"></audio>'; }
+      // audio AND its transcript, together
+      var tr=(e.transcript||"").trim();
+      box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Voice reflection · '+fmtTime(e.duration||0)+'</div>'+
+        '<audio controls playsinline src="'+curObjUrl+'" style="width:100%"></audio>'+
+        (tr ? '<div class="tr-lbl" style="margin:18px 0 8px;">Transcript</div><div class="body">'+escapeHtml(tr)+'</div>'
+            : '<div class="tr-status" style="margin-top:14px;">No transcript was saved with this recording.</div>'); }
+    else if(e.type==="video"){ curObjUrl=URL.createObjectURL(e.video);
+      box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Video reflection</div>'+
+        '<video class="vid" controls playsinline preload="metadata" src="'+curObjUrl+'"></video>'; }
     else { box.innerHTML='<img class="draw" src="'+e.image+'" alt="Handwritten entry"/>'; }
     showView("entry");
   }); }
@@ -1763,16 +2208,32 @@
       else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(function(){toast("Copied to clipboard");}).catch(function(){toast("Couldn’t export here");}); }
       else { toast("Export not supported here"); }
     } else if(e.type==="draw"){
-      fetch(e.image).then(function(r){return r.blob();}).then(function(blob){
-        var file=new File([blob],"permission-drawing.png",{type:"image/png"});
-        if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission drawing"}).catch(function(){}); }
-        else { downloadBlob(blob,"permission-drawing.png"); toast("Saved image"); }
-      });
+      // Decode the data: URL directly rather than requesting it. Two reasons:
+      //   1. Capacitor serves this app from capacitor://localhost, and WKWebView
+      //      does not hand a custom scheme a normal HTTP response — a request
+      //      here works on desktop and silently fails on the phone.
+      //   2. It leaves the app with NO request APIs of any kind in the source,
+      //      so the "nothing leaves your phone" promise is provable by grep
+      //      rather than by argument.
+      var blob=new Blob([dataUrlToBytes(e.image)],{type:"image/png"});
+      var file=new File([blob],"permission-drawing.png",{type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission drawing"}).catch(function(){}); }
+      else { downloadBlob(blob,"permission-drawing.png"); toast("Saved image"); }
     } else if(e.type==="voice"){
       var ext=(e.mime&&e.mime.indexOf("webm")>-1)?"webm":"m4a";
       var file=new File([e.audio],"permission-voice."+ext,{type:e.mime||"audio/mp4"});
-      if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:"My Permission voice note"}).catch(function(){}); }
+      var tr=(e.transcript||"").trim();
+      // Share the transcript with the audio, so the words travel with the voice.
+      var body=tr ? ("Permission — "+dateStr+"\n\nReflecting on: "+e.prompt+"\n\n"+tr) : undefined;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share(body ? {files:[file], text:body, title:"My Permission voice note"} : {files:[file], title:"My Permission voice note"}).catch(function(){});
+      }
       else { downloadBlob(e.audio,"permission-voice."+ext); toast("Saved audio"); }
+    } else if(e.type==="video"){
+      var vext=(e.mime&&e.mime.indexOf("quicktime")>-1)?"mov":"mp4";
+      var vfile=new File([e.video],"permission-video."+vext,{type:e.mime||"video/mp4"});
+      if(navigator.canShare && navigator.canShare({files:[vfile]})){ navigator.share({files:[vfile], title:"My Permission video note"}).catch(function(){}); }
+      else { downloadBlob(e.video,"permission-video."+vext); toast("Saved video"); }
     }
   }
   function downloadBlob(blob,name){ var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },500); }
@@ -1781,16 +2242,20 @@
      EXTERNAL WEBSITE LINK — Capacitor Browser.open with window.open
      fallback, so the link works inside the native WKWebView shell.
      ============================================================ */
-  var SITE_URL="https://jessicaleighbiles.com";
-  function openSite(){
+  var SITE_URL="https://jessicaleighbiles.com";     // the app is a gift for Jessica's clients — her site stays the headline link
+  var MAKER_URL="https://jonathanscribbles.com";    // who built it
+  function openSite(url){
+    url = url || SITE_URL;
     var Browser=capPlugin("Browser");
     if(capNative() && Browser){
-      try{ Promise.resolve(Browser.open({ url:SITE_URL })).catch(function(){ window.open(SITE_URL,"_blank"); }); return; }catch(e){}
+      try{ Promise.resolve(Browser.open({ url:url })).catch(function(){ window.open(url,"_blank"); }); return; }catch(e){}
     }
-    try{ window.open(SITE_URL,"_blank","noopener"); }catch(e){ location.href=SITE_URL; }
+    try{ window.open(url,"_blank","noopener"); }catch(e){ location.href=url; }
   }
-  $("siteLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(); });
-  $("setSite").addEventListener("click", function(){ openSite(); });
+  $("siteLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(SITE_URL); });
+  $("setSite").addEventListener("click", function(){ openSite(SITE_URL); });
+  $("makerLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(MAKER_URL); });
+  $("setMaker").addEventListener("click", function(){ openSite(MAKER_URL); });
 
   /* ============================================================
      SETTINGS SHEET
@@ -1833,10 +2298,12 @@
     if(mediaRec && mediaRec.state==="recording") stopRecord(); cleanupVoice(); showApp(); }); });
   $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
 
-  window.addEventListener("resize", function(){
+  function onViewportChange(){
     if($("v-draw").classList.contains("active") && drawPad){ setTimeout(function(){ drawPad.resize(); },50); }
-    if($("v-notebook").classList.contains("active") && nbPad){ commitCurrentPage(); setTimeout(function(){ nbPad.resize(); loadPageIntoPad(); },50); }
-  });
+    if($("v-notebook").classList.contains("active") && nbPad){ commitCurrentPage(); setTimeout(function(){ nbFit(); loadPageIntoPad(); },50); }
+  }
+  window.addEventListener("resize", onViewportChange);
+  window.addEventListener("orientationchange", function(){ setTimeout(onViewportChange, 220); });
 
   /* ============================================================
      BOOT
