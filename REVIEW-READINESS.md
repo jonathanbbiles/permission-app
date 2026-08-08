@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.3.0 (Speak transcripts + video; Notebook canvas resize; iPad layout)
-**Date:** 2026-08-08
+**Version:** 1.3.1 (Record rename; in-app-only recordings; Draw actions above the fold)
+**Date:** 2026-08-08 (device-feedback pass)
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -18,8 +18,41 @@ The three blockers from the 2026-08-07 run are now cleared:
 | Was blocked | Now |
 |---|---|
 | Universal build with no large-screen media query | **PASS** — real two-column iPad layout at ≥700px |
-| No 2048×2732 iPad screenshots | **PASS** — 4 rendered from the current build |
+| No 2048×2732 iPad screenshots | **PASS** — rendered from the current build |
 | No `appicon-1024.png` at repo root | **PASS** — 1024×1024, no alpha, re-embedded and verified every build |
+
+---
+
+## 1.3.1 — recordings are app-private, and that is enforced, not just intended
+
+Jonathan's device test raised this as core to the app's promise. Three
+independent layers, strongest first:
+
+1. **The OS will not allow it.** `NSPhotoLibraryAddUsageDescription` is **absent
+   from Info.plist**, so iOS refuses any attempt to add media to the photo
+   library — the app *cannot* write to Photos even if code tried. The build
+   **fails** if that key ever appears, so it cannot be reintroduced quietly.
+   (`NSPhotoLibraryUsageDescription` — read-only — stays, and only exists so the
+   user can pick an existing video to bring *into* the app.)
+2. **Nothing in the app even reaches for it.** No `@capacitor/camera`, no media
+   or photo-library plugin is installed at all, and there is no `savePhoto` /
+   `saveToGallery` / `CameraRoll` / `UISaveVideo` call anywhere in `www/`.
+3. **Where recordings actually live.** Audio and video are stored as Blobs in
+   **IndexedDB (`awaken_db`)**, inside the app's own container — the same place
+   as written and drawn entries. Verified end-to-end in a headless run: the
+   audio Blob, its transcript and the video Blob all persist on the entry record
+   and render back in the viewer.
+
+**No automatic export of any kind.** Every share path (`Export a copy`,
+`Page PNG`, `Export PDF`) sits behind an explicit tap. The one filesystem write
+in the app stages a file in the app's **own CACHE** directory purely to hand to
+the share sheet, and it is now **deleted immediately afterwards** so no loose
+copy is left behind.
+
+> The one thing that cannot be proven off-hardware: whether iOS's own picker
+> writes a camera-captured video to the camera roll before handing it to the
+> page. It should not — a web file input receives a temp file, and saving to
+> Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
 
 ---
 
@@ -115,7 +148,7 @@ iPad 13": 92% width, `home=grid [421px 421px]`, no overflow, no page errors.
   | `iphone65` | 1242×2688 | 4 |
   | `ipad13` | **2048×2732** | 4 |
 
-  Home · Speak-with-transcript · Notebook · an entry showing audio + transcript.
+  Home · Record-with-transcript · Notebook · Draw · an entry showing audio + transcript.
   Content is the app's own invented sample text — no third-party media, brands or
   encyclopedic text anywhere (the 4.1(a) "Copycats" rule that rejected Moodie).
   The test suite re-checks every file's exact pixel size on every run.
@@ -170,7 +203,7 @@ errors) proves the *repo* is clean, never that the *build* is.
 Run on a real iPhone from a clean install:
 
 1. **Cold launch from a clean install** (delete the app first).
-2. **Speak → Voice.** Record. Confirm the transcript fills in *while recording*.
+2. **Record → Voice.** Record. Confirm the transcript fills in *while recording*.
    ⚠️ **This is the #1 thing to check.** The recorder (`AVAudioRecorder`) and
    speech recognition (`AVAudioEngine` input tap) both want the microphone and
    both call `setCategory`/`setActive` on the shared audio session. If they
@@ -181,14 +214,23 @@ Run on a real iPhone from a clean install:
    minute; confirm the transcript keeps going (auto-restart) rather than stopping.
 4. **Edit the transcript**, then save. Confirm the edit survives and is not
    overwritten by late recognition results.
-5. **Speak → Video.** Confirm the action sheet offers **Record Video** *and*
+5. **Record → Video.** Confirm the action sheet offers **Record Video** *and*
    **Photo Library**. Record one, play it back, save, reopen from the journal.
 6. **Deny every permission on a second clean install** — microphone, speech,
    camera, photos. Confirm: no crash, the app stays usable, and each denial says
    something useful. (A missing usage string here is a `SIGABRT`, not a prompt.)
+6b. **Confirm the video did NOT land in Photos.** After saving a video entry,
+   open the Photos app and check the camera roll — the recording should not be
+   there. It should only exist inside Permission.
 7. **Notebook.** Confirm **Page PNG** and **Export PDF** are both visible without
    scrolling, on the smallest device you have. Confirm the canvas is bigger than
    in 1.2. Draw, add pages, rotate the device, confirm nothing is lost.
+7b. **Draw.** On first open, **Discard** and **Save entry** must both be visible
+   without scrolling, above the canvas. Then try to scroll with a finger on the
+   canvas — it must leave **no line**. A deliberate stroke must still draw
+   normally, including straight down.
+7c. **Header.** Confirm there is no Notebook icon at the top of the screen, and
+   that the Notebook still opens from its card on the home screen.
 8. **Existing 1.2 notebook pages still render undistorted** (page images are now
    drawn aspect-preserved rather than stretched).
 9. **Airplane mode** — repeat the tour.

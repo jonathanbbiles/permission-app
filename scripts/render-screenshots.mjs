@@ -123,8 +123,8 @@ async function seed(page) {
 }
 
 /* Scribble a few strokes so the Notebook shot isn't a blank white rectangle. */
-async function scribble(page) {
-  const box = await page.locator("#nbCanvas").boundingBox();
+async function scribble(page, sel = "#nbCanvas") {
+  const box = await page.locator(sel).boundingBox();
   if (!box) return;
   const strokes = [
     [[0.10, 0.16], [0.30, 0.11], [0.52, 0.19], [0.74, 0.12]],
@@ -177,7 +177,7 @@ for (const d of DEVICES) {
   // 1 — home
   written.push(await shoot(page, dir, "01-home"));
 
-  // 2 — Speak, with a transcript beside the recording
+  // 2 — Record, with a transcript beside the recording
   await page.click('.mode[data-mode="voice"]');
   await sleep(700);
   await page.evaluate(() => {
@@ -186,12 +186,12 @@ for (const d of DEVICES) {
     document.getElementById("trStatus").textContent =
       "Your words are turned into text on your phone. Nothing is uploaded.";
   });
-  written.push(await shoot(page, dir, "02-speak-transcript"));
+  written.push(await shoot(page, dir, "02-record-transcript"));
 
   // 3 — Notebook, with ink, showing both export controls
   await page.click('#v-voice [data-discard]');
   await sleep(600);
-  await page.click("#btnNotebook");
+  await page.click("#cardNotebook");   // header shortcut removed in 1.3.1
   await sleep(1200);
   await scribble(page);
   await sleep(300);
@@ -224,8 +224,44 @@ for (const d of DEVICES) {
     (nb.exportsVisible && !nb.scrolls ? "  ✓ above the fold, no scroll" : "")
   );
 
-  // 4 — an entry, audio + its transcript together
+  // 4 — Draw: both actions must be reachable the moment it opens
   await page.click('#v-notebook [data-back]');
+  await sleep(800);
+  await page.click('.mode[data-mode="draw"]');
+  await sleep(1200);
+  await scribble(page, "#drawCanvas");
+  await sleep(250);
+  written.push(await shoot(page, dir, "04-draw"));
+
+  const dw = await page.evaluate(() => {
+    const vh = window.innerHeight;
+    const save = document.getElementById("dSave").getBoundingClientRect();
+    const disc = document.querySelector('#drawActions [data-discard]').getBoundingClientRect();
+    const c = document.getElementById("drawCanvas").getBoundingClientRect();
+    return {
+      vh,
+      canvasH: Math.round(c.height), canvasW: Math.round(c.width),
+      saveBottom: Math.round(save.bottom), discardBottom: Math.round(disc.bottom),
+      // both must be fully on screen, and ABOVE the canvas
+      actionsVisible: save.bottom <= vh && disc.bottom <= vh,
+      actionsAboveCanvas: save.bottom <= c.top + 1 && disc.bottom <= c.top + 1,
+      scrolls: document.documentElement.scrollHeight > vh + 1,
+    };
+  });
+  if (!dw.actionsVisible) {
+    console.error(`  ✗ ${d.slot}: Draw actions below the fold (save@${dw.saveBottom} discard@${dw.discardBottom} vh=${dw.vh})`);
+    failed++;
+  }
+  if (!dw.actionsAboveCanvas) { console.error(`  ✗ ${d.slot}: Draw actions are not above the canvas`); failed++; }
+  if (dw.scrolls) { console.error(`  ✗ ${d.slot}: Draw view scrolls`); failed++; }
+  console.log(
+    `${"".padEnd(9)} draw canvas ${dw.canvasW}x${dw.canvasH}` +
+    `  actions@${Math.max(dw.saveBottom, dw.discardBottom)}/${dw.vh}` +
+    (dw.actionsVisible && dw.actionsAboveCanvas && !dw.scrolls ? "  ✓ above canvas + fold, no scroll" : "")
+  );
+
+  // 5 — an entry, audio + its transcript together
+  await page.click('#v-draw [data-discard]');
   await sleep(800);
   await page.evaluate(() => {
     const rows = [...document.querySelectorAll("#homeList .entry")];
@@ -233,7 +269,7 @@ for (const d of DEVICES) {
     voice.click();
   });
   await sleep(900);
-  written.push(await shoot(page, dir, "04-entry-transcript"));
+  written.push(await shoot(page, dir, "05-entry-transcript"));
 
   // ---- verify, don't assume ----
   const metrics = await page.evaluate(() => {

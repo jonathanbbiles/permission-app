@@ -169,7 +169,8 @@ ok("brush/eraser/undo/redo tools", /setErasing/.test(html) && /redoOp/.test(html
 ok("website link uses Capacitor Browser.open + window.open fallback",
    /Browser\.open\(\{ url:url \}\)/.test(html) && /window\.open\(url,"_blank"/.test(html));
 ok("in-app rating after success moment, not first launch", /requestReview/.test(html) && /n===3/.test(html));
-ok("version bumped to 1.3", /APP_VERSION = "1\.3"/.test(html) && />v1\.3</.test(html));
+/* exact version is re-asserted in section 20; here just check it moved past 1.2 */
+ok("version bumped past the live 1.2", /APP_VERSION = "1\.3(\.\d+)?"/.test(html) && />v1\.3/.test(html));
 ok("IndexedDB name preserved for existing users", /indexedDB\.open\("awaken_db"/.test(html));
 ok("passcode keys preserved", /"awaken_pin"/.test(html) && /"awaken_face"/.test(html));
 ok("creator link jonathanscribbles.com present + clickable",
@@ -325,6 +326,85 @@ ok("iPad 13\" screenshots present (hard upload block without them)",
    fs.readdirSync(path.join(ROOT, "screenshots/ipad13")).some((f) => f.endsWith(".png")));
 ok("screenshot renderer is committed so shots can be re-rendered per build",
    fs.existsSync(path.join(ROOT, "scripts/render-screenshots.mjs")));
+
+/* ============================================================ */
+section("16) v1.3.1 — header Notebook shortcut removed");
+ok("no #btnNotebook element", !/id="btnNotebook"/.test(html));
+ok("no listener bound to it either", !/\$\("btnNotebook"\)/.test(html));
+ok("header keeps only Settings + Lock",
+   /id="btnSettings"/.test(html) && /id="btnLock"/.test(html));
+ok("Notebook still reachable from the home card",
+   /id="cardNotebook"/.test(html) && /\$\("cardNotebook"\)\.addEventListener\("click", openNotebook\)/.test(html));
+
+section("17) v1.3.1 — 'Speak' renamed to 'Record'");
+ok('home mode card reads "Record"', /<div class="nm">Record<\/div>/.test(html));
+ok("its subtitle covers both media", /<div class="dsc">voice or video<\/div>/.test(html));
+ok('editor title reads "Record"', /<div class="ttl serif">Record<\/div>/.test(html));
+ok("empty state says Write, Record, or Draw", /then Write, Record, or Draw\./.test(html));
+ok("no user-visible 'Speak' label left",
+   !/<div class="nm">Speak<\/div>/.test(html) &&
+   !/<div class="ttl serif">Speak<\/div>/.test(html) &&
+   !/Write, Speak, or Draw/.test(html));
+/* "Speak it gently to this page" is a journal prompt, not a label — it stays. */
+ok("the journal prompt that uses the word 'Speak' is untouched",
+   /Speak it gently to this page/.test(html));
+
+section("18) v1.3.1 — recordings stay INSIDE the app");
+ok("no camera / photo-library plugin is even installed",
+   !/@capacitor\/camera|capacitor-plugin-camera|photo-library|@capacitor-community\/media/.test(pkgRaw));
+ok("no Photos-write API anywhere in the app",
+   !/savePhoto|saveToGallery|CameraRoll|writePhoto|UISaveVideo|PhotoLibraryAdd/.test(html));
+/* Without NSPhotoLibraryAddUsageDescription iOS will not let the app add
+   anything to Photos at all — the guarantee is enforced by the OS. */
+ok("NSPhotoLibraryAddUsageDescription is NOT set", !/NSPhotoLibraryAddUsageDescription *[:=]/.test(cm));
+ok("the build FAILS if that key ever appears",
+   /Print :NSPhotoLibraryAddUsageDescription/.test(cm) &&
+   /must never be able to write to the photo library/.test(cm));
+ok("audio + video entries are stored as Blobs in IndexedDB",
+   /audio:recBlob/.test(html) && /video:vidBlob/.test(html) && /indexedDB\.open\("awaken_db"/.test(html));
+ok("the only filesystem write is the app's own CACHE, for an explicit share",
+   (html.match(/writeFile\(/g) || []).length === 1 && /directory:"CACHE"/.test(html));
+ok("that staging copy is deleted after sharing", /function cleanupCache/.test(html) && /deleteFile\(/.test(html));
+ok("nothing shares automatically — every export sits behind a click",
+   !/setTimeout[^)]*shareFile|setInterval[^)]*shareFile/.test(html));
+ok("camera usage string states videos never reach Photos",
+   /never added to your Photos library/.test(cm));
+
+section("19) v1.3.1 — Draw: actions above the fold, scrolling leaves no ink");
+ok("Discard + Save live in a bar ABOVE the canvas",
+   html.indexOf('id="drawActions"') < html.indexOf('id="drawWrap"'));
+ok("both actions are in that bar", /id="drawActions"[\s\S]{0,400}?data-discard="1"[\s\S]{0,400}?id="dSave"/.test(html));
+ok("the bar also holds the draw controls", /id="drawBar"[\s\S]{0,200}?id="drawTools"/.test(html));
+ok("draw canvas is measured to fit the screen", /function drawHeightFor/.test(html) && /canvasSpace\("drawWrap", \[\]\)/.test(html));
+ok("fit + scroll-lock helpers exist", /function drawFit/.test(html) && /function drawApplyScrollLock/.test(html));
+ok("scroll is locked while Draw fits", /body\.nb-open, body\.draw-open\{overflow:hidden/.test(html));
+ok("draw-open is cleared when leaving Draw", /if\(id!=="draw"\) document\.body\.classList\.remove\("draw-open"\)/.test(html));
+ok("measurement helper is shared with the Notebook",
+   /function canvasSpace/.test(html) && /function nbSpace\(\)\{ return canvasSpace\("nbWrap"/.test(html));
+/* the two guards that keep a scroll from painting */
+ok("a stroke is discarded if the page scrolls under it", /function abortStroke/.test(html) && /Math\.abs\(scrollPos\(\)-startScroll\)>2/.test(html));
+ok("pointercancel ABORTS rather than finishing the stroke",
+   /addEventListener\("pointercancel",abortStroke\)/.test(html));
+ok("touchcancel does the same on the non-pointer path",
+   /addEventListener\("touchcancel",abortStroke\)/.test(html));
+ok("a scroll starting outside the canvas also kills an in-flight stroke",
+   /addEventListener\("scroll", function\(\)\{\s*if\(drawing/.test(html));
+
+section("20) v1.3.1 — kept intact (explicitly requested)");
+ok("passcode lock on open still gates the app", /if\(hasPin\(\)\)\{ showLock\("enter"/.test(html) && /showLock\("set"/.test(html));
+ok("passcode + Face ID storage keys unchanged", /"awaken_pin"/.test(html) && /"awaken_face"/.test(html));
+ok("Settings still has passcode, website, theme + accent, erase",
+   /id="setPin"/.test(html) && /id="setSite"/.test(html) &&
+   /id="themeSeg"/.test(html) && /id="accentRow"/.test(html) && /id="setErase"/.test(html));
+ok("writing section intact", /id="v-text"/.test(html) && /id="tSave"/.test(html) && /id="tChips"/.test(html));
+ok("Jessica's headline link + jonathanscribbles footer both present",
+   /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html) && /MAKER_URL="https:\/\/jonathanscribbles\.com"/.test(html));
+ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /id="nbExportPdf"/.test(html));
+ok("on-device speech + zero network APIs still hold",
+   /requiresOnDeviceRecognition = true/.test(patchSrc) &&
+   !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
+ok("version bumped to 1.3.1", /APP_VERSION = "1\.3\.1"/.test(html) && />v1\.3\.1</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.1/.test(cm));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

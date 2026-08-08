@@ -223,7 +223,7 @@
   audio{width:100%; margin-top:14px;}
   video.vid{width:100%; margin-top:14px; border-radius:var(--radius-sm); background:#000; display:block;}
 
-  /* Speak mode switch (Voice / Video) */
+  /* Record mode switch (Voice / Video) */
   .modeseg{display:flex; gap:4px; background:var(--surface2); border-radius:999px; padding:4px; margin-bottom:14px;}
   .modeseg button{flex:1; border:0; background:transparent; color:var(--ink-soft); font-family:inherit; font-weight:700; font-size:13.5px;
     padding:9px 12px; border-radius:999px; cursor:pointer; transition:background .2s, color .2s; display:inline-flex; align-items:center; justify-content:center; gap:7px;}
@@ -271,6 +271,21 @@
   .sizedot i{display:block; border-radius:50%; background:var(--ink);}
   .spacer{flex:1;}
 
+  /* ---- Draw: controls + actions above the canvas ----
+     On a phone the tool cluster wraps onto its own line and the two actions
+     sit beside it; on a tablet everything lands on one row. Either way both
+     buttons are above the canvas, so they are on screen the moment Draw
+     opens without any scrolling. */
+  .drawbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .drawbar .tools{margin-top:0; flex:1 1 auto; gap:7px;}
+  .drawbar .tools .spacer{display:none;}
+  .drawbar .tools .pen{width:27px; height:27px;}
+  .drawbar .tools .sizedot{width:31px; height:31px; border-radius:10px;}
+  .drawbar .tools .toolbtn{width:36px; height:36px; border-radius:10px;}
+  .drawbar .tools .toolbtn svg{width:17px; height:17px;}
+  .drawactions{display:flex; align-items:center; gap:9px; flex:0 0 auto; margin-left:auto;}
+  .drawactions .btn{width:auto; padding:10px 14px; font-size:14px;}
+
   /* notebook chrome */
   .nb-bar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
   .nb-page{font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.3px; font-variant-numeric:tabular-nums;}
@@ -284,7 +299,10 @@
      over after the chrome and sizes the canvas to exactly that — the canvas
      gets BIGGER on tall phones and both export buttons stay on screen.
      JS owns the height; this rule just stops the page scrolling underneath. */
-  body.nb-open{overflow:hidden;}
+  /* While a canvas view fits the screen, lock page scrolling entirely. Nothing
+     to scroll means no scroll gesture can land on the pad and leave a stray
+     line — the structural half of the accidental-drawing fix. */
+  body.nb-open, body.draw-open{overflow:hidden; overscroll-behavior:none;}
   /* The notebook carries its own back button, title and save button, so the
      app's brand header is redundant here — hiding it hands ~70px straight to
      the paper, which is what makes the canvas bigger than it used to be
@@ -550,10 +568,10 @@
       <div class="sub">Journal</div>
     </div>
   </div>
+  <!-- No Notebook shortcut here on purpose: a stray tap at the top of the
+       screen used to drop straight onto the drawing canvas. The Notebook is
+       reached deliberately, from its card on the home screen. -->
   <div class="hbtns">
-    <button class="iconbtn" id="btnNotebook" aria-label="Notebook">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2z"/><path d="M9 2v20"/></svg>
-    </button>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -600,8 +618,8 @@
     </div>
     <div class="mode speak" data-mode="voice">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg></div>
-      <div class="nm">Speak</div>
-      <div class="dsc">say it aloud</div>
+      <div class="nm">Record</div>
+      <div class="dsc">voice or video</div>
     </div>
     <div class="mode draw" data-mode="draw">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="M2 2l7.5 7.5"/><circle cx="11" cy="11" r="1.5"/></svg></div>
@@ -653,11 +671,11 @@
 <div class="view" id="v-voice">
   <div class="editor-head">
     <button class="iconbtn back" data-discard="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="ttl serif">Speak</div>
+    <div class="ttl serif">Record</div>
   </div>
   <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="vPrompt"></div></div>
 
-  <div class="modeseg" id="speakSeg" role="tablist" aria-label="Speak mode">
+  <div class="modeseg" id="speakSeg" role="tablist" aria-label="Record mode">
     <button type="button" class="on" id="segVoice" data-speak="voice" role="tab" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>Voice</button>
     <button type="button" id="segVideo" data-speak="video" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Video</button>
   </div>
@@ -693,7 +711,7 @@
       <button class="capbtn" id="vidPick" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         <span id="vidPickLabel">Record a video</span>
-        <span class="sub">Your camera opens so you can record yourself &mdash; or choose a video you already have. It stays on this phone.</span>
+        <span class="sub">Your camera opens so you can record yourself &mdash; or choose a video you already have. It&rsquo;s kept inside Permission only, never saved to your Photos.</span>
       </button>
       <!-- No capture="" attribute on purpose: a plain accept lets iOS show the
            full action sheet and quietly omit any source it cannot offer. -->
@@ -718,12 +736,17 @@
     <div class="ttl serif">Draw</div>
   </div>
   <div class="promptmini"><div class="k">Reflecting on</div><div class="q" id="dPrompt"></div></div>
-  <div class="canvas-wrap" id="drawWrap"><canvas id="drawCanvas" class="pad"></canvas></div>
-  <div class="tools" id="drawTools"></div>
-  <div class="btnrow">
-    <button class="btn ghost" data-discard="1">Discard</button>
-    <button class="btn primary" id="dSave" style="filter:hue-rotate(12deg);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+  <!-- Controls AND the two actions sit ABOVE the canvas. They used to be
+       underneath it, which put "Discard" / "Save entry" below the fold on a
+       phone — you opened Draw and had no visible way out or way to keep it. -->
+  <div class="drawbar" id="drawBar">
+    <div class="tools" id="drawTools"></div>
+    <div class="drawactions" id="drawActions">
+      <button class="btn small ghost" data-discard="1">Discard</button>
+      <button class="btn small primary" id="dSave" style="filter:hue-rotate(12deg);"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Save entry</button>
+    </div>
   </div>
+  <div class="canvas-wrap" id="drawWrap"><canvas id="drawCanvas" class="pad"></canvas></div>
 </div>
 
 <!-- NOTEBOOK (freehand writing pad, multi-page) -->
@@ -842,7 +865,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.1</span></div>
 </div>
 
 <!-- TOAST -->
@@ -852,7 +875,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.3";
+  var APP_VERSION = "1.3.1";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1392,10 +1415,11 @@
     $("v-"+id).classList.add("active");
     window.scrollTo(0,0);
     // nb-view: notebook is on screen (hides the redundant brand header)
-    // nb-open: it also FITS, so page scrolling can be locked. Both are cleared
-    // on the way out so no other view inherits them.
+    // nb-open / draw-open: that canvas view also FITS, so page scrolling can be
+    // locked. All are cleared on the way out so no other view inherits them.
     document.body.classList.toggle("nb-view", id==="notebook");
     if(id!=="notebook") document.body.classList.remove("nb-open");
+    if(id!=="draw") document.body.classList.remove("draw-open");
     $("appFoot").style.display = (id==="home") ? "" : "none";
   }
   function showApp(){
@@ -1449,7 +1473,7 @@
     dbAll().then(function(list){
       var home=$("homeList"), all=$("allList");
       home.innerHTML=""; all.innerHTML="";
-      if(list.length===0){ home.innerHTML='<div class="empty"><div class="big">✨</div><div class="t">Your journal is waiting.</div><div class="s">Choose Quick, Deep, or Playful above, then Write, Speak, or Draw.</div></div>'; $("viewAll").style.display="none"; }
+      if(list.length===0){ home.innerHTML='<div class="empty"><div class="big">✨</div><div class="t">Your journal is waiting.</div><div class="s">Choose Quick, Deep, or Playful above, then Write, Record, or Draw.</div></div>'; $("viewAll").style.display="none"; }
       else {
         var n=homePreviewCount();
         list.slice(0,n).forEach(function(e){ home.appendChild(entryRow(e)); });
@@ -1891,15 +1915,43 @@
       var cy = (e.clientY!=null? e.clientY : (e.touches&&e.touches[0]? e.touches[0].clientY:0));
       return { x:(cx-rect.left)*sx, y:(cy-rect.top)*sy };
     }
+    /* ---- scrolling must never leave ink ----
+       Dragging a finger across the pad to scroll the page used to paint a
+       line. Two guards, because either one alone has a hole:
+         1. If the page scrolls at all while a stroke is in progress, that
+            gesture was a scroll — throw the stroke away and stop drawing.
+            This still allows ordinary vertical strokes, which a touch-action
+            rule like `pan-y` would have broken.
+         2. `pointercancel` means the browser took the gesture over for a
+            scroll or a second finger arrived. That is never a deliberate
+            mark, so it ABORTS rather than finishing the stroke.
+       The Draw and Notebook views are also sized to fit the screen, so in
+       normal use there is nothing to scroll in the first place. */
+    function scrollPos(){
+      return (window.pageYOffset||document.documentElement.scrollTop||0) +
+             (window.pageXOffset||document.documentElement.scrollLeft||0);
+    }
+    var startScroll=0;
+    function abortStroke(){
+      if(!cur) return;
+      var i=strokes.indexOf(cur);
+      if(i>-1) strokes.splice(i,1);
+      cur=null; drawing=false;
+      render();                                   // wipe the accidental mark
+      if(pid!=null && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(pid); }catch(_){} pid=null; }
+    }
     function down(e){
       e.preventDefault();
-      drawing=true; redo=[];
+      drawing=true; redo=[]; startScroll=scrollPos();
       cur={ color:color, w:(erasing? size*3.2 : size), erase:erasing, pts:[pt(e)] };
       strokes.push(cur); drawStroke(cur);
       if(canvas.setPointerCapture && e.pointerId!=null){ pid=e.pointerId; try{ canvas.setPointerCapture(pid); }catch(_){} }
     }
     function move(e){
-      if(!drawing||!cur) return; e.preventDefault();
+      if(!drawing||!cur) return;
+      // the page moved under the finger — this was a scroll, not a mark
+      if(Math.abs(scrollPos()-startScroll)>2){ abortStroke(); return; }
+      e.preventDefault();
       var p=pt(e); cur.pts.push(p);
       // draw just the last segment for smoothness
       ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -1913,12 +1965,17 @@
       canvas.addEventListener("pointerdown",down);
       canvas.addEventListener("pointermove",move);
       canvas.addEventListener("pointerup",up);
-      canvas.addEventListener("pointercancel",up);
+      canvas.addEventListener("pointercancel",abortStroke);
       canvas.addEventListener("pointerleave",up);
     } else {
       canvas.addEventListener("mousedown",down); canvas.addEventListener("mousemove",move); window.addEventListener("mouseup",up);
       canvas.addEventListener("touchstart",down,{passive:false}); canvas.addEventListener("touchmove",move,{passive:false}); canvas.addEventListener("touchend",up);
+      canvas.addEventListener("touchcancel",abortStroke);
     }
+    // a scroll that starts outside the canvas must also kill an in-flight stroke
+    window.addEventListener("scroll", function(){
+      if(drawing && Math.abs(scrollPos()-startScroll)>2) abortStroke();
+    }, {passive:true});
 
     return {
       resize:resize, render:render,
@@ -1945,6 +2002,35 @@
       toDataURL:function(type,q){ return canvas.toDataURL(type||"image/png", q); },
       dims:function(){ return {w:canvas.width, h:canvas.height, cw:cw, ch:ch}; }
     };
+  }
+
+  /* ============================================================
+     CANVAS FIT — shared by Draw and Notebook
+     Measure the space actually left for the paper instead of using a fixed
+     ratio, so the controls that must stay on screen always do. `reserveIds`
+     are the elements that sit BELOW the canvas and have to remain visible.
+     ============================================================ */
+  var CANVAS_MIN_H=240;
+  function canvasSpace(wrapId, reserveIds){
+    var wrap=$(wrapId); if(!wrap) return 0;
+    var top=wrap.getBoundingClientRect().top;
+    var below=0;
+    (reserveIds||[]).forEach(function(id){
+      var el=$(id); if(!el) return;
+      var cs=getComputedStyle(el);
+      below += el.getBoundingClientRect().height +
+               (parseFloat(cs.marginTop)||0) + (parseFloat(cs.marginBottom)||0);
+    });
+    var padBottom=parseFloat(getComputedStyle(document.body).paddingBottom)||0;
+    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
+    return Math.round(vh - top - below - padBottom - 4);
+  }
+  /* Laid out on screen? Guards every path that would resize or overwrite a
+     page using geometry from a backgrounded / not-yet-laid-out webview. */
+  function canvasMeasurable(wrapId){
+    var wrap=$(wrapId); if(!wrap) return false;
+    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
+    return wrap.getBoundingClientRect().width>=40 && vh>=80;
   }
 
   /* build a color/tool toolbar into a container, bound to a pad */
@@ -2009,14 +2095,39 @@
 
   /* ---- Draw editor (prompt doodle) ---- */
   var drawPad=null, drawTools=null;
+  /* The bar (tools + Discard + Save) is ABOVE the canvas, so nothing has to be
+     reserved below it — the paper simply takes whatever is left to the bottom
+     of the screen. That is what keeps both actions on screen without scrolling. */
+  function drawHeightFor(w){
+    var avail=canvasSpace("drawWrap", []);
+    if(!avail || avail<0) return Math.round(w*1.15);   // fallback: old fixed ratio
+    return Math.max(CANVAS_MIN_H, avail);
+  }
+  function drawApplyScrollLock(){
+    document.body.classList.toggle("draw-open", canvasSpace("drawWrap", []) >= CANVAS_MIN_H);
+  }
+  function drawFit(){
+    if(!drawPad) return;
+    if(!canvasMeasurable("drawWrap")) return;
+    drawApplyScrollLock();
+    drawPad.resize();
+  }
   function startDrawView(){
     $("dPrompt").textContent=currentPrompt; showView("draw");
     setTimeout(function(){
       if(!drawPad){
-        drawPad=createPad($("drawCanvas"), { height:function(w){ return Math.round(w*1.15); }, onChange:function(){ if(drawTools) drawTools.sync(); } });
+        drawPad=createPad($("drawCanvas"), { height:drawHeightFor, onChange:function(){ if(drawTools) drawTools.sync(); } });
         drawTools=buildTools($("drawTools"), drawPad);
       }
-      drawPad.clear(); drawPad.resize();
+      drawPad.clear();
+      // size once the tool row exists, then again once layout has settled
+      drawFit();
+      requestAnimationFrame(drawFit);
+      var tries=0;
+      (function settle(){
+        if(canvasMeasurable("drawWrap") || tries++>10){ drawFit(); return; }
+        setTimeout(settle, 80);
+      })();
     },60);
   }
   $("dSave").addEventListener("click", function(){
@@ -2032,27 +2143,11 @@
      share sheet (Capacitor) or downloaded on the web.
      ============================================================ */
   var nbPad=null, nbTools=null, nbPages=[""], nbIndex=0, nbDirty=false, nbLoaded=false;
-  var NB_MIN_H=240;
+  var NB_MIN_H=CANVAS_MIN_H;
   /* How tall can the page be and still leave BOTH export buttons on screen?
-     Measure it rather than guessing: take the space from the top of the canvas
-     to the bottom of the viewport, then subtract everything that has to sit
-     below the canvas (tool row, the Page PNG / Export PDF row, the caption)
-     including their margins, plus the body's bottom padding (which carries the
-     home-indicator safe area). What's left is the paper. */
-  function nbSpace(){
-    var wrap=$("nbWrap"); if(!wrap) return 0;
-    var top=wrap.getBoundingClientRect().top;
-    var below=0;
-    ["nbTools","nbExportRow","nbMeta"].forEach(function(id){
-      var el=$(id); if(!el) return;
-      var cs=getComputedStyle(el);
-      below += el.getBoundingClientRect().height +
-               (parseFloat(cs.marginTop)||0) + (parseFloat(cs.marginBottom)||0);
-    });
-    var padBottom=parseFloat(getComputedStyle(document.body).paddingBottom)||0;
-    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
-    return Math.round(vh - top - below - padBottom - 4);
-  }
+     The tool row, the Page PNG / Export PDF row and the caption all sit below
+     the canvas here, so they are reserved out of the available space. */
+  function nbSpace(){ return canvasSpace("nbWrap", ["nbTools","nbExportRow","nbMeta"]); }
   /* Height the notebook canvas should be right now. Falls back to the old
      fixed ratio if the measurement is nonsense (view hidden, zero-height). */
   function nbHeightFor(w){
@@ -2073,13 +2168,7 @@
     nbApplyScrollLock();
     nbPad.resize();
   }
-  /* True only when the view is actually laid out on screen. Guards every path
-     that would otherwise resize or overwrite a page using bogus geometry. */
-  function nbMeasurable(){
-    var wrap=$("nbWrap"); if(!wrap) return false;
-    var vh=window.innerHeight || document.documentElement.clientHeight || 0;
-    return wrap.getBoundingClientRect().width>=40 && vh>=80;
-  }
+  function nbMeasurable(){ return canvasMeasurable("nbWrap"); }
   function nbUpdateLabel(){ $("nbPageLabel").textContent="Page "+(nbIndex+1)+" / "+nbPages.length; }
   function commitCurrentPage(){
     if(!nbPad) return;
@@ -2224,12 +2313,19 @@
   /* Capacitor plugins for sharing/saving (guarded) */
   function capPlugin(name){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) || null; }catch(e){ return null; } }
   function bytesToB64(bytes){ var s="",CH=0x8000; for(var i=0;i<bytes.length;i+=CH){ s+=String.fromCharCode.apply(null, bytes.subarray(i,i+CH)); } return btoa(s); }
+  /* Only ever called from an explicit tap (Page PNG / Export PDF / Export a
+     copy). Nothing in this app exports on its own.
+     The staging file goes to CACHE — the app's OWN private container, not the
+     photo library — and is deleted again as soon as the share sheet closes, so
+     no copy of an entry is left sitting outside the journal. */
   function shareFile(bytes, filename, mime, title){
     var Filesystem=capPlugin("Filesystem"), Share=capPlugin("Share");
     if(capNative() && Filesystem && Share){
       return Filesystem.writeFile({ path:filename, data:bytesToB64(bytes), directory:"CACHE" }).then(function(res){
-        return Share.share({ title:title||"Permission", url:res.uri, dialogTitle:title||"Share" });
-      }).then(function(){ toast("Ready to share"); }).catch(function(){ downloadBytes(bytes, filename, mime); });
+        return Share.share({ title:title||"Permission", url:res.uri, dialogTitle:title||"Share" })
+          .catch(function(err){ cleanupCache(filename); throw err; });
+      }).then(function(){ toast("Ready to share"); cleanupCache(filename); })
+        .catch(function(){ cleanupCache(filename); downloadBytes(bytes, filename, mime); });
     }
     // web fallback
     try{
@@ -2239,6 +2335,11 @@
     }catch(e){}
     downloadBytes(bytes, filename, mime);
     return Promise.resolve();
+  }
+  function cleanupCache(filename){
+    var Filesystem=capPlugin("Filesystem");
+    if(!Filesystem) return;
+    try{ Promise.resolve(Filesystem.deleteFile({ path:filename, directory:"CACHE" })).catch(function(){}); }catch(e){}
   }
   function downloadBytes(bytes, name, mime){
     var blob=new Blob([bytes],{type:mime||"application/octet-stream"});
@@ -2405,14 +2506,15 @@
   $("anotherPrompt").addEventListener("click", anotherPrompt);
   $("viewAll").addEventListener("click", function(){ showView("journal"); });
   $("cardNotebook").addEventListener("click", openNotebook);
-  $("btnNotebook").addEventListener("click", openNotebook);
+  /* The Notebook opens ONLY from its home-screen card — there is deliberately
+     no header shortcut, so a stray tap at the top can't land on the canvas. */
   document.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ if($("v-notebook").classList.contains("active") && nbDirty){ nbSave().then(showApp); } else { showApp(); } }); });
   document.querySelectorAll("[data-discard]").forEach(function(b){ b.addEventListener("click", function(){
     if(mediaRec && mediaRec.state==="recording") stopRecord(); cleanupVoice(); showApp(); }); });
   $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
 
   function onViewportChange(){
-    if($("v-draw").classList.contains("active") && drawPad){ setTimeout(function(){ drawPad.resize(); },50); }
+    if($("v-draw").classList.contains("active") && drawPad){ setTimeout(drawFit,50); }
     if($("v-notebook").classList.contains("active") && nbPad){ commitCurrentPage(); setTimeout(function(){ nbFit(); loadPageIntoPad(); },50); }
   }
   window.addEventListener("resize", onViewportChange);
