@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.3.1 (Record rename; in-app-only recordings; Draw actions above the fold)
-**Date:** 2026-08-08 (device-feedback pass)
+**Version:** 1.3.2 (fixes transcription — file-based on-device recognition)
+**Date:** 2026-08-08 (transcription fix)
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -53,6 +53,52 @@ copy is left behind.
 > writes a camera-captured video to the camera roll before handing it to the
 > page. It should not — a web file input receives a temp file, and saving to
 > Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
+
+---
+
+## 1.3.2 — why transcription produced nothing on device, and what changed
+
+**Root cause: two plugins, one microphone.** Not the Web Speech API — the app
+never used it; transcription already went through the native `SpeechRecognition`
+plugin (SFSpeechRecognizer). The real problem was that 1.3.1 transcribed *while*
+recording. `capacitor-voice-recorder` (AVAudioRecorder) already owned the mic and
+the shared `AVAudioSession`, and the speech plugin's live path then ran:
+
+```swift
+try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+} catch {
+      call.reject("Microphone is already in use by another application.")
+```
+
+That `setActive` throws while a recording is in progress, so `start()` rejected
+every time. And the JS swallowed it (`.catch(function(){ /* … */ })`) while the
+status line still said "Listening" — so the failure was completely invisible:
+a perfect recording, no transcript, no explanation.
+
+**The fix: stop competing for the microphone.** Recognition now runs on the
+**finished audio file**, after the recorder has released the session:
+
+- The patch script adds a `transcribeFile` method to the plugin, backed by
+  `SFSpeechURLRecognitionRequest`, and registers it with the Capacitor bridge
+  (`CAP_PLUGIN_METHOD`) so JS can actually call it. Upstream has no such method.
+- Nothing overlaps, so there is nothing to conflict. Live recognition is now
+  used **only** by the standalone **Dictate** button, where no recorder is running.
+- The native recorder already returns base64, so the audio is not re-encoded.
+- Speech permission is requested **up front**, before recording starts, so the
+  prompt never interrupts a recording — and a denial never blocks recording.
+
+**Still on-device only.** `requiresOnDeviceRecognition = true` is set on the file
+request too. If the device has no on-device model for the locale, `transcribeFile`
+returns `{ok:false, reason:"no-on-device"}` and the app **says so** — it does not
+fall back to Apple's servers. There is no server path in this app, opt-in or
+otherwise, so the privacy copy is unchanged and still accurate.
+
+**Failure is never silent again.** The status line always shows one of:
+"Transcribing on this phone…" → "Transcribed on this phone. The audio never left
+your device." or "Transcription unavailable — <reason>". Reasons covered:
+permission denied, no on-device model, recognizer unavailable, no speech
+detected, recognition failed, timed out (90s), unsupported platform. The build
+**fails** unless both patches are present and `transcribeFile` is registered.
 
 ---
 
@@ -203,15 +249,19 @@ errors) proves the *repo* is clean, never that the *build* is.
 Run on a real iPhone from a clean install:
 
 1. **Cold launch from a clean install** (delete the app first).
-2. **Record → Voice.** Record. Confirm the transcript fills in *while recording*.
-   ⚠️ **This is the #1 thing to check.** The recorder (`AVAudioRecorder`) and
-   speech recognition (`AVAudioEngine` input tap) both want the microphone and
-   both call `setCategory`/`setActive` on the shared audio session. If they
-   conflict on device, **the recording still works and the transcript comes back
-   empty** — that is the designed failure, not a crash. If that happens, the
-   **Dictate** button is the fallback path and must be used instead.
-3. **Long recording (> 1 min).** iOS caps a single recognition task around a
-   minute; confirm the transcript keeps going (auto-restart) rather than stopping.
+2. **Record → Voice.** ⚠️ **This is the #1 thing to check — it is what 1.3.2
+   fixes.** Record a few seconds and stop. The status line should read
+   "Transcribing on this phone…" and then either fill the transcript box and say
+   "Transcribed on this phone. The audio never left your device.", or say
+   "Transcription unavailable — <reason>". It must never sit silent.
+   Transcription now runs on the SAVED FILE after the recorder releases the
+   microphone, so the two no longer fight over it. If the reason comes back as
+   **"on-device transcription isn't ready for your language yet"**, that is the
+   honest no-server refusal — download the offline dictation language in iOS
+   Settings › General › Keyboard › Dictation, then retry.
+3. **Long recording (> 1 min).** File-based recognition is not subject to the
+   ~1-minute live-task cap, but confirm a longer clip still transcribes and does
+   not time out (the UI stops waiting after 90s and says so).
 4. **Edit the transcript**, then save. Confirm the edit survives and is not
    overwritten by late recognition results.
 5. **Record → Video.** Confirm the action sheet offers **Record Video** *and*

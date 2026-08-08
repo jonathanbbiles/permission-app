@@ -187,8 +187,11 @@ ok("transcript is persisted on the voice entry",
    /type:"voice"[^}]*transcript:transcript/.test(html));
 ok("transcript is rendered in the entry viewer alongside the audio",
    /e\.transcript/.test(html) && /Transcript</.test(html));
-ok("live transcription starts with recording, both native + web paths",
-   (html.match(/srStart\("live"\)/g) || []).length >= 2);
+/* 1.3.2 replaced live-while-recording (which never worked on device — the
+   recorder and the recognizer fought over the microphone) with file-based
+   recognition after the recorder releases it. */
+ok("transcription is kicked off once the recording finishes, on both paths",
+   (html.match(/runTranscription\(/g) || []).length >= 3);
 ok("transcription stops when recording stops", /srStop\(\)/.test(html));
 ok("standalone dictation fallback exists", /id="vDictate"/.test(html) && /srStart\("dictate"\)/.test(html));
 ok("long recordings restart the recognition task (iOS ~1min cap)",
@@ -403,8 +406,76 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("on-device speech + zero network APIs still hold",
    /requiresOnDeviceRecognition = true/.test(patchSrc) &&
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
-ok("version bumped to 1.3.1", /APP_VERSION = "1\.3\.1"/.test(html) && />v1\.3\.1</.test(html) &&
-   /CFBundleShortVersionString 1\.3\.1/.test(cm));
+/* exact version re-asserted in section 25 */
+ok("version moved past 1.3.0", /APP_VERSION = "1\.3\.[1-9]"/.test(html));
+
+/* ============================================================ */
+section("21) v1.3.2 — transcription fix (the 1.3.1 device bug)");
+/* ROOT CAUSE: recording and live recognition both grabbed the microphone.
+   capacitor-voice-recorder's AVAudioRecorder held the AVAudioSession, the
+   speech plugin's live start() then called setActive(...) which threw, and it
+   rejected with "Microphone is already in use by another application" — a
+   rejection the JS swallowed, so the user saw nothing at all.
+   FIX: transcribe the finished file after the recorder releases the mic. */
+ok("cause #1 ruled out — no Web Speech API anywhere",
+   !/webkitSpeechRecognition|window\.SpeechRecognition|new SpeechRecognition/.test(html));
+ok("transcription goes through the NATIVE plugin", /Capacitor\.Plugins\.SpeechRecognition/.test(html));
+ok("live recognition is NEVER started during a recording",
+   !/srStart\("live"\)/.test(html));
+ok("recognition runs on the finished recording instead", /function transcribeRecording/.test(html) && /sr\.transcribeFile\(/.test(html));
+ok("it is invoked only after the recorder stopped", /stopRecording\(\)[\s\S]{0,900}?runTranscription\(/.test(html));
+ok("the native recorder's base64 is reused, not re-encoded", /runTranscription\(b64, mime\)/.test(html));
+ok("web path converts its blob instead", /function blobToBase64/.test(html));
+
+section("22) v1.3.2 — the native side actually supports file transcription");
+ok("patch adds transcribeFile to the plugin", /@objc func transcribeFile/.test(patchSrc));
+ok("it uses SFSpeechURLRecognitionRequest (file, not mic)", /SFSpeechURLRecognitionRequest/.test(patchSrc));
+ok("it is registered with the Capacitor bridge", /CAP_PLUGIN_METHOD\(transcribeFile/.test(patchSrc));
+ok("patch fails loudly if any anchor moves", /function bail/.test(patchSrc) && /process\.exit\(1\)/.test(patchSrc));
+ok("patch verifies its own work by re-reading", /verified — on-device flag \+ file transcription/.test(patchSrc));
+ok("build BLOCKS unless transcribeFile is present AND registered",
+   /@objc func transcribeFile/.test(cm) && /CAP_PLUGIN_METHOD\(transcribeFile/.test(cm) &&
+   /Refusing to build/.test(cm));
+
+section("23) v1.3.2 — still on-device only, never a server fallback");
+ok("on-device flag still forced on the live request", /requiresOnDeviceRecognition = true/.test(patchSrc));
+ok("the FILE request is on-device too",
+   /SFSpeechURLRecognitionRequest[\s\S]{0,400}?requiresOnDeviceRecognition = true/.test(patchSrc));
+ok("if on-device is unavailable it REFUSES rather than using the network",
+   /supportsOnDeviceRecognition/.test(patchSrc) && /"reason": "no-on-device"/.test(patchSrc));
+ok("the UI explains that refusal honestly", /won.t send your audio anywhere/.test(html));
+ok("no network APIs introduced", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
+
+section("24) v1.3.2 — failure is never silent");
+ok("a visible 'Transcribing…' state exists", /Transcribing on this phone/.test(html));
+ok("success states that the audio stayed on device", /The audio never left your device/.test(html));
+ok("failures render as 'Transcription unavailable — <reason>'", /Transcription unavailable — /.test(html));
+for (const reason of ["permission-denied", "no-on-device", "recognizer-unavailable",
+                      "no-speech", "recognition-failed", "timeout", "unsupported"]) {
+  ok(`reason "${reason}" has human copy`, new RegExp(`"${reason}":`).test(html));
+}
+ok("a stuck transcription times out rather than hanging", /TRANSCRIBE_TIMEOUT_MS/.test(html));
+ok("errors are no longer swallowed silently",
+   !/catch\(function\(\)\{ \/\* a failed restart just ends the transcript \*\/ \}\)/.test(html));
+ok("Dictate fallback kept", /id="vDictate"/.test(html) && /srStart\("dictate"\)/.test(html));
+ok("speech permission is requested up front, before recording", /srPermission\(\)\.catch/.test(html));
+ok("a denied speech permission never blocks recording",
+   /srPermission\(\)\.catch\(function\(\)\{\}\);[\s\S]{0,200}?requestAudioRecordingPermission/.test(html));
+
+section("25) v1.3.2 — nothing else changed");
+ok("version bumped to 1.3.2", /APP_VERSION = "1\.3\.2"/.test(html) && />v1\.3\.2</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.2/.test(cm));
+ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
+ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
+ok("transcript still saved with the audio", /type:"voice"[^}]*transcript:transcript/.test(html));
+ok("video entries intact", /type:"video"/.test(html) && /id="vidInput"/.test(html));
+ok("Draw actions still above the canvas", html.indexOf('id="drawActions"') < html.indexOf('id="drawWrap"'));
+ok("scroll-does-not-draw guards intact", /function abortStroke/.test(html) && /addEventListener\("pointercancel",abortStroke\)/.test(html));
+ok("passcode lock + Settings + writing intact",
+   /showLock\("enter"/.test(html) && /id="setPin"/.test(html) && /id="v-text"/.test(html));
+ok("both links intact",
+   /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html) && /MAKER_URL="https:\/\/jonathanscribbles\.com"/.test(html));
+ok("recordings still cannot reach Photos", !/NSPhotoLibraryAddUsageDescription *[:=]/.test(cm));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));
