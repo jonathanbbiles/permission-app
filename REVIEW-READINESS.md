@@ -1,17 +1,25 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.3.0 (Speak transcripts + video; Notebook canvas resize)
-**Date:** 2026-08-07
+**Version:** 1.3.0 (Speak transcripts + video; Notebook canvas resize; iPad layout)
+**Date:** 2026-08-08
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
-## VERDICT: **NOT SUBMITTABLE — and not being submitted.**
+## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
 
-This build goes to **TestFlight only**, for on-device testing. `submit_to_app_store`
-stays commented out in `codemagic.yaml`.
+## Overall: **not yet submittable**, and not being submitted.
 
-Three §A blockers remain. **All three pre-date this release** (verified against
-`HEAD`: zero `@media` queries and no `appicon-1024.png` before these changes) and
-all three are *submission*-stage, not *TestFlight*-stage.
+§A is clean. What stands between this and a submission is **§C, the on-device
+TestFlight smoke test**, which is Jonathan's to run and cannot be done off real
+hardware. This build goes to **TestFlight only**; `submit_to_app_store` stays
+commented out in `codemagic.yaml`.
+
+The three blockers from the 2026-08-07 run are now cleared:
+
+| Was blocked | Now |
+|---|---|
+| Universal build with no large-screen media query | **PASS** — real two-column iPad layout at ≥700px |
+| No 2048×2732 iPad screenshots | **PASS** — 4 rendered from the current build |
+| No `appicon-1024.png` at repo root | **PASS** — 1024×1024, no alpha, re-embedded and verified every build |
 
 ---
 
@@ -62,15 +70,69 @@ The privacy policy (`docs/privacy.html`) was updated in the same commit with new
 > Before any submission, all four must be re-checked by hand — the published page
 > still needs the two new sections copied to it.
 
-### BLOCKED (pre-existing — must be cleared before submit, not before TestFlight)
+### A5 — iPad, and why it's a real layout rather than a wider phone
 
-1. **Universal build with no large-screen media query.** `npx cap add ios` defaults
-   to Universal (1,2), so Apple reviews this on iPad, where it renders as a
-   floating phone-width card → Guideline 4 "not designed for iPad".
-   *Fix options: add an iPad layout, or set `TARGETED_DEVICE_FAMILY = 1`.*
-2. **No 2048×2732 iPad screenshots.** Hard upload block while the build is Universal.
-3. **No `appicon-1024.png` at repo root.** (`assets/icon.png` is 1024×1024 but not
-   where the lane looks.)
+The build is Universal, so Apple reviews it on a 13" iPad. Previously the 540px
+phone column just floated in the middle of a 1024×1366pt screen — Guideline 4
+"not designed for iPad". Now, at **≥700px** (every iPad in full screen; iPad mini
+portrait is 744pt):
+
+- Body widens to 940px (1080px past 1100px), with a larger type scale.
+- **Home becomes two columns** — the invitation, the three ways to answer it and
+  the Notebook on the left; the journal alongside on the right, instead of pushed
+  a screen and a half down. Grid rows are assigned explicitly so auto-flow can't
+  reshuffle them.
+- The home journal preview shows **6** entries instead of 3, because the column
+  has the room. "See all" still shows everything on every device.
+- Editors keep a 760px reading measure rather than stretching text and buttons
+  the full width. **The Notebook is deliberately not capped** — there, more width
+  is more paper (canvas renders 870×1079 on iPad vs 396×628 on a 6.9" phone).
+- The settings sheet is centred at panel width instead of a full-bleed bar.
+
+Below 700px nothing changes, so Slide Over and narrow Split View correctly keep
+the phone layout. **No feature is added, removed or hidden by screen size** — the
+iPad build is the same app, which is what Guideline 4 is actually asking for.
+
+Verified by rendering, not by eye: `scripts/render-screenshots.mjs` reports body
+fill, grid mode, horizontal overflow, page errors, and the notebook fold check at
+every size. Latest run — 6.9": 100% width, no overflow · 6.5": 100%, no overflow ·
+iPad 13": 92% width, `home=grid [421px 421px]`, no overflow, no page errors.
+
+### A7 — icon and screenshots
+
+- **`appicon-1024.png`** at repo root: 1024×1024, RGB, **no alpha** (Apple rejects
+  an app icon with transparency). It is now the single source of truth — the build
+  copies it to `assets/icon.png`, regenerates the appiconset from it, then
+  **verifies a real 1024 icon landed and fails the build otherwise**. That closes
+  a live trap: `ios/` is regenerated every build, so a silently-failed asset
+  generation would have shipped Capacitor's placeholder icon = automatic rejection.
+- **Screenshots** — 12 rendered from the *current* build by
+  `scripts/render-screenshots.mjs`, at exactly the sizes ASC expects:
+
+  | slot | pixels | shots |
+  |---|---|---|
+  | `iphone69` | 1290×2796 | 4 |
+  | `iphone65` | 1242×2688 | 4 |
+  | `ipad13` | **2048×2732** | 4 |
+
+  Home · Speak-with-transcript · Notebook · an entry showing audio + transcript.
+  Content is the app's own invented sample text — no third-party media, brands or
+  encyclopedic text anywhere (the 4.1(a) "Copycats" rule that rejected Moodie).
+  The test suite re-checks every file's exact pixel size on every run.
+
+### Remaining WARN / CHECK (none blocking)
+
+- ⚠️ **Screenshots are on disk but NOT published** to
+  `jonathanbbiles.github.io/appstore-assets/permission-app/`. The ASC upload lane
+  reads the published manifest, so before submitting:
+  `scripts/publish-screenshots.sh permission-app screenshots/` then
+  `scripts/cm-build.sh -w asc-screenshots`. Left unpublished deliberately — these
+  are brand-new shots and worth eyeballing first, and publishing is a step on the
+  submit path, not the TestFlight path.
+- **No privacy-policy URL inside `www/`** — the policy lives in `docs/`. Publish to
+  `jonathanbbiles.github.io/app-privacy` and link it before submit.
+- **`TARGETED_DEVICE_FAMILY` not overridden** — intentional. The app now has a real
+  iPad layout, so staying Universal is the right call.
 
 ### CHECK (verified by hand this run)
 
@@ -88,9 +150,11 @@ The privacy policy (`docs/privacy.html`) was updated in the same commit with new
   additive; the listing does not yet mention transcripts or video. If the ASC
   description/What's New is updated to mention them, both must be demonstrably
   present (they are).
-- **Screenshots.** Live screenshots still show 1.2. The Notebook layout changed
-  visibly in this release. **Re-render and re-publish before submit** — a stale
-  screenshot is what took the 2.3.3 on Permission 1.2.
+- **Screenshots.** Live ASC screenshots still show 1.2. Fresh ones are rendered
+  from this build in `screenshots/`, but are **not yet published or swapped into
+  ASC**. Do that while the version is still *Prepare for Submission* — a stale
+  screenshot is what took the 2.3.3 on Permission 1.2. Verify the swap landed by
+  opening ASC; don't assume.
 - **Age rating** unchanged (intimacy/desire content → 17+ stands).
 - **No mocks, no dead ends.** Transcript and video both persist real data to
   IndexedDB and render back in the viewer; verified end-to-end in-browser.
@@ -130,6 +194,10 @@ Run on a real iPhone from a clean install:
 9. **Airplane mode** — repeat the tour.
 10. **Force-quit mid-recording**; relaunch; confirm state.
 11. Both website links open in the in-app browser and come back.
+12. **On an iPad, if one is available.** Home should be two columns filling the
+    screen — not a phone column floating in the middle. Check the Notebook canvas
+    is large with both exports on screen, and that Split View / Slide Over falls
+    back to the phone layout cleanly.
 
-Only after all of the above, plus clearing the three §A blockers, does 1.3 become
-submittable.
+§A is clear. Once §C above is done — and the screenshots are published and swapped
+into ASC, and the privacy page is published — 1.3 is submittable.

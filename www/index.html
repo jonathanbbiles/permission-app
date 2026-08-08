@@ -306,6 +306,103 @@
   #v-notebook .tools .toolbtn{width:36px; height:36px; border-radius:10px;}
   #v-notebook .tools .toolbtn svg{width:17px; height:17px;}
 
+  /* ============================================================
+     iPAD / LARGE SCREEN  (Guideline 4 — "designed for iPad")
+     `npx cap add ios` produces a Universal build, so Apple reviews this on a
+     13" iPad. Without this block the 540px phone column just floats in the
+     middle of a 1024x1366pt screen, which reads as an iPhone app that was
+     never adapted. Everything below is layout only — no feature is added,
+     removed or hidden by screen size, so the iPad build is the same app.
+
+     700px catches every iPad in full screen (mini portrait is 744pt) while
+     leaving Slide Over / narrow Split View on the phone layout, which is
+     correct: at that width it genuinely is a phone-shaped column.
+     ============================================================ */
+  @media (min-width: 700px){
+    body{max-width:940px; padding-left:34px; padding-right:34px;}
+
+    /* a touch more air + a larger type scale, so it reads as a tablet app
+       rather than a phone app at 200% */
+    header{margin-bottom:22px; padding-bottom:18px;}
+    .brand h1{font-size:25px;}
+    .logo{width:50px; height:50px; border-radius:16px;}
+    .iconbtn{width:48px; height:48px; border-radius:14px;}
+    .iconbtn svg{width:22px; height:22px;}
+
+    .greet{margin-bottom:20px;}
+    .greet .hi{font-size:36px;}
+    .greet .date{font-size:15px;}
+    .depth{font-size:14px; padding:9px 18px;}
+    .prompt{padding:30px 28px 24px;}
+    .prompt .q{font-size:28px;}
+    .prompt .kick{font-size:23px;}
+    .prompt .quotemark{font-size:84px;}
+    .textlink{font-size:15px;}
+    .sechead h3{font-size:22px;}
+    .mode{padding:22px 10px 18px;}
+    .mode .ic{width:56px; height:56px; border-radius:17px;}
+    .mode .ic svg{width:28px; height:28px;}
+    .mode .nm{font-size:16px;}
+    .mode .dsc{font-size:12.5px;}
+    .bigcard{padding:19px 20px;}
+    .bigcard .ic{width:54px; height:54px;}
+    .bigcard .tx .a{font-size:17px;}
+    .bigcard .tx .b{font-size:13.5px;}
+    .entry{padding:16px; gap:16px;}
+    .entry .badge{width:52px; height:52px;}
+    .entry .meta .d{font-size:13.5px;}
+    .entry .meta .p{font-size:15px;}
+
+    /* HOME becomes two columns: the invitation and the ways to answer it on
+       the left, the journal alongside it on the right — instead of the
+       journal being pushed a screen and a half down. Rows are assigned
+       explicitly so auto-flow can't reshuffle them. */
+    #v-home.active{display:grid; grid-template-columns:1fr 1fr; column-gap:30px; align-content:start;}
+    #v-home .greet   {grid-column:1 / -1; grid-row:1;}
+    #v-home .depths  {grid-column:1 / -1; grid-row:2;}
+    #v-home .prompt  {grid-column:1; grid-row:3;}
+    #v-home .modes   {grid-column:1; grid-row:4;}
+    #v-home .bigcard {grid-column:1; grid-row:5;}
+    #v-home .sechead {grid-column:2; grid-row:3;}
+    #v-home #homeList{grid-column:2; grid-row:4 / 7;}
+
+    /* Editors keep a comfortable reading measure instead of stretching text
+       and buttons the full width of the tablet. The Notebook is deliberately
+       NOT constrained — there, more width is more paper. */
+    #v-text, #v-voice, #v-draw, #v-entry, #v-journal{max-width:760px; margin:0 auto;}
+    textarea{min-height:260px; font-size:19px;}
+    .btn{font-size:17px; padding:17px 20px;}
+    .editor-head .ttl{font-size:24px;}
+    .promptmini .q{font-size:19px;}
+    .viewer .body{font-size:19px;}
+
+    /* The settings sheet as a full-bleed bar looks unfinished on a tablet;
+       centre it at panel width. left/right:0 + margin:auto keeps the existing
+       slide-up transform untouched. */
+    .sheet{max-width:600px; margin-left:auto; margin-right:auto; border-radius:26px 26px 0 0;}
+
+    /* On a phone the spacer is suppressed so the tool row fits two lines; a
+       tablet has room to push undo/redo/clear back over to the right. */
+    #v-notebook .tools .spacer{display:block; flex:1;}
+    #v-notebook .tools .pen{width:32px; height:32px;}
+    #v-notebook .tools .sizedot{width:38px; height:38px;}
+    #v-notebook .tools .toolbtn{width:44px; height:44px;}
+    #v-notebook .tools .toolbtn svg{width:20px; height:20px;}
+
+    /* lock + onboarding are already centred columns — just scale them up */
+    #lock .locklogo{width:104px; height:104px;}
+    #lock .pad-grid{max-width:330px;}
+    /* constrain the form column but NOT the logo — width:100% on an <img>
+       would blow it up to the full column width */
+    #onboard > *:not(.ob-logo){max-width:560px; margin-left:auto; margin-right:auto; width:100%;}
+  }
+
+  /* Landscape iPad / 13" — a little more room again. */
+  @media (min-width: 1100px){
+    body{max-width:1080px;}
+    #v-home.active{column-gap:38px;}
+  }
+
   /* entry viewer */
   .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
   .viewer .body{font-size:17px; line-height:1.68; color:var(--ink-soft); font-family:var(--body); white-space:pre-wrap; word-wrap:break-word;}
@@ -1341,18 +1438,34 @@
     return el;
   }
 
+  /* On a tablet the journal sits in its own column beside the prompt, so it
+     has room for more than the phone's three. Purely how many are previewed —
+     "See all" still shows everything on every device. */
+  var BIG_SCREEN="(min-width: 700px)";
+  function homePreviewCount(){
+    try{ return window.matchMedia(BIG_SCREEN).matches ? 6 : 3; }catch(e){ return 3; }
+  }
   function refreshLists(){
     dbAll().then(function(list){
       var home=$("homeList"), all=$("allList");
       home.innerHTML=""; all.innerHTML="";
       if(list.length===0){ home.innerHTML='<div class="empty"><div class="big">✨</div><div class="t">Your journal is waiting.</div><div class="s">Choose Quick, Deep, or Playful above, then Write, Speak, or Draw.</div></div>'; $("viewAll").style.display="none"; }
       else {
-        list.slice(0,3).forEach(function(e){ home.appendChild(entryRow(e)); });
-        $("viewAll").style.display = list.length>3 ? "inline" : "none";
+        var n=homePreviewCount();
+        list.slice(0,n).forEach(function(e){ home.appendChild(entryRow(e)); });
+        $("viewAll").style.display = list.length>n ? "inline" : "none";
         list.forEach(function(e){ all.appendChild(entryRow(e)); });
       }
     });
   }
+  /* Re-render the preview when the phone/tablet breakpoint is crossed —
+     iPad Split View and Slide Over change the width without a reload. */
+  try{
+    var bigMq=window.matchMedia(BIG_SCREEN);
+    var onBreakpoint=function(){ if($("v-home").classList.contains("active")) refreshLists(); };
+    if(bigMq.addEventListener) bigMq.addEventListener("change", onBreakpoint);
+    else if(bigMq.addListener) bigMq.addListener(onBreakpoint);
+  }catch(e){}
 
   /* ============================================================
      TEXT ENTRY (+ quick-reply chips for low-effort responses)

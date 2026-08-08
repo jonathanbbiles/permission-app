@@ -8,18 +8,19 @@
     "postinstall": "node scripts/patch-ondevice-speech.mjs"
   },
   "dependencies": {
+    "@capacitor-community/in-app-review": "^8.0.0",
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/core": "latest",
     "@capacitor/filesystem": "^8.0.0",
     "@capacitor/ios": "latest",
     "@capacitor/share": "^8.0.0",
-    "@capacitor-community/in-app-review": "^8.0.0",
     "@capgo/capacitor-native-biometric": "^8.6.1",
-    "capacitor-voice-recorder": "^7.0.6",
-    "@capacitor-community/speech-recognition": "^7.0.1"
+    "capacitor-voice-recorder": "^7.0.6"
   },
   "devDependencies": {
+    "@capacitor/assets": "latest",
     "@capacitor/cli": "latest",
-    "@capacitor/assets": "latest"
+    "playwright": "^1.62.1"
   }
 }

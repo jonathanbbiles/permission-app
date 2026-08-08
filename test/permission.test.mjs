@@ -261,6 +261,72 @@ ok("stored pages keep their aspect ratio when the canvas shape changes",
 ok("a minimum canvas height is enforced", /NB_MIN_H/.test(html));
 
 /* ============================================================ */
+section("14) v1.3 — iPad / large screen (Guideline 4 'designed for iPad')");
+/* The audit greps for a min-width between 620 and 899 — below that it is a
+   phone breakpoint, above it would miss iPad mini portrait (744pt). */
+const bigMq = html.match(/@media *\( *min-width: *(\d+)px *\)/g) || [];
+ok("a large-screen @media block exists", bigMq.length > 0);
+ok("its breakpoint is in the iPad range the gate requires (620–899)",
+   bigMq.some((m) => { const n = +m.match(/(\d+)px/)[1]; return n >= 620 && n <= 899; }),
+   bigMq.join(" "));
+ok("body widens past the 540px phone column on iPad",
+   /@media[^{]*min-width: *7\d\dpx[^{]*\{[\s\S]{0,600}?body\{max-width:9\d\dpx/.test(html));
+ok("home becomes a two-column grid on iPad", /#v-home\.active\{display:grid/.test(html));
+ok("grid rows are assigned explicitly (auto-flow can't reshuffle)",
+   /#v-home \.greet\s*\{grid-column:1 \/ -1; grid-row:1;\}/.test(html) &&
+   /#v-home #homeList\{grid-column:2/.test(html));
+ok("editors keep a reading measure instead of stretching full width",
+   /#v-text, #v-voice, #v-draw, #v-entry, #v-journal\{max-width:7\d\dpx/.test(html));
+ok("notebook is NOT width-capped on iPad (more width = more paper)",
+   !/#v-notebook\{max-width/.test(html));
+ok("settings sheet is centred at panel width, transform untouched",
+   /\.sheet\{max-width:6\d\dpx; margin-left:auto/.test(html));
+ok("onboarding logo is excluded from the column constraint",
+   /#onboard > \*:not\(\.ob-logo\)/.test(html));
+ok("home preview count adapts to screen size", /function homePreviewCount/.test(html) && /matches \? 6 : 3/.test(html));
+ok("crossing the breakpoint re-renders the preview (Split View / Slide Over)",
+   /addEventListener\("change", onBreakpoint\)/.test(html));
+ok("no feature is hidden by screen size — layout only",
+   !/@media[^{]*min-width[^{]*\{[\s\S]{0,3000}?(display:none *!important|visibility:hidden)/.test(
+      html.slice(html.indexOf("iPAD / LARGE SCREEN"))));
+
+section("15) v1.3 — App Store assets");
+const iconPath = path.join(ROOT, "appicon-1024.png");
+ok("appicon-1024.png exists at repo root", fs.existsSync(iconPath));
+if (fs.existsSync(iconPath)) {
+  const buf = fs.readFileSync(iconPath);
+  const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), colorType = buf[25];
+  ok("app icon is exactly 1024x1024", w === 1024 && h === 1024, `${w}x${h}`);
+  /* PNG colour types 4 and 6 carry an alpha channel; Apple rejects an app
+     icon with transparency. */
+  ok("app icon has NO alpha channel (Apple rejects it)", colorType !== 4 && colorType !== 6,
+     `colorType=${colorType}`);
+}
+ok("build regenerates the icon from appicon-1024.png", /cp appicon-1024\.png assets\/icon\.png/.test(cm));
+ok("build references AppIcon.appiconset", /AppIcon\.appiconset/.test(cm));
+ok("build FAILS rather than shipping the Capacitor placeholder",
+   /the Capacitor placeholder would ship/.test(cm) && /that is a placeholder, not the real artwork/.test(cm));
+
+/* Screenshots must exist at the EXACT pixel sizes ASC expects — a wrong size
+   is a hard upload rejection, and a stale one is the 2.3.3 that hit 1.2. */
+const SLOTS = { iphone69: [1290, 2796], iphone65: [1242, 2688], ipad13: [2048, 2732] };
+for (const [slot, [ew, eh]] of Object.entries(SLOTS)) {
+  const dir = path.join(ROOT, "screenshots", slot);
+  const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".png")) : [];
+  ok(`${slot}: screenshots rendered`, files.length > 0, `${files.length} file(s)`);
+  const bad = files.filter((f) => {
+    const b = fs.readFileSync(path.join(dir, f));
+    return b.readUInt32BE(16) !== ew || b.readUInt32BE(20) !== eh;
+  });
+  ok(`${slot}: every shot is exactly ${ew}x${eh}`, files.length > 0 && bad.length === 0, bad.join(", "));
+}
+ok("iPad 13\" screenshots present (hard upload block without them)",
+   fs.existsSync(path.join(ROOT, "screenshots/ipad13")) &&
+   fs.readdirSync(path.join(ROOT, "screenshots/ipad13")).some((f) => f.endsWith(".png")));
+ok("screenshot renderer is committed so shots can be re-rendered per build",
+   fs.existsSync(path.join(ROOT, "scripts/render-screenshots.mjs")));
+
+/* ============================================================ */
 console.log("\n" + "=".repeat(40));
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

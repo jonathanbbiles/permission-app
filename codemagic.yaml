@@ -62,8 +62,40 @@ workflows:
         script: |
           [ -d ios ] || npx cap add ios
           npx cap sync ios
-      - name: Generate app icon + splash from assets/
-        script: npx @capacitor/assets generate --ios || echo "asset generation warning (continuing)"
+      - name: Generate app icon + splash, and PROVE the real icon landed
+        script: |
+          # appicon-1024.png at the repo root is the single source of truth for
+          # the app icon (1024x1024, no alpha — Apple rejects alpha here).
+          # Feed it to @capacitor/assets so the generator writes the whole
+          # AppIcon.appiconset (and its Contents.json) from it.
+          set -e
+          [ -f appicon-1024.png ] || { echo "BLOCKED: appicon-1024.png missing at repo root"; exit 1; }
+          mkdir -p assets
+          cp appicon-1024.png assets/icon.png
+          npx @capacitor/assets generate --ios || echo "asset generation warning (continuing to the check below)"
+
+          # `ios/` is regenerated every build, so a failed generation silently
+          # leaves Capacitor's PLACEHOLDER icon in place — which is an automatic
+          # rejection. Never trust the generator; verify a real 1024 icon is in
+          # the appiconset and fail the build if it is not.
+          ICONSET=ios/App/App/Assets.xcassets/AppIcon.appiconset
+          [ -d "$ICONSET" ] || { echo "BLOCKED: $ICONSET does not exist"; exit 1; }
+          FOUND=""
+          for f in "$ICONSET"/*.png; do
+            [ -f "$f" ] || continue
+            W=$(sips -g pixelWidth "$f" 2>/dev/null | awk '/pixelWidth/{print $2}')
+            if [ "$W" = "1024" ]; then FOUND="$f"; break; fi
+          done
+          [ -n "$FOUND" ] || { echo "BLOCKED: no 1024x1024 icon in $ICONSET — the Capacitor placeholder would ship"; ls -la "$ICONSET"; exit 1; }
+          # It must be OUR icon, not a same-sized placeholder.
+          if cmp -s "$FOUND" appicon-1024.png; then
+            echo "OK — $FOUND is byte-identical to appicon-1024.png"
+          else
+            echo "OK — $FOUND is 1024x1024 (re-encoded by the generator); checking it is not the Capacitor placeholder"
+            SZ=$(wc -c < "$FOUND")
+            [ "$SZ" -gt 20000 ] || { echo "BLOCKED: $FOUND is only ${SZ}B — that is a placeholder, not the real artwork"; exit 1; }
+          fi
+          echo "----- AppIcon.appiconset -----"; ls -la "$ICONSET"
       - name: Info.plist — display name, permission strings, export compliance
         script: |
           # ---------------------------------------------------------------
