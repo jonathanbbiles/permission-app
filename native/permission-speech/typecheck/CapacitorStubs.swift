@@ -59,6 +59,8 @@ public class AVAudioSession {
     public enum Mode { case `default` }
     public static func sharedInstance() -> AVAudioSession { return AVAudioSession() }
     public var recordPermission: RecordPermission { return .undetermined }
+    // real iOS: @property(readonly, getter=isInputAvailable) BOOL inputAvailable, ios(6.0)
+    public var isInputAvailable: Bool { return true }
     public func requestRecordPermission(_ response: @escaping (Bool) -> Void) { response(true) }
     public func setCategory(_ c: Category, mode: Mode, options: CategoryOptions = []) throws {}
     public func setActive(_ active: Bool, options: SetActiveOptions = []) throws {}

@@ -220,40 +220,88 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - live dictation  (the "Dictate" button only — never while recording)
 
+    /// Live dictation.
+    ///
+    /// ⚠️ THIS PATH CRASHED THE APP IN 1.3.4, and the reason is worth spelling
+    /// out because Swift's error handling cannot express it:
+    ///
+    ///     input.installTap(onBus: 0, bufferSize: 1024, format: format)
+    ///
+    /// raises an **Objective-C exception** — not a Swift error — when `format`
+    /// is invalid (`sampleRate == 0` / `channelCount == 0`):
+    ///
+    ///     'com.apple.coreaudio.avfaudio', reason: 'required condition is
+    ///      false: IsFormatSampleRateAndChannelCountValid(format)'
+    ///
+    /// A Swift `do/catch` CANNOT catch that; the process terminates. So the fix
+    /// is not to catch it — it is to make it impossible to reach: verify the
+    /// microphone permission, the input availability and the format itself
+    /// BEFORE touching `installTap`, and bail with a reason if any is wrong.
+    ///
+    /// `inputNode` hands back a zero format whenever the app doesn't really own
+    /// the audio input — which is easy here, because recording runs on
+    /// WKWebView's MediaRecorder (capacitor-voice-recorder isn't in the build),
+    /// so WebKit may already own the input route.
     @objc func startLive(_ call: CAPPluginCall) {
         let language = call.getString("language") ?? "en-US"
+        // AVAudioEngine setup must not race with the recognition callback,
+        // which arrives on a background queue and can tear the engine down.
+        DispatchQueue.main.async { self.startLiveOnMain(call, language: language) }
+    }
 
-        if audioEngine?.isRunning == true {
-            call.resolve(["ok": false, "reason": "already-listening", "diag": snapshot(language)]); return
+    private func startLiveOnMain(_ call: CAPPluginCall, language: String) {
+        func fail(_ reason: String, _ detail: String? = nil) {
+            var out: [String: Any] = ["ok": false, "reason": reason, "diag": snapshot(language)]
+            if let d = detail { out["detail"] = d }
+            call.resolve(out)
         }
+
+        // Anything left over from a previous run: tear it down rather than
+        // installing a second tap on the same bus (that raises too).
+        if audioEngine != nil { teardownLive() }
+
         let auth = SFSpeechRecognizer.authorizationStatus()
-        if auth != .authorized {
-            call.resolve(["ok": false, "reason": "permission-" + authString(auth), "diag": snapshot(language)]); return
-        }
-        guard let rec = recognizer(language), rec.isAvailable else {
-            call.resolve(["ok": false, "reason": "recognizer-unavailable", "diag": snapshot(language)]); return
-        }
-        if !supportsOnDevice(rec) {
-            call.resolve(["ok": false, "reason": "no-on-device", "diag": snapshot(language)]); return
-        }
+        if auth != .authorized { fail("permission-" + authString(auth)); return }
+
+        // The MICROPHONE is a separate permission from speech recognition, and
+        // it was never checked here. Without it `inputNode` yields the zero
+        // format that makes installTap raise.
+        let mic = micString()
+        if mic != "granted" { fail("mic-" + mic); return }
+
+        guard let rec = recognizer(language) else { fail("no-recognizer"); return }
+        if !rec.isAvailable { fail("recognizer-unavailable"); return }
+        if !supportsOnDevice(rec) { fail("no-on-device"); return }
 
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            // Something else holds the mic. Say so instead of failing silently.
-            call.resolve(["ok": false, "reason": "mic-busy", "detail": error.localizedDescription,
-                          "diag": snapshot(language)]); return
+            fail("mic-busy", error.localizedDescription); return
         }
+        guard session.isInputAvailable else { fail("input-unavailable"); return }
 
         let engine = AVAudioEngine()
+        let input = engine.inputNode
+        // Safe even when no tap is installed, and it prevents the
+        // "may not be called on a bus that already has a tap" exception.
+        input.removeTap(onBus: 0)
+
+        // ---- THE CRASH GUARD ----
+        let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            // Someone else owns the input (very often WKWebView). Degrade
+            // instead of dying — the record → stop → transcribe path still works.
+            fail("no-audio-input",
+                 "input format \(format.sampleRate)Hz/\(format.channelCount)ch")
+            return
+        }
+
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         if #available(iOS 13.0, *) { request.requiresOnDeviceRecognition = true }
 
-        let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             request.append(buffer)
         }
@@ -261,13 +309,16 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
         liveTask = rec.recognitionTask(with: request) { [weak self] (result, error) in
             guard let self = self else { return }
             if let result = result {
-                self.notifyListeners("partialResults", data: [
-                    "matches": [result.bestTranscription.formattedString]
-                ])
+                let text = result.bestTranscription.formattedString
+                DispatchQueue.main.async {
+                    self.notifyListeners("partialResults", data: ["matches": [text]])
+                }
             }
             if error != nil || (result?.isFinal ?? false) {
-                self.teardownLive()
-                self.notifyListeners("listeningState", data: ["status": "stopped"])
+                DispatchQueue.main.async {
+                    self.teardownLive()
+                    self.notifyListeners("listeningState", data: ["status": "stopped"])
+                }
             }
         }
 
@@ -276,8 +327,8 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
-            call.resolve(["ok": false, "reason": "engine-failed", "detail": error.localizedDescription,
-                          "diag": snapshot(language)]); return
+            liveTask?.cancel(); liveTask = nil
+            fail("engine-failed", error.localizedDescription); return
         }
 
         audioEngine = engine
@@ -287,10 +338,19 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func stopLive(_ call: CAPPluginCall) {
-        teardownLive()
-        call.resolve(["ok": true])
+        DispatchQueue.main.async {
+            self.teardownLive()
+            call.resolve(["ok": true])
+        }
     }
 
+    /// Releases only what live dictation owns.
+    ///
+    /// It deliberately does NOT call `setActive(false)`. The shared
+    /// AVAudioSession is also used by WKWebView's MediaRecorder (the recording
+    /// path) and by playback of saved entries — deactivating it here would
+    /// break the record → stop → transcribe flow that already works. The
+    /// session is activated once at launch and left alone.
     private func teardownLive() {
         if let engine = audioEngine {
             if engine.isRunning { engine.stop() }
@@ -299,7 +359,7 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
         audioEngine = nil
         liveRequest?.endAudio()
         liveRequest = nil
+        liveTask?.cancel()
         liveTask = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }

@@ -17,6 +17,9 @@ const pkgRaw = fs.readFileSync(path.join(ROOT, "package.json"), "utf8");
 const cm = fs.readFileSync(path.join(ROOT, "codemagic.yaml"), "utf8");
 const PLUGIN_SWIFT = "native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift";
 const pluginSrc = fs.readFileSync(path.join(ROOT, PLUGIN_SWIFT), "utf8");
+/* comment-free view: the doc comments quote the exact lines they explain, so
+   ordering/absence checks must not see them. */
+const pluginCode = pluginSrc.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
 const pluginPkg = fs.readFileSync(path.join(ROOT, "native/permission-speech/Package.swift"), "utf8");
 
 let pass = 0, fail = 0;
@@ -477,8 +480,8 @@ ok("the permission request is fire-and-forget, so a denial can't block recording
    /Never awaited: a denial must\s*\n?\s*\/\/ not stop anyone from recording/.test(html));
 
 section("25) v1.3.2 — nothing else changed");
-ok("version bumped to 1.3.4", /APP_VERSION = "1\.3\.4"/.test(html) && />v1\.3\.4</.test(html) &&
-   /CFBundleShortVersionString 1\.3\.4/.test(cm));
+ok("version bumped to 1.3.5", /APP_VERSION = "1\.3\.5"/.test(html) && />v1\.3\.5</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.5/.test(cm));
 ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
 ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
 ok("transcript still saved with the audio", /type:"voice"[^}]*transcript:transcript/.test(html));
@@ -537,6 +540,37 @@ ok("the stub mirrors CAPPlugin's real permission methods (so collisions reproduc
    /open func checkPermissions/.test(fs.readFileSync(path.join(ROOT, "native/permission-speech/typecheck/CapacitorStubs.swift"), "utf8")));
 ok("the build runs that type-check before xcodebuild",
    /typecheck\/run\.sh/.test(cm) && /does not type-check/.test(cm));
+
+section("28) v1.3.5 — the live-Dictate crash cannot recur");
+/* installTap raises an ObjC exception (uncatchable by Swift do/catch) when the
+   input format is invalid. The fix is to make it unreachable, not to catch it. */
+ok("the audio format is VALIDATED before installTap",
+   /guard format\.sampleRate > 0, format\.channelCount > 0 else/.test(pluginSrc));
+ok("that guard sits before the installTap call",
+   pluginCode.indexOf("format.sampleRate > 0") < pluginCode.indexOf("input.installTap"));
+ok("microphone permission is checked before touching inputNode",
+   /let mic = micString\(\)/.test(pluginCode) &&
+   pluginCode.indexOf('fail("mic-"') < pluginCode.indexOf("engine.inputNode"));
+ok("input availability is checked", /guard session\.isInputAvailable else/.test(pluginSrc));
+ok("any leftover tap is removed before installing a new one",
+   pluginCode.indexOf("input.removeTap(onBus: 0)") < pluginCode.indexOf("input.installTap"));
+ok("a stale engine is torn down rather than double-tapped",
+   /if audioEngine != nil \{ teardownLive\(\) \}/.test(pluginSrc));
+ok("engine.start errors are caught and reported", /catch \{[\s\S]{0,200}?fail\("engine-failed"/.test(pluginSrc));
+ok("engine work is marshalled to the main thread",
+   /DispatchQueue\.main\.async \{ self\.startLiveOnMain/.test(pluginSrc));
+ok("recognition callbacks notify + tear down on main", /DispatchQueue\.main\.async \{[\s\S]{0,140}?self\.teardownLive\(\)/.test(pluginSrc));
+ok("the live task is cancelled on teardown", /liveTask\?\.cancel\(\)/.test(pluginSrc));
+/* the working record -> file path must not be collateral damage */
+ok("teardown no longer deactivates the SHARED audio session",
+   !/setActive\(false/.test(pluginCode));
+ok("file transcription path untouched", /SFSpeechURLRecognitionRequest/.test(pluginSrc) && /func transcribeFile/.test(pluginSrc));
+/* every new reason reaches the user */
+for (const r of ["no-audio-input","input-unavailable","mic-denied","mic-notDetermined","mic-restricted"]) {
+  ok(`reason "${r}" has human copy`, new RegExp(`"${r}":`).test(html));
+}
+ok("the busy-mic message points at the working record->transcribe path",
+   /let it transcribe itself when you stop/.test(html));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));
