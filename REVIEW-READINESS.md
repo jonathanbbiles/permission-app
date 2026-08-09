@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.3.2 (fixes transcription — file-based on-device recognition)
-**Date:** 2026-08-08 (transcription fix)
+**Version:** 1.3.3 (transcription — first-party SPM-native speech plugin)
+**Date:** 2026-08-08 (transcription fix, 3rd attempt — true root cause)
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -56,49 +56,69 @@ copy is left behind.
 
 ---
 
-## 1.3.2 — why transcription produced nothing on device, and what changed
+## 1.3.3 — the TRUE root cause: the speech plugin was never in the app
 
-**Root cause: two plugins, one microphone.** Not the Web Speech API — the app
-never used it; transcription already went through the native `SpeechRecognition`
-plugin (SFSpeechRecognizer). The real problem was that 1.3.1 transcribed *while*
-recording. `capacitor-voice-recorder` (AVAudioRecorder) already owned the mic and
-the shared `AVAudioSession`, and the speech plugin's live path then ran:
+Two previous attempts blamed the wrong thing. The actual cause, proved by running
+the build locally:
 
-```swift
-try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-} catch {
-      call.reject("Microphone is already in use by another application.")
+**`npx cap sync ios` silently drops SPM-incompatible plugins.** This app's iOS
+project is SPM-based. `@capacitor-community/speech-recognition` ships only a
+CocoaPods podspec — it has **no `Package.swift`** — so Capacitor prints
+
+```
+[warn] @capacitor-community/speech-recognition does not have a Package.swift
+[warn] Some installed Capacitor plugins are not compatible with SPM
 ```
 
-That `setActive` throws while a recording is in progress, so `start()` rejected
-every time. And the JS swallowed it (`.catch(function(){ /* … */ })`) while the
-status line still said "Listening" — so the failure was completely invisible:
-a perfect recording, no transcript, no explanation.
+...and then **builds anyway without it**. The generated
+`ios/App/CapApp-SPM/Package.swift` listed five plugins; the speech recogniser was
+not among them. So on device `window.Capacitor.Plugins.SpeechRecognition` was
+`undefined`, every call fell into the "unavailable" branch, and the transcript was
+always empty.
 
-**The fix: stop competing for the microphone.** Recognition now runs on the
-**finished audio file**, after the recorder has released the session:
+This explains every symptom, including the ones the mic-conflict theory could not:
 
-- The patch script adds a `transcribeFile` method to the plugin, backed by
-  `SFSpeechURLRecognitionRequest`, and registers it with the Capacitor bridge
-  (`CAP_PLUGIN_METHOD`) so JS can actually call it. Upstream has no such method.
-- Nothing overlaps, so there is nothing to conflict. Live recognition is now
-  used **only** by the standalone **Dictate** button, where no recorder is running.
-- The native recorder already returns base64, so the audio is not re-encoded.
-- Speech permission is requested **up front**, before recording starts, so the
-  prompt never interrupts a recording — and a denial never blocks recording.
+| Symptom | Explanation |
+|---|---|
+| Transcript always empty | plugin absent → `transcribeFile` unreachable |
+| "Dictation isn't available here" toast | `srPlugin()` was `null` |
+| **Never prompted for Speech Recognition** | the code that calls `requestAuthorization` was never in the app |
+| Recording worked fine | `capacitor-voice-recorder` is *also* SPM-incompatible and also absent, so recording quietly fell back to WKWebView's `MediaRecorder` — which works, and hid the problem |
 
-**Still on-device only.** `requiresOnDeviceRecognition = true` is set on the file
-request too. If the device has no on-device model for the locale, `transcribeFile`
-returns `{ok:false, reason:"no-on-device"}` and the app **says so** — it does not
-fall back to Apple's servers. There is no server path in this app, opt-in or
-otherwise, so the privacy copy is unchanged and still accurate.
+It was never a microphone conflict: the recogniser was never running at all.
 
-**Failure is never silent again.** The status line always shows one of:
-"Transcribing on this phone…" → "Transcribed on this phone. The audio never left
-your device." or "Transcription unavailable — <reason>". Reasons covered:
-permission denied, no on-device model, recognizer unavailable, no speech
-detected, recognition failed, timed out (90s), unsupported platform. The build
-**fails** unless both patches are present and `transcribeFile` is registered.
+**The fix — a first-party, SPM-native plugin.** `native/permission-speech/` is
+owned by this repo, has a real `Package.swift`, and registers through
+`CAPBridgedPlugin` (pure Swift — SwiftPM cannot mix ObjC and Swift in one
+target, which is why the community plugin's `CAP_PLUGIN` macro could never be
+made SPM-compatible without a rewrite). It cannot be silently dropped: it either
+compiles into the IPA or the build fails.
+
+It does file transcription via `SFSpeechURLRecognitionRequest`, requests **both**
+`SFSpeechRecognizer.requestAuthorization` and the microphone permission up front
+when the Record screen opens, and sets `requiresOnDeviceRecognition = true` on
+every request — no server fallback, so the privacy copy is unchanged.
+
+**Verified locally, not assumed:**
+- `npx cap add ios` → `PermissionSpeech` IS in the generated SPM manifest ✓
+- `swiftc -frontend -parse` on the plugin ✓
+- the real `PlistBuddy` step run against the generated `Info.plist` →
+  `NSSpeechRecognitionUsageDescription` present ✓
+- headless run of the actual device code path (MediaRecorder → file
+  transcription) → transcript lands, and every failure reason surfaces ✓
+- **Not verified locally: a full `xcodebuild`.** There is no full Xcode on this
+  machine (Command Line Tools only), so the Swift is syntax-checked but not
+  type-checked. Codemagic compiles it — and a compile error fails the build
+  loudly, which is the safe direction. **The device test remains the gate.**
+
+**The build now checks the artefact, not the source.** The previous check grepped
+`node_modules` and passed happily while proving nothing. It now reads the
+generated `CapApp-SPM/Package.swift` and **fails** if `PermissionSpeech` is not in
+it, and prints found-vs-compiled plugins so this class of bug is visible.
+
+**A visible diagnostic ships in the Record screen.** Under the transcript box:
+`engine · speech auth · mic auth · available · on-device · locale`. Three
+releases of this bug would have read `engine: none` at a glance.
 
 ---
 
@@ -249,7 +269,7 @@ errors) proves the *repo* is clean, never that the *build* is.
 Run on a real iPhone from a clean install:
 
 1. **Cold launch from a clean install** (delete the app first).
-2. **Record → Voice.** ⚠️ **This is the #1 thing to check — it is what 1.3.2
+2. **Record → Voice.** ⚠️ **This is the #1 thing to check — it is what 1.3.3
    fixes.** Record a few seconds and stop. The status line should read
    "Transcribing on this phone…" and then either fill the transcript box and say
    "Transcribed on this phone. The audio never left your device.", or say
@@ -259,6 +279,15 @@ Run on a real iPhone from a clean install:
    **"on-device transcription isn't ready for your language yet"**, that is the
    honest no-server refusal — download the offline dictation language in iOS
    Settings › General › Keyboard › Dictation, then retry.
+   **Read the diagnostic line under the transcript box and screenshot it.** It
+   should say `engine: native-sfspeechrecognizer · speech: authorized · mic:
+   granted · available: yes · on-device: yes · en-US`. If it says
+   `engine: none`, the plugin is still not in the build. If `speech:` is
+   anything but `authorized`, the permission is the problem. Either way the
+   line names the cause — no more guessing.
+2b. **You should now get TWO permission prompts** on a clean install when the
+   Record screen opens: Microphone AND Speech Recognition. Only ever seeing the
+   Microphone prompt was the tell for this bug.
 3. **Long recording (> 1 min).** File-based recognition is not subject to the
    ~1-minute live-task cap, but confirm a longer clip still transcribes and does
    not time out (the UI stops waiting after 90s and says so).

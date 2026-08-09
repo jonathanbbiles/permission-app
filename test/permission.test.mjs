@@ -15,7 +15,9 @@ const ROOT = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "www/index.html"), "utf8");
 const pkgRaw = fs.readFileSync(path.join(ROOT, "package.json"), "utf8");
 const cm = fs.readFileSync(path.join(ROOT, "codemagic.yaml"), "utf8");
-const patchSrc = fs.readFileSync(path.join(ROOT, "scripts/patch-ondevice-speech.mjs"), "utf8");
+const PLUGIN_SWIFT = "native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift";
+const pluginSrc = fs.readFileSync(path.join(ROOT, PLUGIN_SWIFT), "utf8");
+const pluginPkg = fs.readFileSync(path.join(ROOT, "native/permission-speech/Package.swift"), "utf8");
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {
@@ -179,9 +181,9 @@ ok("Jessica's link kept as the headline link", /SITE_URL="https:\/\/jessicaleigh
 
 /* ============================================================ */
 section("8) v1.3 — Speak: transcript saved WITH the audio");
-ok("speech recognition plugin declared", /"@capacitor-community\/speech-recognition"/.test(pkgRaw));
+ok("first-party speech plugin declared", /"permission-speech": "file:native\/permission-speech"/.test(pkgRaw));
 ok("plugin accessed through the guarded Capacitor.Plugins lookup",
-   /Capacitor\.Plugins\.SpeechRecognition/.test(html));
+   /Capacitor\.Plugins\.PermissionSpeech/.test(html));
 ok("transcript textarea exists and is editable", /id="vTranscript"/.test(html) && /class="transcript"/.test(html));
 ok("transcript is persisted on the voice entry",
    /type:"voice"[^}]*transcript:transcript/.test(html));
@@ -194,8 +196,9 @@ ok("transcription is kicked off once the recording finishes, on both paths",
    (html.match(/runTranscription\(/g) || []).length >= 3);
 ok("transcription stops when recording stops", /srStop\(\)/.test(html));
 ok("standalone dictation fallback exists", /id="vDictate"/.test(html) && /srStart\("dictate"\)/.test(html));
-ok("long recordings restart the recognition task (iOS ~1min cap)",
-   /listeningState/.test(html) && /srKick/.test(html));
+/* file-based recognition has no ~1-minute live-task cap to work around */
+ok("long recordings are handled by file recognition, not live restarts",
+   /transcribeFile/.test(html) && !/srKick/.test(html));
 ok("user edits to the transcript are not clobbered", /trUserEdited/.test(html));
 
 section("9) v1.3 — Speak: video option");
@@ -215,9 +218,10 @@ ok("oversized videos are refused with a message, not a crash", /MAX_VIDEO_BYTES/
 ok("cancelling the picker is a no-op", /if\(!f\)\{ return; \}/.test(html));
 
 section("10) v1.3 — permission denial is handled, never fatal");
-ok("speech availability check cannot throw", /srAvailable[\s\S]{0,400}catch\(e\)\{ return Promise\.resolve\(false\); \}/.test(html));
-ok("a denied speech permission resolves false and explains itself",
-   /Speech recognition is off/.test(html));
+ok("the diagnostics probe can never throw",
+   /function srRefreshDiag[\s\S]{0,600}?catch\(e\)\{ srDiag=null; renderDiag\(\); return Promise\.resolve\(null\); \}/.test(html));
+ok("a denied speech permission explains itself, with the fix",
+   /you declined Speech Recognition/.test(html) && /iOS Settings/.test(html));
 ok("denied mic keeps the rest of the app usable",
    /You can still write or draw an entry/.test(html));
 ok("save is never blocked by a missing transcript",
@@ -241,13 +245,8 @@ ok("usage strings name the app and the reason (not 'we need access')",
    /Permission turns what you say into text on this device/.test(cm));
 
 section("12) v1.3 — speech stays ON-DEVICE (privacy promise is literal)");
-ok("postinstall patch is wired", /"postinstall": "node scripts\/patch-ondevice-speech\.mjs"/.test(pkgRaw));
-ok("patch script exists", fs.existsSync(path.join(ROOT, "scripts/patch-ondevice-speech.mjs")));
-ok("patch sets requiresOnDeviceRecognition = true",
-   /requiresOnDeviceRecognition = true/.test(patchSrc));
-ok("patch fails loudly if its anchor moves", /process\.exit\(1\)/.test(patchSrc));
-ok("build verifies the patch and blocks if absent",
-   /requiresOnDeviceRecognition = true/.test(cm) && /Refusing to build/.test(cm));
+ok("plugin source is committed in-repo", fs.existsSync(path.join(ROOT, PLUGIN_SWIFT)));
+ok("it forces on-device recognition", /requiresOnDeviceRecognition = true/.test(pluginSrc));
 ok("no network calls introduced by the new features",
    !/fetch\(["'`]https?:/.test(html) && !/XMLHttpRequest\(\)[\s\S]{0,80}https?:/.test(html));
 
@@ -404,7 +403,7 @@ ok("Jessica's headline link + jonathanscribbles footer both present",
    /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html) && /MAKER_URL="https:\/\/jonathanscribbles\.com"/.test(html));
 ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /id="nbExportPdf"/.test(html));
 ok("on-device speech + zero network APIs still hold",
-   /requiresOnDeviceRecognition = true/.test(patchSrc) &&
+   /requiresOnDeviceRecognition = true/.test(pluginSrc) &&
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
 ok("version moved past 1.3.0", /APP_VERSION = "1\.3\.[1-9]"/.test(html));
@@ -427,22 +426,35 @@ ok("it is invoked only after the recorder stopped", /stopRecording\(\)[\s\S]{0,9
 ok("the native recorder's base64 is reused, not re-encoded", /runTranscription\(b64, mime\)/.test(html));
 ok("web path converts its blob instead", /function blobToBase64/.test(html));
 
-section("22) v1.3.2 — the native side actually supports file transcription");
-ok("patch adds transcribeFile to the plugin", /@objc func transcribeFile/.test(patchSrc));
-ok("it uses SFSpeechURLRecognitionRequest (file, not mic)", /SFSpeechURLRecognitionRequest/.test(patchSrc));
-ok("it is registered with the Capacitor bridge", /CAP_PLUGIN_METHOD\(transcribeFile/.test(patchSrc));
-ok("patch fails loudly if any anchor moves", /function bail/.test(patchSrc) && /process\.exit\(1\)/.test(patchSrc));
-ok("patch verifies its own work by re-reading", /verified — on-device flag \+ file transcription/.test(patchSrc));
-ok("build BLOCKS unless transcribeFile is present AND registered",
-   /@objc func transcribeFile/.test(cm) && /CAP_PLUGIN_METHOD\(transcribeFile/.test(cm) &&
-   /Refusing to build/.test(cm));
+section("22) v1.3.3 — the native side is FIRST-PARTY and SPM-native");
+/* THE REAL ROOT CAUSE of 1.3.0-1.3.2: @capacitor-community/speech-recognition
+   ships no Package.swift. This app's iOS project is SPM, and `cap sync` drops
+   SPM-incompatible plugins with only a warning — so the plugin was installed,
+   listed, even patched, but never compiled into the IPA. */
+ok("the SPM-incompatible community plugin is gone",
+   !/@capacitor-community\/speech-recognition/.test(pkgRaw));
+ok("our plugin HAS a Package.swift (the thing that was missing)",
+   fs.existsSync(path.join(ROOT, "native/permission-speech/Package.swift")));
+ok("it declares an SPM library target", /\.library\(\s*name: "PermissionSpeech"/.test(pluginPkg));
+ok("source sits where SPM expects it", /path: "ios\/Sources\/PermissionSpeechPlugin"/.test(pluginPkg));
+ok("registered via CAPBridgedPlugin (pure Swift, no ObjC macro)",
+   /CAPBridgedPlugin/.test(pluginSrc) && /jsName = "PermissionSpeech"/.test(pluginSrc));
+ok("every JS-called method is declared to the bridge",
+   ["diagnostics","checkPermissions","requestPermissions","transcribeFile","startLive","stopLive"]
+     .every((m) => new RegExp(`CAPPluginMethod\\(name: "${m}"`).test(pluginSrc)));
+ok("file transcription uses SFSpeechURLRecognitionRequest", /SFSpeechURLRecognitionRequest/.test(pluginSrc));
+ok("speech authorization is actually requested", /SFSpeechRecognizer\.requestAuthorization/.test(pluginSrc));
+ok("microphone authorization is requested too", /requestRecordPermission/.test(pluginSrc));
+ok("build BLOCKS unless the plugin is in the GENERATED SPM manifest",
+   /CapApp-SPM\/Package\.swift/.test(cm) && /PermissionSpeech is NOT in/.test(cm));
+ok("build checks the artifact, not node_modules", !/node_modules\/@capacitor-community/.test(cm));
 
 section("23) v1.3.2 — still on-device only, never a server fallback");
-ok("on-device flag still forced on the live request", /requiresOnDeviceRecognition = true/.test(patchSrc));
+ok("on-device flag forced on the live request", /requiresOnDeviceRecognition = true/.test(pluginSrc));
 ok("the FILE request is on-device too",
-   /SFSpeechURLRecognitionRequest[\s\S]{0,400}?requiresOnDeviceRecognition = true/.test(patchSrc));
+   /SFSpeechURLRecognitionRequest[\s\S]{0,400}?requiresOnDeviceRecognition = true/.test(pluginSrc));
 ok("if on-device is unavailable it REFUSES rather than using the network",
-   /supportsOnDeviceRecognition/.test(patchSrc) && /"reason": "no-on-device"/.test(patchSrc));
+   /supportsOnDeviceRecognition/.test(pluginSrc) && /"reason": "no-on-device"/.test(pluginSrc));
 ok("the UI explains that refusal honestly", /won.t send your audio anywhere/.test(html));
 ok("no network APIs introduced", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 
@@ -458,13 +470,15 @@ ok("a stuck transcription times out rather than hanging", /TRANSCRIBE_TIMEOUT_MS
 ok("errors are no longer swallowed silently",
    !/catch\(function\(\)\{ \/\* a failed restart just ends the transcript \*\/ \}\)/.test(html));
 ok("Dictate fallback kept", /id="vDictate"/.test(html) && /srStart\("dictate"\)/.test(html));
-ok("speech permission is requested up front, before recording", /srPermission\(\)\.catch/.test(html));
-ok("a denied speech permission never blocks recording",
-   /srPermission\(\)\.catch\(function\(\)\{\}\);[\s\S]{0,200}?requestAudioRecordingPermission/.test(html));
+ok("BOTH permissions requested up front, when the Record screen opens",
+   /srRequestPermissions\(\)\.catch\(function\(\)\{\}\);/.test(html) &&
+   /requestRecordPermission/.test(pluginSrc) && /requestAuthorization/.test(pluginSrc));
+ok("the permission request is fire-and-forget, so a denial can't block recording",
+   /Never awaited: a denial must\s*\n?\s*\/\/ not stop anyone from recording/.test(html));
 
 section("25) v1.3.2 — nothing else changed");
-ok("version bumped to 1.3.2", /APP_VERSION = "1\.3\.2"/.test(html) && />v1\.3\.2</.test(html) &&
-   /CFBundleShortVersionString 1\.3\.2/.test(cm));
+ok("version bumped to 1.3.3", /APP_VERSION = "1\.3\.3"/.test(html) && />v1\.3\.3</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.3/.test(cm));
 ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
 ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
 ok("transcript still saved with the audio", /type:"voice"[^}]*transcript:transcript/.test(html));
@@ -476,6 +490,27 @@ ok("passcode lock + Settings + writing intact",
 ok("both links intact",
    /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html) && /MAKER_URL="https:\/\/jonathanscribbles\.com"/.test(html));
 ok("recordings still cannot reach Photos", !/NSPhotoLibraryAddUsageDescription *[:=]/.test(cm));
+
+section("26) v1.3.3 — the visible diagnostic (so the next test is definitive)");
+ok("a diagnostic line exists under the transcript box", /id="trDiag"/.test(html));
+ok("it is rendered from a native snapshot", /function renderDiag/.test(html) && /function srRefreshDiag/.test(html));
+ok("it names the ENGINE", /engine: /.test(html));
+ok("it shows speech auth, mic auth, availability and on-device state",
+   /speech: " \+/.test(html) && /mic: " \+/.test(html) &&
+   /available: " \+/.test(html) && /on-device: " \+/.test(html));
+/* "engine: none" is exactly what 1.3.0-1.3.2 would have shown. Phrased as a
+   device-capability readout, not a build note — build-status copy in shipped
+   UI is itself a rejection. */
+ok("a MISSING native engine is called out explicitly",
+   /el\.textContent="engine: none · speech: n\/a · available: no · on-device: no";/.test(html));
+ok("native reports the same fields", ["engine","speechAuth","micAuth","available","onDevice","locale"]
+     .every((k) => new RegExp(`"${k}"`).test(pluginSrc)));
+ok("native attaches a diag snapshot to every result", /"diag": snapshot\(language\)/.test(pluginSrc));
+ok("the generic 'Dictation isn\u2019t available here' toast is gone",
+   !/Dictation isn\u2019t available here/.test(html));
+ok("Dictate failures show the real reason instead", /Dictation unavailable — /.test(html));
+ok("a missing engine is a named reason, not silence",
+   /"unsupported":"speech to text isn.t available on this device/.test(html));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

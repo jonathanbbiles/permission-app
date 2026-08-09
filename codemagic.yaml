@@ -41,50 +41,57 @@ workflows:
     scripts:
       - name: Install npm dependencies
         script: npm install
-      - name: Verify speech recognition is ON-DEVICE and file-based
-        script: |
-          # `npm install` above runs scripts/patch-ondevice-speech.mjs via
-          # postinstall. It applies two patches, and BOTH must be present:
-          #
-          #  A. requiresOnDeviceRecognition = true — without it iOS may ship
-          #     captured audio to Apple's servers while this app and its privacy
-          #     policy promise nothing leaves the phone (Guideline 5.1.1(i)).
-          #
-          #  B. transcribeFile — file-based recognition. Without it the app
-          #     falls back to LIVE recognition, which fights capacitor-voice-
-          #     recorder for the microphone and silently yields no transcript at
-          #     all. That is the 1.3.1 device bug this build exists to fix.
-          #
-          # Prove both landed rather than trusting postinstall to have run.
-          P=node_modules/@capacitor-community/speech-recognition/ios/Plugin/Plugin.swift
-          M=node_modules/@capacitor-community/speech-recognition/ios/Plugin/Plugin.m
-          for f in "$P" "$M"; do
-            [ -f "$f" ] || { echo "BLOCKED: missing $f"; exit 1; }
-          done
-          grep -q "requiresOnDeviceRecognition = true" "$P" || {
-            echo "BLOCKED: on-device speech patch is NOT present in $P"
-            echo "Speech audio could leave the device. Refusing to build."
-            exit 1
-          }
-          grep -q "@objc func transcribeFile" "$P" || {
-            echo "BLOCKED: transcribeFile is NOT present in $P"
-            echo "Transcription would fall back to the broken live-mic path. Refusing to build."
-            exit 1
-          }
-          grep -q "CAP_PLUGIN_METHOD(transcribeFile" "$M" || {
-            echo "BLOCKED: transcribeFile is not registered with the Capacitor bridge in $M"
-            echo "JS could never call it. Refusing to build."
-            exit 1
-          }
-          echo "OK — on-device recognition enforced:"
-          grep -n "requiresOnDeviceRecognition = true" "$P"
-          echo "OK — file-based transcription present and registered:"
-          grep -n "@objc func transcribeFile" "$P"
-          grep -n "CAP_PLUGIN_METHOD(transcribeFile" "$M"
       - name: Add + sync iOS platform (Capacitor)
         script: |
           [ -d ios ] || npx cap add ios
           npx cap sync ios
+      - name: Verify the speech plugin is ACTUALLY IN THE BUILD (not just installed)
+        script: |
+          # ---------------------------------------------------------------
+          # THE 1.3.0-1.3.2 BUG, AND WHY THIS CHECK EXISTS.
+          #
+          # This app's iOS project is SPM-based. `npx cap sync ios` SILENTLY
+          # DROPS any Capacitor plugin that has no Package.swift — it prints a
+          # warning and builds anyway. @capacitor-community/speech-recognition
+          # is CocoaPods-only, so for three releases it was installed in
+          # node_modules, listed by `cap ls`, patched by our own script... and
+          # never once compiled into the IPA. On device
+          # window.Capacitor.Plugins.SpeechRecognition was undefined, so the
+          # transcript was always empty and the speech permission was never
+          # even requested.
+          #
+          # The old check grepped node_modules and passed happily while proving
+          # nothing. So: check the ARTIFACT. The generated SPM manifest is what
+          # actually gets compiled — if our plugin is not in it, FAIL.
+          # ---------------------------------------------------------------
+          SPM=ios/App/CapApp-SPM/Package.swift
+          [ -f "$SPM" ] || { echo "BLOCKED: $SPM not found — cap add/sync did not run?"; exit 1; }
+          echo "----- generated SPM manifest -----"; cat "$SPM"
+          grep -q 'name: "PermissionSpeech"' "$SPM" || {
+            echo ""
+            echo "BLOCKED: PermissionSpeech is NOT in $SPM."
+            echo "The speech plugin would be missing from the IPA and transcription"
+            echo "would silently produce nothing — exactly the 1.3.0-1.3.2 bug."
+            exit 1
+          }
+          [ -f native/permission-speech/Package.swift ] || { echo "BLOCKED: native/permission-speech/Package.swift missing"; exit 1; }
+          [ -f native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift ] || { echo "BLOCKED: plugin source missing"; exit 1; }
+          grep -q "SFSpeechURLRecognitionRequest" native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift || {
+            echo "BLOCKED: file-based recognition (SFSpeechURLRecognitionRequest) missing from the plugin"; exit 1; }
+          grep -q "requiresOnDeviceRecognition = true" native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift || {
+            echo "BLOCKED: on-device-only enforcement missing — audio could reach Apple's servers"; exit 1; }
+          grep -q "SFSpeechRecognizer.requestAuthorization" native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift || {
+            echo "BLOCKED: speech authorization is never requested — SFSpeechRecognizer would return nothing"; exit 1; }
+          echo "OK — PermissionSpeech is in the compiled SPM package, file-based, on-device, and requests speech auth."
+
+          # Any OTHER plugin dropped for SPM incompatibility is a landmine of the
+          # same shape. Not fatal (capacitor-voice-recorder is knowingly excluded
+          # — recording runs on the WKWebView MediaRecorder path), but say it
+          # loudly in the log so it is never a surprise again.
+          echo ""
+          echo "----- plugins Capacitor found vs. plugins actually compiled -----"
+          npx cap ls ios 2>&1 | sed 's/^/  /' || true
+          echo "  (only packages listed as .package(...) in the manifest above are in the IPA)"
       - name: Generate app icon + splash, and PROVE the real icon landed
         script: |
           # appicon-1024.png at the repo root is the single source of truth for
@@ -206,10 +213,10 @@ workflows:
           # Use a unix timestamp: always an integer, always increasing, immune to float app versions like 1.0.
           NEXT=$(date +%s)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
-          # 1.3.2 — fixes transcription: file-based on-device recognition (no mic contention).
+          # 1.3.3 — transcription: first-party SPM-native speech plugin (was never in the IPA).
           # 1.2 is the live App Store version; this opens the next train.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.3.2" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.3.2" ios/App/App/Info.plist
-          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing); CFBundleShortVersionString=1.3.2"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.3.3" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.3.3" ios/App/App/Info.plist
+          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing); CFBundleShortVersionString=1.3.3"
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

@@ -235,6 +235,11 @@
   .tr-lbl{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800;}
   .tr-status{font-size:12px; color:var(--muted); line-height:1.5; margin-top:8px;}
   .tr-status.warn{color:var(--secondary);}
+  /* diagnostic readout — deliberately plain and monospaced so it reads as
+     instrumentation, not chrome */
+  .tr-diag{margin-top:7px; font-size:10.5px; line-height:1.5; letter-spacing:.2px; color:var(--faint);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-word;}
+  .tr-diag.bad{color:var(--secondary); font-weight:600;}
   textarea.transcript{min-height:104px; font-size:15.5px; line-height:1.55;}
   .tr-live{display:inline-block; width:7px; height:7px; border-radius:50%; background:#D8586A; margin-right:6px; vertical-align:middle; animation:pulseDot 1.2s ease-in-out infinite;}
   @keyframes pulseDot{0%,100%{opacity:1;} 50%{opacity:.25;}}
@@ -702,6 +707,11 @@
       </div>
       <textarea id="vTranscript" class="transcript" placeholder="Your words appear here as you speak. You can edit them before saving." autocapitalize="sentences"></textarea>
       <div class="tr-status" id="trStatus">Your words are turned into text on your phone. Nothing is uploaded.</div>
+      <!-- Always-visible engine/permission readout. A screenshot of this says
+           exactly what the transcriber is doing, so a failure is never a
+           mystery again — "engine: NONE" is what three releases of this bug
+           would have looked like. -->
+      <div class="tr-diag" id="trDiag">engine: checking&hellip;</div>
     </div>
   </div>
 
@@ -865,7 +875,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.2</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.3</span></div>
 </div>
 
 <!-- TOAST -->
@@ -875,7 +885,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.3.2";
+  var APP_VERSION = "1.3.3";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1518,37 +1528,35 @@
   });
 
   /* ============================================================
-     ON-DEVICE SPEECH → TEXT
-     Wraps @capacitor-community/speech-recognition = SFSpeechRecognizer on iOS.
-     `requiresOnDeviceRecognition` is forced on natively (see
-     scripts/patch-ondevice-speech.mjs), so audio never leaves the phone: iOS
-     transcribes locally or not at all, and there is NO server fallback.
+     ON-DEVICE SPEECH → TEXT   (PermissionSpeech — our own native plugin)
 
-     WHY THIS IS FILE-BASED AND NOT LIVE  (the 1.3.1 device bug)
-     -----------------------------------------------------------
-     1.3.1 tried to transcribe WHILE recording. On device that produced a
-     perfect recording and never a single word, every time. The cause: the
-     recorder (capacitor-voice-recorder → AVAudioRecorder) already owns the
-     microphone and the shared AVAudioSession, and the speech plugin's live
-     path then calls
+     WHY THIS IS OUR OWN PLUGIN
+     --------------------------
+     1.3.0–1.3.2 called @capacitor-community/speech-recognition. That package
+     ships only a CocoaPods podspec — it has NO Package.swift — and this app's
+     iOS project is SPM. `npx cap sync ios` prints
 
-         audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+         [warn] ... does not have a Package.swift
+         [warn] Some installed Capacitor plugins are not compatible with SPM
 
-     which throws, so the plugin rejects with "Microphone is already in use by
-     another application." Two plugins, one microphone.
+     ...and then builds anyway WITHOUT it. So on device
+     `window.Capacitor.Plugins.SpeechRecognition` was simply `undefined`:
+     every call fell into the "unavailable" branch, the transcript was always
+     empty, and the speech permission was never even requested — which is why
+     only the microphone prompt ever appeared. It was never a mic conflict;
+     the recognizer was never in the app at all.
 
-     So we no longer compete for the mic. Record first; once the recorder has
-     released the session, hand the FINISHED audio to `transcribeFile` (an
-     SFSpeechURLRecognitionRequest added by the patch script). Nothing overlaps,
-     so there is nothing to conflict.
+     `permission-speech` (native/permission-speech) is first-party and
+     SPM-native, so it cannot be silently dropped: it either builds into the
+     IPA or the build fails.
 
-     EVERY path here is non-fatal: if the plugin is absent (web/desktop),
-     unavailable, or the permission is denied, the recording is untouched and
-     the entry still saves. But failure is never SILENT any more — the status
-     line always says what happened and why.
+     PRIVACY: every request sets requiresOnDeviceRecognition = true. iOS
+     transcribes locally or not at all — there is deliberately no server
+     fallback, and no opt-in for one.
      ============================================================ */
-  var srListening=false, srCommitted="", srPartial="", srHandles=[], srMode=null; // srMode: "live" | "dictate"
-  function srPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition) || null; }catch(e){ return null; } }
+  var srListening=false, srCommitted="", srPartial="", srHandles=[], srMode=null;
+  var srDiag=null;                       // last diagnostics snapshot from native
+  function srPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PermissionSpeech) || null; }catch(e){ return null; } }
   function trSet(text){
     var ta=$("vTranscript"); if(!ta) return;
     trProgrammatic=true; ta.value=text; trProgrammatic=false;
@@ -1558,136 +1566,84 @@
     var el=$("trStatus"); if(!el) return;
     el.innerHTML=msg; el.classList.toggle("warn", !!warn);
   }
-  /* Resolves true/false — never rejects. */
-  function srAvailable(){
+
+  /* ---- VISIBLE DIAGNOSTIC LINE ----
+     Under the transcript box, always. This is what makes the next device test
+     definitive instead of another guess: a screenshot now says exactly which
+     engine is running, whether speech was authorised, and whether an on-device
+     model exists. The absence of the plugin — the actual bug for three
+     releases — shows up here as "engine: NONE". */
+  function renderDiag(){
+    var el=$("trDiag"); if(!el) return;
     var sr=srPlugin();
-    if(!capNative() || !sr) return Promise.resolve(false);
-    try{
-      return Promise.resolve(sr.available()).then(function(r){
-        return !!(r && (r.available===undefined ? r : r.available));
-      }).catch(function(){ return false; });
-    }catch(e){ return Promise.resolve(false); }
-  }
-  /* Resolves true/false — a denial is a normal, handled outcome, not an error. */
-  function srPermission(){
-    var sr=srPlugin(); if(!sr) return Promise.resolve(false);
-    function granted(r){
-      if(!r) return false;
-      var v=r.speechRecognition||r.permission||r.state;
-      return v==="granted" || v===true;
+    if(!capNative()){
+      el.textContent="engine: none (web preview) · speech: n/a · available: no";
+      el.classList.add("bad"); return;
     }
-    try{
-      return Promise.resolve(sr.checkPermissions()).then(function(r){
-        if(granted(r)) return true;
-        return Promise.resolve(sr.requestPermissions()).then(granted).catch(function(){ return false; });
-      }).catch(function(){
-        return Promise.resolve(sr.requestPermissions()).then(granted).catch(function(){ return false; });
-      });
-    }catch(e){ return Promise.resolve(false); }
-  }
-  function srDetach(){
-    srHandles.forEach(function(h){ try{ h && h.remove && h.remove(); }catch(e){} });
-    srHandles=[];
-  }
-  function srAttach(sr){
-    srDetach();
-    try{
-      var p=sr.addListener("partialResults", function(data){
-        var m=(data && data.matches) || [];
-        if(!m.length) return;
-        srPartial=String(m[0]||"");
-        if(!trUserEdited) trSet(trFull());
-      });
-      // addListener may return the handle directly or a promise for it
-      Promise.resolve(p).then(function(h){ srHandles.push(h); }).catch(function(){});
-    }catch(e){}
-    try{
-      // iOS caps a single recognition task (~1 min). When it stops on its own
-      // mid-recording, bank what we have and start a fresh task so a long
-      // reflection still comes out as one continuous transcript.
-      var q=sr.addListener("listeningState", function(data){
-        var st=(data && (data.status||data.state))||"";
-        if(st==="stopped" && srListening){
-          if(srPartial){ srCommitted=(srCommitted?srCommitted+" ":"")+srPartial; srPartial=""; }
-          setTimeout(function(){ if(srListening) srKick(sr); }, 120);
-        }
-      });
-      Promise.resolve(q).then(function(h){ srHandles.push(h); }).catch(function(){});
-    }catch(e){}
-  }
-  function srKick(sr){
-    function failed(e){
-      // Never swallow this. A rejected start() is exactly how the 1.3.1 bug
-      // hid itself: the mic was busy, start() rejected, the catch ate it, and
-      // the status line kept claiming it was listening.
-      srListening=false; srDetach();
-      var msg=String((e&&(e.message||e.errorMessage))||e||"");
-      var why=/already in use|Ongoing/i.test(msg)
-        ? "the microphone is busy. Stop the recording first, then tap Dictate."
-        : (msg || "the recognizer couldn’t start.");
-      trStatus("Transcription unavailable — " + why, true);
-      syncDictateBtn();
+    if(!sr){
+      el.textContent="engine: none · speech: n/a · available: no · on-device: no";
+      el.classList.add("bad"); return;
     }
-    try{
-      Promise.resolve(sr.start({
-        language:"en-US",
-        partialResults:true,
-        popup:false,
-        maxResults:1
-        // On-device-only is NOT set from here — the plugin has no such option.
-        // It is forced natively by scripts/patch-ondevice-speech.mjs, which sets
-        // requiresOnDeviceRecognition = true on the recognition request so iOS
-        // transcribes locally or not at all. See that file for why.
-      })).catch(failed);
-    }catch(e){ failed(e); }
+    if(!srDiag){ el.textContent="engine: native · checking…"; el.classList.remove("bad"); return; }
+    var bits=[
+      "engine: " + (srDiag.engine||"native"),
+      "speech: " + (srDiag.speechAuth||"?"),
+      "mic: " + (srDiag.micAuth||"?"),
+      "available: " + (srDiag.available?"yes":"no"),
+      "on-device: " + (srDiag.onDevice?"yes":"no"),
+      (srDiag.locale||"")
+    ];
+    el.textContent=bits.join(" · ");
+    var bad = srDiag.speechAuth!=="authorized" || !srDiag.available || !srDiag.onDevice;
+    el.classList.toggle("bad", bad);
   }
-  /* Live recognition. ONLY used for standalone Dictate — never alongside a
-     recording, because the two fight over the microphone (see the note at the
-     top of this section). */
-  function srStart(mode){
-    return srAvailable().then(function(ok){
-      if(!ok){
-        trStatus(capNative()
-          ? "Speech to text isn’t available on this device. You can still record, and type your own note here."
-          : "Speech to text runs on your phone — on the web you can type your note here instead.");
-        return false;
-      }
-      return srPermission().then(function(granted){
-        if(!granted){
-          // DENIED: recording is untouched, the entry still saves, we just say so.
-          trStatus("Speech recognition is off, so nothing is being transcribed. You can type your note here, or turn it on in Settings &rsaquo; Permission.", true);
-          return false;
-        }
-        var sr=srPlugin(); if(!sr) return false;
-        srMode=mode; srListening=true; srAttach(sr); srKick(sr);
-        trStatus('<span class="tr-live"></span>Listening — your words are turned into text on this phone.');
-        return true;
-      });
-    }).catch(function(){ return false; });
+  /* Pulls a fresh snapshot from native. Never throws. */
+  function srRefreshDiag(){
+    var sr=srPlugin();
+    if(!sr || typeof sr.diagnostics!=="function"){ srDiag=null; renderDiag(); return Promise.resolve(null); }
+    try{
+      return Promise.resolve(sr.diagnostics({language:"en-US"})).then(function(d){
+        srDiag=d||null; renderDiag(); return srDiag;
+      }).catch(function(){ srDiag=null; renderDiag(); return null; });
+    }catch(e){ srDiag=null; renderDiag(); return Promise.resolve(null); }
+  }
+  /* Requests BOTH permissions. Speech recognition is a SEPARATE permission
+     from the microphone — granting the mic does not grant it, and without it
+     SFSpeechRecognizer silently returns nothing. Resolves the snapshot. */
+  function srRequestPermissions(){
+    var sr=srPlugin();
+    if(!sr || typeof sr.requestPermissions!=="function") return Promise.resolve(null);
+    try{
+      return Promise.resolve(sr.requestPermissions({language:"en-US"})).then(function(d){
+        srDiag=d||null; renderDiag(); return srDiag;
+      }).catch(function(){ return srRefreshDiag(); });
+    }catch(e){ return srRefreshDiag(); }
   }
 
-  /* ---- FILE-BASED TRANSCRIPTION (the path used after recording) ----
-     Runs once the recorder has released the microphone, so nothing contends.
-     Resolves {ok, transcript} or {ok:false, reason} — it never rejects, and it
-     never leaves the status line lying about what happened. */
+  /* ---- human copy for every machine reason ---- */
   var TRANSCRIBE_TIMEOUT_MS=90000;
   var REASON_TEXT={
-    "permission-denied":"permission denied. Turn on Speech Recognition for Permission in iOS Settings, or tap Dictate.",
-    "no-on-device":"on-device transcription isn’t ready for your language yet. Permission won’t send your audio anywhere, so tap Dictate to add the words yourself.",
-    "recognizer-unavailable":"the speech recognizer isn’t available right now. Tap Dictate to add the words yourself.",
-    "no-recognizer":"no speech recognizer for this language. Tap Dictate to add the words yourself.",
+    "permission-denied":"you declined Speech Recognition. Turn it on in iOS Settings › Permission › Speech Recognition, then record again.",
+    "permission-restricted":"Speech Recognition is restricted on this device (Screen Time or a device policy).",
+    "permission-notDetermined":"Speech Recognition hasn’t been allowed yet. Record again and choose Allow.",
+    "permission-unknown":"Speech Recognition isn’t authorised.",
+    "no-on-device":"your iPhone doesn’t have the offline dictation model for this language yet. Permission won’t send your audio anywhere, so download it in iOS Settings › General › Keyboard › Dictation, or tap Dictate to type it yourself.",
+    "recognizer-unavailable":"the speech recogniser isn’t available right now. Tap Dictate to add the words yourself.",
+    "no-recognizer":"there’s no speech recogniser for this language.",
     "no-speech":"no speech was detected in that recording.",
     "recognition-failed":"transcription didn’t finish.",
     "no-audio":"the recording couldn’t be read.",
     "bad-audio":"the recording couldn’t be read.",
     "write-failed":"the recording couldn’t be prepared for transcription.",
+    "mic-busy":"the microphone is in use. Stop the recording first, then tap Dictate.",
+    "engine-failed":"the audio engine couldn’t start.",
+    "already-listening":"it’s already listening.",
     "timeout":"transcription took too long and was stopped.",
-    "unsupported":"transcription runs on your phone and isn’t available here.",
-    "no-permission-api":"speech recognition couldn’t be enabled."
+    "unsupported":"speech to text isn’t available on this device. Tap Dictate to add the words yourself."
   };
   function reasonText(reason, detail){
     var base=REASON_TEXT[reason] || ("something went wrong (" + reason + ").");
-    if(reason==="recognition-failed" && detail) base += " (" + detail + ")";
+    if(detail && (reason==="recognition-failed"||reason==="engine-failed"||reason==="mic-busy")) base += " (" + detail + ")";
     return base;
   }
   function extForMime(mime){
@@ -1695,18 +1651,18 @@
     if(mime.indexOf("wav")>-1) return "wav";
     if(mime.indexOf("webm")>-1) return "webm";
     if(mime.indexOf("aiff")>-1) return "aiff";
-    return "m4a";              // aac / mp4 / default from capacitor-voice-recorder
+    return "m4a";              // aac / mp4 — what both recorders produce
   }
-  /* base64 of the recording — the native recorder already hands us one, so we
-     avoid re-encoding a potentially large blob wherever possible. */
+
+  /* ---- FILE-BASED TRANSCRIPTION (runs after a recording finishes) ----
+     Never rejects; always resolves {ok, transcript} or {ok:false, reason}. */
   function transcribeRecording(b64, mime){
     var sr=srPlugin();
     if(!capNative() || !sr || typeof sr.transcribeFile!=="function"){
       return Promise.resolve({ ok:false, reason:"unsupported" });
     }
     if(!b64) return Promise.resolve({ ok:false, reason:"no-audio" });
-    return srPermission().then(function(granted){
-      if(!granted) return { ok:false, reason:"permission-denied" };
+    return srRequestPermissions().then(function(){
       var call;
       try{
         call=Promise.resolve(sr.transcribeFile({ data:b64, ext:extForMime(mime), language:"en-US" }));
@@ -1723,8 +1679,6 @@
       return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) };
     });
   }
-  /* Drives the whole visible flow: "Transcribing…" → transcript, or an honest
-     reason. Called as soon as a recording finishes. */
   var trBusy=false;
   function runTranscription(b64, mime){
     if(trBusy) return Promise.resolve();
@@ -1732,6 +1686,7 @@
     trStatus('<span class="tr-live"></span>Transcribing on this phone&hellip;');
     return transcribeRecording(b64, mime).then(function(r){
       trBusy=false;
+      if(r && r.diag){ srDiag=r.diag; renderDiag(); }
       if(r && r.ok && r.transcript){
         srCommitted=r.transcript; srPartial="";
         if(!trUserEdited) trSet(r.transcript);
@@ -1748,6 +1703,54 @@
       return false;
     });
   }
+
+  /* ---- LIVE DICTATION (the Dictate button only — never while recording) ---- */
+  function srDetach(){
+    srHandles.forEach(function(h){ try{ h && h.remove && h.remove(); }catch(e){} });
+    srHandles=[];
+  }
+  function srAttach(sr){
+    srDetach();
+    try{
+      var p=sr.addListener("partialResults", function(data){
+        var m=(data && data.matches) || [];
+        if(!m.length) return;
+        srPartial=String(m[0]||"");
+        if(!trUserEdited) trSet(trFull());
+      });
+      Promise.resolve(p).then(function(h){ srHandles.push(h); }).catch(function(){});
+    }catch(e){}
+    try{
+      var q=sr.addListener("listeningState", function(data){
+        var st=(data && (data.status||data.state))||"";
+        if(st==="stopped" && srListening){ srStop().then(syncDictateBtn); }
+      });
+      Promise.resolve(q).then(function(h){ srHandles.push(h); }).catch(function(){});
+    }catch(e){}
+  }
+  /* Resolves {ok:true} or {ok:false, reason} — the caller shows the reason. */
+  function srStart(mode){
+    var sr=srPlugin();
+    if(!capNative() || !sr || typeof sr.startLive!=="function"){
+      return Promise.resolve({ ok:false, reason:"unsupported" });
+    }
+    return srRequestPermissions().then(function(){
+      srAttach(sr);
+      return Promise.resolve(sr.startLive({ language:"en-US" }));
+    }).then(function(r){
+      if(r && r.diag){ srDiag=r.diag; renderDiag(); }
+      if(r && r.ok){
+        srMode=mode; srListening=true;
+        trStatus('<span class="tr-live"></span>Listening — your words are turned into text on this phone.');
+        return { ok:true };
+      }
+      srDetach();
+      return { ok:false, reason:(r && r.reason) || "recognizer-unavailable", detail:r && r.detail };
+    }).catch(function(e){
+      srDetach();
+      return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) };
+    });
+  }
   function srStop(){
     if(!srListening) return Promise.resolve();
     srListening=false;
@@ -1755,14 +1758,15 @@
     if(srPartial){ srCommitted=(srCommitted?srCommitted+" ":"")+srPartial; srPartial=""; }
     if(!trUserEdited) trSet(trFull());
     srDetach();
-    if(!sr) return Promise.resolve();
-    try{ return Promise.resolve(sr.stop()).catch(function(){}); }catch(e){ return Promise.resolve(); }
+    if(!sr || typeof sr.stopLive!=="function") return Promise.resolve();
+    try{ return Promise.resolve(sr.stopLive()).catch(function(){}); }catch(e){ return Promise.resolve(); }
   }
   function srReset(){
-    srStop(); srCommitted=""; srPartial=""; srMode=null; trUserEdited=false;
+    srStop(); srCommitted=""; srPartial=""; srMode=null; trUserEdited=false; trBusy=false;
     trSet("");
     trStatus("Your words are turned into text on your phone. Nothing is uploaded.");
     syncDictateBtn();
+    srRefreshDiag();
   }
   function syncDictateBtn(){
     var b=$("vDictate"); if(!b) return;
@@ -1775,17 +1779,18 @@
     if(trProgrammatic) return;
     trUserEdited=true;   // hands off — the words are the user's now
   });
-  /* Standalone dictation. This is the guaranteed path: if transcribing while
-     recording turns out not to work on a given device, the user can still get
-     a transcript by dictating it here, and it saves with the audio. */
+  /* Standalone dictation — the guaranteed path when file transcription can't
+     run. On failure it now says WHY, rather than a generic toast. */
   $("vDictate").addEventListener("click", function(){
     if(srListening && srMode==="dictate"){ srStop().then(syncDictateBtn); haptic(8); return; }
     if(srListening){ toast("Already listening"); return; }
-    // keep whatever is already in the box, and append to it
     var existing=$("vTranscript").value.trim();
     srCommitted=existing; srPartial=""; trUserEdited=false;
-    srStart("dictate").then(function(ok){
-      if(ok){ haptic(10); } else { toast("Dictation isn’t available here"); }
+    srStart("dictate").then(function(r){
+      if(r && r.ok){ haptic(10); }
+      else {
+        trStatus("Dictation unavailable — " + reasonText((r&&r.reason)||"recognizer-unavailable", r&&r.detail), true);
+      }
       syncDictateBtn();
     });
   });
@@ -1872,6 +1877,13 @@
     srReset(); clearVideo(); setSpeakMode("voice");
     disableSave($("vSave"),true);
     showView("voice");
+    // Ask for BOTH permissions as soon as the Record screen opens — speech
+    // recognition is a SEPARATE permission from the microphone, and without it
+    // SFSpeechRecognizer just returns nothing. Doing it here (rather than in
+    // one recorder branch) means it happens whichever recorder is in use, and
+    // the prompt never interrupts a recording. Never awaited: a denial must
+    // not stop anyone from recording.
+    srRequestPermissions().catch(function(){});
   }
   function recIcon(recording){ var svg = recording ? '<div class="sq"></div>' :
     '<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
@@ -1914,7 +1926,7 @@
       // prompt never interrupts a recording and the answer is already known by
       // the time we transcribe. Deliberately not awaited: a denial must never
       // stop the user from recording.
-      srPermission().catch(function(){});
+      srRequestPermissions().catch(function(){});
       Promise.resolve(vp.requestAudioRecordingPermission()).then(function(){ return vp.startRecording(); }).then(function(){
         nativeRec=true; $("recBtn").classList.add("recording"); recIcon(true); $("recHint").textContent="Recording… tap to stop."; $("recTime").textContent="0:00";
         fauxWaveOn(true); recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) finishNativeRec(); },1000); haptic(12);

@@ -1,5 +1,8 @@
 node_modules/
-ios/
+# ONLY the Capacitor-generated project at the repo root.
+# An unanchored "ios/" also matches native/permission-speech/ios/ and would
+# silently drop the speech plugin's Swift source from the commit.
+/ios/
 build/
 .DS_Store
 *.log

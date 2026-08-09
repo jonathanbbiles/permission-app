@@ -1,0 +1,11 @@
+{
+  "name": "permission-speech",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Permission's own on-device speech-to-text bridge (SFSpeechRecognizer). First-party and SPM-native, because SPM-incompatible plugins are silently dropped from the build.",
+  "capacitor": {
+    "ios": { "src": "ios" }
+  },
+  "files": ["ios/Sources", "Package.swift"],
+  "license": "UNLICENSED"
+}

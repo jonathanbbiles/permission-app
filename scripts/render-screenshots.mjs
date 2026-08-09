@@ -184,7 +184,14 @@ for (const d of DEVICES) {
     const ta = document.getElementById("vTranscript");
     ta.value = "I keep waiting to feel ready. Maybe ready is just the thing that shows up after you start.";
     document.getElementById("trStatus").textContent =
-      "Your words are turned into text on your phone. Nothing is uploaded.";
+      "Transcribed on this phone. The audio never left your device.";
+    // The diagnostic line reports the LIVE engine state. In a desktop browser
+    // there is no native plugin, so it correctly reads "engine: none" — which
+    // is an artefact of the render environment, not of the app. Show the state
+    // it has on the device the app actually ships to.
+    const d = document.getElementById("trDiag");
+    d.textContent = "engine: native-sfspeechrecognizer · speech: authorized · mic: granted · available: yes · on-device: yes · en-US";
+    d.classList.remove("bad");
   });
   written.push(await shoot(page, dir, "02-record-transcript"));
 
