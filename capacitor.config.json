@@ -3,5 +3,7 @@
   "appName": "Permission",
   "webDir": "www",
   "backgroundColor": "#FFF8F1",
-  "ios": { "contentInset": "always" }
+  "ios": {
+    "contentInset": "never"
+  }
 }

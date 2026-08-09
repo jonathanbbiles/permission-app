@@ -18,8 +18,10 @@ const cm = fs.readFileSync(path.join(ROOT, "codemagic.yaml"), "utf8");
 const PLUGIN_SWIFT = "native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift";
 const pluginSrc = fs.readFileSync(path.join(ROOT, PLUGIN_SWIFT), "utf8");
 /* comment-free view: the doc comments quote the exact lines they explain, so
-   ordering/absence checks must not see them. */
-const pluginCode = pluginSrc.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+   ordering/absence checks must not see them. Strips /* *\/ blocks AND // lines. */
+const pluginCode = pluginSrc
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
 const pluginPkg = fs.readFileSync(path.join(ROOT, "native/permission-speech/Package.swift"), "utf8");
 
 let pass = 0, fail = 0;
@@ -480,8 +482,8 @@ ok("the permission request is fire-and-forget, so a denial can't block recording
    /Never awaited: a denial must\s*\n?\s*\/\/ not stop anyone from recording/.test(html));
 
 section("25) v1.3.2 — nothing else changed");
-ok("version bumped to 1.3.5", /APP_VERSION = "1\.3\.5"/.test(html) && />v1\.3\.5</.test(html) &&
-   /CFBundleShortVersionString 1\.3\.5/.test(cm));
+ok("version bumped to 1.3.6", /APP_VERSION = "1\.3\.6"/.test(html) && />v1\.3\.6</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.6/.test(cm));
 ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
 ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
 ok("transcript still saved with the audio", /type:"voice"[^}]*transcript:transcript/.test(html));
@@ -571,6 +573,45 @@ for (const r of ["no-audio-input","input-unavailable","mic-denied","mic-notDeter
 }
 ok("the busy-mic message points at the working record->transcribe path",
    /let it transcribe itself when you stop/.test(html));
+
+section("29) v1.3.6 — dark-mode safe-area background");
+const capCfg = fs.readFileSync(path.join(ROOT, "capacitor.config.json"), "utf8");
+/* ios.contentInset "always" insets the WKWebView viewport away from the safe
+   area, so even `position:fixed; inset:0` could not paint the home-indicator
+   strip — what showed there was the native background, hardcoded to the LIGHT
+   theme colour, i.e. a white bar in dark mode. */
+ok('contentInset is "never" so the web layer paints edge to edge', /"contentInset"\s*:\s*"never"/.test(capCfg));
+ok('contentInset "always" is gone', !/"contentInset"\s*:\s*"always"/.test(capCfg));
+ok("viewport-fit=cover is set", /viewport-fit=cover/.test(html));
+ok("html itself carries the themed background (not just body)",
+   /\n  html\{[\s\S]{0,400}?linear-gradient\(180deg,var\(--bg\) 0%, var\(--bg2\) 100%\)/.test(html));
+ok("html has a solid fallback colour for overscroll", /background-color:var\(--bg2\);/.test(html));
+ok("html background is viewport-anchored so it lines up with body's",
+   /\n  html\{[\s\S]{0,400}?background-attachment:fixed;/.test(html));
+ok("no hardcoded white on the root", !/\n  html\{[\s\S]{0,400}?(#fff|#ffffff|white)/i.test(html));
+ok("color-scheme follows the chosen theme",
+   /:root\[data-theme="light"\]\{color-scheme:light;\}/.test(html) &&
+   /:root\[data-theme="dark"\]\{color-scheme:dark;\}/.test(html));
+ok("theme-color meta still tracks the theme", /tc\.setAttribute\("content", dark\?"#160512":"#FCE9F0"\)/.test(html));
+ok("full-screen overlays stay themed", /#lock\{position:fixed; inset:0/.test(html) && /#onboard\{position:fixed; inset:0/.test(html));
+
+section("30) v1.3.6 — first-use transcription warm-up (messaging + one retry only)");
+ok("a first-success flag is recorded", /LSK_STT_OK/.test(html) && /function markSttWorked/.test(html));
+ok("only warm-up-ish reasons retry", /WARMUP_REASONS=\{ "no-speech":1, "recognition-failed":1, "timeout":1 \}/.test(html));
+ok("retry happens ONLY before the first ever success",
+   /if\(!WARMUP_REASONS\[reason\] \|\| sttHasWorked\(\)\)\{/.test(html));
+ok('user sees "Preparing on-device transcription" instead of an empty result',
+   /Preparing on-device transcription&hellip; trying again in a moment/.test(html));
+ok("a still-cold recogniser gets a clear message, not silence",
+   /Preparing on-device transcription — this can take a moment the first time/.test(html));
+ok("genuine silence twice still reports no-speech honestly",
+   /if\(reason2==="no-speech"\)\{[\s\S]{0,200}?trShowFailure\("no-speech"\)/.test(html));
+ok("success marks the flag so the retry never runs again", /function trShowSuccess[\s\S]{0,300}?markSttWorked\(\)/.test(html));
+ok("the transcription approach is unchanged — still on-device only",
+   /requiresOnDeviceRecognition = true/.test(pluginSrc) && /SFSpeechURLRecognitionRequest/.test(pluginSrc));
+ok("no server-recognition fallback was introduced",
+   !/requiresOnDeviceRecognition = false/.test(pluginCode) && !/server/i.test(pluginCode));
+ok("still zero network APIs", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

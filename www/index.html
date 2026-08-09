@@ -58,6 +58,37 @@
 
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0; height:100%;}
+
+  /* ---- FULL-BLEED THEMED BACKGROUND (the dark-mode white bar fix) ----
+     In dark mode a solid cream strip used to span the bottom of the screen,
+     over the home-indicator / safe-area region. Two causes, both fixed:
+
+       1. capacitor.config.json had ios.contentInset "always", which insets the
+          WKWebView's viewport away from the safe area. Even `position:fixed;
+          inset:0` (the passcode screen) could not reach the bottom strip, so
+          what showed there was the NATIVE webview background — hardcoded
+          #FFF8F1, i.e. the LIGHT theme colour, regardless of dark mode. It is
+          now "never", so the web layer paints edge to edge; the CSS already
+          keeps content clear of the indicator via env(safe-area-inset-*).
+
+       2. Only <body> carried a background, and <body> is max-width capped. The
+          gradient now lives on <html> as well, so the canvas — including the
+          safe areas and any rubber-band overscroll — is always themed. Both
+          use background-attachment:fixed, so they are anchored to the viewport
+          and line up seamlessly with no visible seam on wide screens. */
+  html{
+    background:
+      radial-gradient(1100px 520px at 50% -6%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 58%),
+      linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    background-attachment:fixed;
+    background-color:var(--bg2);   /* what any overscroll past the gradient shows */
+  }
+  /* tell iOS which appearance we are in, so native-drawn chrome (scroll
+     indicators, form controls, the webview's own default backdrop) matches
+     instead of defaulting to light */
+  :root[data-theme="light"]{color-scheme:light;}
+  :root[data-theme="dark"]{color-scheme:dark;}
+
   body{
     font-family:var(--body);
     background:
@@ -875,7 +906,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.5</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.6</span></div>
 </div>
 
 <!-- TOAST -->
@@ -885,7 +916,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.3.5";
+  var APP_VERSION = "1.3.6";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1685,24 +1716,63 @@
       return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) };
     });
   }
+  /* ---- FIRST-USE WARM-UP ----
+     Apple's on-device recogniser can need a moment the very first time it runs
+     on a device — the first attempt can come back empty or error even though
+     everything is authorised and the model reports as present. A first-time
+     user (or an App Review tester, who is always a fresh install) would just
+     see an empty transcript and no explanation.
+
+     So: before transcription has EVER succeeded on this device, a warm-up-ish
+     failure says what is happening and quietly tries once more. Once it has
+     worked once, this never runs again and the normal, accurate messages apply.
+     The success path is untouched. */
+  var LSK_STT_OK="perm_stt_ok";
+  var WARMUP_REASONS={ "no-speech":1, "recognition-failed":1, "timeout":1 };
+  function sttHasWorked(){ try{ return localStorage.getItem(LSK_STT_OK)==="1"; }catch(e){ return false; } }
+  function markSttWorked(){ try{ localStorage.setItem(LSK_STT_OK,"1"); }catch(e){} }
+  function trShowSuccess(r){
+    srCommitted=r.transcript; srPartial="";
+    if(!trUserEdited) trSet(r.transcript);
+    trStatus("Transcribed on this phone. The audio never left your device.");
+    markSttWorked();
+  }
+  function trShowFailure(reason, detail){
+    trStatus("Transcription unavailable — " + reasonText(reason, detail) +
+             " Your recording is safe either way.", true);
+  }
   var trBusy=false;
   function runTranscription(b64, mime){
     if(trBusy) return Promise.resolve();
     trBusy=true;
     trStatus('<span class="tr-live"></span>Transcribing on this phone&hellip;');
     return transcribeRecording(b64, mime).then(function(r){
-      trBusy=false;
       if(r && r.diag){ srDiag=r.diag; renderDiag(); }
-      if(r && r.ok && r.transcript){
-        srCommitted=r.transcript; srPartial="";
-        if(!trUserEdited) trSet(r.transcript);
-        trStatus("Transcribed on this phone. The audio never left your device.");
-        return true;
-      }
+      if(r && r.ok && r.transcript){ trBusy=false; trShowSuccess(r); return true; }
+
       var reason=(r && r.reason) || "recognition-failed";
-      trStatus("Transcription unavailable — " + reasonText(reason, r && r.detail) +
-               " Your recording is safe either way.", true);
-      return false;
+      if(!WARMUP_REASONS[reason] || sttHasWorked()){
+        trBusy=false; trShowFailure(reason, r && r.detail); return false;
+      }
+      // one quiet retry, with an honest "preparing" message meanwhile
+      trStatus('<span class="tr-live"></span>Preparing on-device transcription&hellip; trying again in a moment.');
+      return new Promise(function(res){ setTimeout(res, 2500); })
+        .then(function(){ return transcribeRecording(b64, mime); })
+        .then(function(r2){
+          trBusy=false;
+          if(r2 && r2.diag){ srDiag=r2.diag; renderDiag(); }
+          if(r2 && r2.ok && r2.transcript){ trShowSuccess(r2); return true; }
+          var reason2=(r2 && r2.reason) || reason;
+          if(reason2==="no-speech"){
+            // twice in a row with nothing heard: that is genuinely silence,
+            // not a cold recogniser — say the true thing.
+            trShowFailure("no-speech");
+          } else {
+            trStatus("Preparing on-device transcription — this can take a moment the first time. " +
+                     "Record again in a few seconds and it should appear. Your recording is safe either way.", true);
+          }
+          return false;
+        });
     }).catch(function(){
       trBusy=false;
       trStatus("Transcription unavailable — something went wrong. Your recording is safe either way.", true);
