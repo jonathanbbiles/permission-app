@@ -477,8 +477,8 @@ ok("the permission request is fire-and-forget, so a denial can't block recording
    /Never awaited: a denial must\s*\n?\s*\/\/ not stop anyone from recording/.test(html));
 
 section("25) v1.3.2 — nothing else changed");
-ok("version bumped to 1.3.3", /APP_VERSION = "1\.3\.3"/.test(html) && />v1\.3\.3</.test(html) &&
-   /CFBundleShortVersionString 1\.3\.3/.test(cm));
+ok("version bumped to 1.3.4", /APP_VERSION = "1\.3\.4"/.test(html) && />v1\.3\.4</.test(html) &&
+   /CFBundleShortVersionString 1\.3\.4/.test(cm));
 ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
 ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
 ok("transcript still saved with the audio", /type:"voice"[^}]*transcript:transcript/.test(html));
@@ -511,6 +511,32 @@ ok("the generic 'Dictation isn\u2019t available here' toast is gone",
 ok("Dictate failures show the real reason instead", /Dictation unavailable — /.test(html));
 ok("a missing engine is a named reason, not silence",
    /"unsupported":"speech to text isn.t available on this device/.test(html));
+
+section("27) v1.3.4 — the 1.3.3 compile failure cannot recur");
+/* CAPPlugin already declares checkPermissions:/requestPermissions:, so a
+   subclass MUST use `override`. 1.3.3 didn't, and xcodebuild exited 65. */
+ok("checkPermissions is an override", /@objc override public func checkPermissions/.test(pluginSrc));
+ok("requestPermissions is an override", /@objc override public func requestPermissions/.test(pluginSrc));
+ok("no other method collides with CAPPlugin's own selectors",
+   !/@objc[^\n]*func (addEventListener|getListeners|hasListeners|removeListener|removeEventListener|notifyListeners|shouldOverrideLoad)\b/.test(pluginSrc));
+ok("listener methods are registered so JS can call them",
+   /CAPPluginMethod\(name: "addListener"/.test(pluginSrc) &&
+   /CAPPluginMethod\(name: "removeAllListeners"/.test(pluginSrc));
+/* deprecated-in-iOS-17 mic APIs are guarded, with a working fallback */
+ok("modern AVAudioApplication used when available", /if #available\(iOS 17\.0, \*\)[\s\S]{0,200}?AVAudioApplication/.test(pluginSrc));
+ok("iOS 15/16 fallback retained", /AVAudioSession\.sharedInstance\(\)\.recordPermission/.test(pluginSrc) &&
+   /AVAudioSession\.sharedInstance\(\)\.requestRecordPermission/.test(pluginSrc));
+ok("on-device Speech APIs stay behind their iOS 13 guard",
+   /if #available\(iOS 13\.0, \*\)[\s\S]{0,120}?supportsOnDeviceRecognition/.test(pluginSrc) &&
+   /if #available\(iOS 13\.0, \*\)[\s\S]{0,120}?requiresOnDeviceRecognition/.test(pluginSrc));
+/* the harness that would have caught this */
+ok("a real type-check harness is committed",
+   fs.existsSync(path.join(ROOT, "native/permission-speech/typecheck/run.sh")) &&
+   fs.existsSync(path.join(ROOT, "native/permission-speech/typecheck/CapacitorStubs.swift")));
+ok("the stub mirrors CAPPlugin's real permission methods (so collisions reproduce)",
+   /open func checkPermissions/.test(fs.readFileSync(path.join(ROOT, "native/permission-speech/typecheck/CapacitorStubs.swift"), "utf8")));
+ok("the build runs that type-check before xcodebuild",
+   /typecheck\/run\.sh/.test(cm) && /does not type-check/.test(cm));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

@@ -41,7 +41,11 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "transcribeFile", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startLive", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stopLive", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "stopLive", returnType: CAPPluginReturnPromise),
+        // Inherited from CAPPlugin, but JS can only call what is listed here.
+        // Dictate's live partial results arrive through these.
+        CAPPluginMethod(name: "addListener", returnType: CAPPluginReturnCallback),
+        CAPPluginMethod(name: "removeAllListeners", returnType: CAPPluginReturnPromise)
     ]
 
     private var audioEngine: AVAudioEngine?
@@ -61,12 +65,36 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Microphone permission state.
+    ///
+    /// `AVAudioSession.recordPermission` was deprecated in iOS 17 in favour of
+    /// `AVAudioApplication`. Codemagic builds with `xcode: latest`, so prefer
+    /// the modern API wherever it exists and keep the old one only as the
+    /// iOS 15/16 fallback the deployment target still requires.
     private func micString() -> String {
-        switch AVAudioSession.sharedInstance().recordPermission {
-        case .granted:    return "granted"
-        case .denied:     return "denied"
-        case .undetermined: return "notDetermined"
-        @unknown default: return "unknown"
+        if #available(iOS 17.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted:      return "granted"
+            case .denied:       return "denied"
+            case .undetermined: return "notDetermined"
+            @unknown default:   return "unknown"
+            }
+        } else {
+            switch AVAudioSession.sharedInstance().recordPermission {
+            case .granted:      return "granted"
+            case .denied:       return "denied"
+            case .undetermined: return "notDetermined"
+            @unknown default:   return "unknown"
+            }
+        }
+    }
+
+    /// Same split for *requesting* the microphone.
+    private func requestMic(_ done: @escaping (Bool) -> Void) {
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission(completionHandler: done)
+        } else {
+            AVAudioSession.sharedInstance().requestRecordPermission(done)
         }
     }
 
@@ -102,17 +130,22 @@ public class PermissionSpeechPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - permissions  (speech AND microphone are SEPARATE permissions)
 
-    @objc func checkPermissions(_ call: CAPPluginCall) {
+    /// NOTE: `CAPPlugin` itself declares `checkPermissions:` and
+    /// `requestPermissions:` (the Capacitor 3+ permission pattern), so these
+    /// MUST be `override public` — redeclaring them plainly is a compile error
+    /// ("overriding declaration requires an 'override' keyword"), which is what
+    /// failed the 1.3.3 build.
+    @objc override public func checkPermissions(_ call: CAPPluginCall) {
         call.resolve(snapshot(call.getString("language") ?? "en-US"))
     }
 
     /// Requests BOTH authorizations. Speech recognition is its own permission —
     /// granting the microphone does not grant it, and without it
     /// SFSpeechRecognizer just returns nothing.
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    @objc override public func requestPermissions(_ call: CAPPluginCall) {
         let language = call.getString("language") ?? "en-US"
         SFSpeechRecognizer.requestAuthorization { _ in
-            AVAudioSession.sharedInstance().requestRecordPermission { _ in
+            self.requestMic { _ in
                 DispatchQueue.main.async {
                     call.resolve(self.snapshot(language))
                 }
