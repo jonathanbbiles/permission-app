@@ -150,8 +150,13 @@
   .textlink{background:none; border:0; color:var(--accent-deep); font-weight:700; font-size:13px; padding:4px 0; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px;}
   .textlink:active{opacity:.6;}
 
-  /* mode buttons */
-  .modes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; margin-bottom:14px;}
+  /* mode buttons — the four ways to answer today's invitation.
+     TWO AND TWO, not three-plus-a-stray-wide-card. The Notebook used to be a
+     full-width row of its own below these (.bigcard), which read as a different
+     kind of thing and left the row visually unbalanced. Four equal tiles in a
+     2x2 grid put every way of answering on the same footing, and a half-width
+     tile is a bigger tap target than a third-width one. */
+  .modes{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:18px;}
   .mode{background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line2);
     border-radius:var(--radius-sm); padding:16px 8px 13px; text-align:center; cursor:pointer; transition:transform .07s, box-shadow .2s, border-color .2s; box-shadow:var(--shadow-soft);}
   .mode:active{transform:scale(.95);}
@@ -160,21 +165,9 @@
   .mode.write .ic{background:linear-gradient(155deg,var(--accent),var(--accent-deep));}
   .mode.speak .ic{background:linear-gradient(155deg,var(--secondary),var(--secondary-deep));}
   .mode.draw  .ic{background:linear-gradient(155deg,var(--accent),var(--accent-deep)); filter:hue-rotate(12deg);}
+  .mode.notebook .ic{background:linear-gradient(155deg,var(--secondary),var(--secondary-deep));}
   .mode .nm{font-size:14px; font-weight:700; color:var(--ink); letter-spacing:.2px;}
   .mode .dsc{font-size:11px; color:var(--muted); margin-top:2px;}
-
-  /* notebook home card */
-  .bigcard{display:flex; align-items:center; gap:14px; background:linear-gradient(180deg,var(--surface),var(--surface-tint));
-    border:1px solid var(--line2); border-radius:var(--radius-sm); padding:15px 16px; margin-bottom:18px; cursor:pointer;
-    box-shadow:var(--shadow-soft); transition:transform .07s, box-shadow .2s;}
-  .bigcard:active{transform:scale(.985);}
-  .bigcard .ic{width:46px; height:46px; border-radius:13px; flex:none; display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(155deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent);}
-  .bigcard .ic svg{width:23px; height:23px;}
-  .bigcard .tx{flex:1; min-width:0;}
-  .bigcard .tx .a{font-size:15px; font-weight:700; color:var(--ink);}
-  .bigcard .tx .b{font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4;}
-  .bigcard .go{color:var(--faint); flex:none;}
 
   /* section header row */
   .sechead{display:flex; align-items:baseline; justify-content:space-between; margin:6px 2px 11px;}
@@ -261,19 +254,11 @@
   .modeseg button svg{width:16px; height:16px;}
   .modeseg button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
 
-  /* transcript panel */
-  .tr-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  /* Transcript styling kept ONLY for the entry viewer: recordings saved by
+     1.3.x carry a transcript field, and those words are still shown so nobody
+     loses what they wrote. Nothing new is ever transcribed — see 1.4.0. */
   .tr-lbl{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800;}
   .tr-status{font-size:12px; color:var(--muted); line-height:1.5; margin-top:8px;}
-  .tr-status.warn{color:var(--secondary);}
-  /* diagnostic readout — deliberately plain and monospaced so it reads as
-     instrumentation, not chrome */
-  .tr-diag{margin-top:7px; font-size:10.5px; line-height:1.5; letter-spacing:.2px; color:var(--faint);
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-word;}
-  .tr-diag.bad{color:var(--secondary); font-weight:600;}
-  textarea.transcript{min-height:104px; font-size:15.5px; line-height:1.55;}
-  .tr-live{display:inline-block; width:7px; height:7px; border-radius:50%; background:#D8586A; margin-right:6px; vertical-align:middle; animation:pulseDot 1.2s ease-in-out infinite;}
-  @keyframes pulseDot{0%,100%{opacity:1;} 50%{opacity:.25;}}
 
   /* big capture button (video) */
   .capbtn{width:100%; border:1px dashed var(--line2); background:var(--surface-tint); color:var(--ink); border-radius:var(--radius-sm);
@@ -398,10 +383,6 @@
     .mode .ic svg{width:28px; height:28px;}
     .mode .nm{font-size:16px;}
     .mode .dsc{font-size:12.5px;}
-    .bigcard{padding:19px 20px;}
-    .bigcard .ic{width:54px; height:54px;}
-    .bigcard .tx .a{font-size:17px;}
-    .bigcard .tx .b{font-size:13.5px;}
     .entry{padding:16px; gap:16px;}
     .entry .badge{width:52px; height:52px;}
     .entry .meta .d{font-size:13.5px;}
@@ -415,8 +396,9 @@
     #v-home .greet   {grid-column:1 / -1; grid-row:1;}
     #v-home .depths  {grid-column:1 / -1; grid-row:2;}
     #v-home .prompt  {grid-column:1; grid-row:3;}
-    #v-home .modes   {grid-column:1; grid-row:4;}
-    #v-home .bigcard {grid-column:1; grid-row:5;}
+    /* The four mode tiles stay 2x2 here too — the left column is half the
+       tablet, so four across would shrink each one to a phone-sized sliver. */
+    #v-home .modes   {grid-column:1; grid-row:4 / 6;}
     #v-home .sechead {grid-column:2; grid-row:3;}
     #v-home #homeList{grid-column:2; grid-row:4 / 7;}
 
@@ -662,12 +644,15 @@
       <div class="nm">Draw</div>
       <div class="dsc">by hand</div>
     </div>
-  </div>
-
-  <div class="bigcard" id="cardNotebook">
-    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2z"/><path d="M9 2v20"/><path d="M13 7h4M13 11h4"/></svg></div>
-    <div class="tx"><div class="a">Notebook</div><div class="b">Free pages to write by hand — save &amp; export as PDF</div></div>
-    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    <!-- Notebook sits in the grid with the other three rather than in a wide
+         card of its own underneath: four ways to answer, two and two.
+         Deliberately NO data-mode — it opens via its own #cardNotebook
+         listener, and the .mode delegation below only acts on modes it knows. -->
+    <div class="mode notebook" id="cardNotebook">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2z"/><path d="M9 2v20"/><path d="M13 7h4M13 11h4"/></svg></div>
+      <div class="nm">Notebook</div>
+      <div class="dsc">free pages, export as PDF</div>
+    </div>
   </div>
 
   <div class="sechead">
@@ -730,20 +715,9 @@
       </div>
     </div>
 
-    <!-- transcript: written as you speak, saved WITH the recording -->
-    <div class="card" id="transcriptCard">
-      <div class="tr-head">
-        <div class="tr-lbl" id="trLabel">Transcript</div>
-        <button class="btn small ghost" id="vDictate" type="button" style="flex:none; padding:8px 12px; font-size:13px;">Dictate</button>
-      </div>
-      <textarea id="vTranscript" class="transcript" placeholder="Your words appear here as you speak. You can edit them before saving." autocapitalize="sentences"></textarea>
-      <div class="tr-status" id="trStatus">Your words are turned into text on your phone. Nothing is uploaded.</div>
-      <!-- Always-visible engine/permission readout. A screenshot of this says
-           exactly what the transcriber is doing, so a failure is never a
-           mystery again — "engine: NONE" is what three releases of this bug
-           would have looked like. -->
-      <div class="tr-diag" id="trDiag">engine: checking&hellip;</div>
-    </div>
+    <!-- REMOVED in 1.4.0: the transcript panel and its Dictate button.
+         Speech-to-text is gone from this app entirely — see the note above the
+         voice recorder in the script below. Recording is just recording now. -->
   </div>
 
   <!-- ---- VIDEO PANE ---- -->
@@ -906,7 +880,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.3.6</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.4.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -916,7 +890,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.3.6";
+  var APP_VERSION = "1.4.0";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1559,317 +1533,28 @@
   });
 
   /* ============================================================
-     ON-DEVICE SPEECH → TEXT   (PermissionSpeech — our own native plugin)
+     SPEECH → TEXT: REMOVED IN 1.4.0 — ON PURPOSE, DO NOT RE-ADD
 
-     WHY THIS IS OUR OWN PLUGIN
-     --------------------------
-     1.3.0–1.3.2 called @capacitor-community/speech-recognition. That package
-     ships only a CocoaPods podspec — it has NO Package.swift — and this app's
-     iOS project is SPM. `npx cap sync ios` prints
+     1.3.0–1.3.5 shipped an on-device transcriber (our own SPM plugin,
+     native/permission-speech) plus a "Dictate" button on the Record screen.
+     It was a running sore: three releases where the plugin was silently
+     dropped from the IPA, then a live-dictation CRASH in 1.3.5 from
+     installTap() on an invalid audio format. Jonathan does not want the
+     feature. So the whole capability is gone — the button, the transcript
+     box, the file-based transcription, the native plugin, and the iOS
+     speech permission string with it. (Named indirectly on purpose: the
+     Codemagic guard greps this file for the real symbols and would trip
+     over a comment that spelled them out.)
 
-         [warn] ... does not have a Package.swift
-         [warn] Some installed Capacitor plugins are not compatible with SPM
+     What deliberately REMAINS:
+       • Recording itself. Voice and video are untouched.
+       • Reading the `transcript` field on entries saved by 1.3.x, in the
+         entry viewer and in Share. Those are the user's own words and
+         deleting them would be data loss. Nothing writes that field now.
 
-     ...and then builds anyway WITHOUT it. So on device
-     `window.Capacitor.Plugins.SpeechRecognition` was simply `undefined`:
-     every call fell into the "unavailable" branch, the transcript was always
-     empty, and the speech permission was never even requested — which is why
-     only the microphone prompt ever appeared. It was never a mic conflict;
-     the recognizer was never in the app at all.
-
-     `permission-speech` (native/permission-speech) is first-party and
-     SPM-native, so it cannot be silently dropped: it either builds into the
-     IPA or the build fails.
-
-     PRIVACY: every request sets requiresOnDeviceRecognition = true. iOS
-     transcribes locally or not at all — there is deliberately no server
-     fallback, and no opt-in for one.
+     If transcription is ever wanted again it should come back as a fresh,
+     device-tested feature — not by reviving this code.
      ============================================================ */
-  var srListening=false, srCommitted="", srPartial="", srHandles=[], srMode=null;
-  var srDiag=null;                       // last diagnostics snapshot from native
-  function srPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PermissionSpeech) || null; }catch(e){ return null; } }
-  function trSet(text){
-    var ta=$("vTranscript"); if(!ta) return;
-    trProgrammatic=true; ta.value=text; trProgrammatic=false;
-  }
-  function trFull(){ return (srCommitted + (srPartial ? (srCommitted?" ":"")+srPartial : "")).trim(); }
-  function trStatus(msg, warn){
-    var el=$("trStatus"); if(!el) return;
-    el.innerHTML=msg; el.classList.toggle("warn", !!warn);
-  }
-
-  /* ---- VISIBLE DIAGNOSTIC LINE ----
-     Under the transcript box, always. This is what makes the next device test
-     definitive instead of another guess: a screenshot now says exactly which
-     engine is running, whether speech was authorised, and whether an on-device
-     model exists. The absence of the plugin — the actual bug for three
-     releases — shows up here as "engine: NONE". */
-  function renderDiag(){
-    var el=$("trDiag"); if(!el) return;
-    var sr=srPlugin();
-    if(!capNative()){
-      el.textContent="engine: none (web preview) · speech: n/a · available: no";
-      el.classList.add("bad"); return;
-    }
-    if(!sr){
-      el.textContent="engine: none · speech: n/a · available: no · on-device: no";
-      el.classList.add("bad"); return;
-    }
-    if(!srDiag){ el.textContent="engine: native · checking…"; el.classList.remove("bad"); return; }
-    var bits=[
-      "engine: " + (srDiag.engine||"native"),
-      "speech: " + (srDiag.speechAuth||"?"),
-      "mic: " + (srDiag.micAuth||"?"),
-      "available: " + (srDiag.available?"yes":"no"),
-      "on-device: " + (srDiag.onDevice?"yes":"no"),
-      (srDiag.locale||"")
-    ];
-    el.textContent=bits.join(" · ");
-    var bad = srDiag.speechAuth!=="authorized" || !srDiag.available || !srDiag.onDevice;
-    el.classList.toggle("bad", bad);
-  }
-  /* Pulls a fresh snapshot from native. Never throws. */
-  function srRefreshDiag(){
-    var sr=srPlugin();
-    if(!sr || typeof sr.diagnostics!=="function"){ srDiag=null; renderDiag(); return Promise.resolve(null); }
-    try{
-      return Promise.resolve(sr.diagnostics({language:"en-US"})).then(function(d){
-        srDiag=d||null; renderDiag(); return srDiag;
-      }).catch(function(){ srDiag=null; renderDiag(); return null; });
-    }catch(e){ srDiag=null; renderDiag(); return Promise.resolve(null); }
-  }
-  /* Requests BOTH permissions. Speech recognition is a SEPARATE permission
-     from the microphone — granting the mic does not grant it, and without it
-     SFSpeechRecognizer silently returns nothing. Resolves the snapshot. */
-  function srRequestPermissions(){
-    var sr=srPlugin();
-    if(!sr || typeof sr.requestPermissions!=="function") return Promise.resolve(null);
-    try{
-      return Promise.resolve(sr.requestPermissions({language:"en-US"})).then(function(d){
-        srDiag=d||null; renderDiag(); return srDiag;
-      }).catch(function(){ return srRefreshDiag(); });
-    }catch(e){ return srRefreshDiag(); }
-  }
-
-  /* ---- human copy for every machine reason ---- */
-  var TRANSCRIBE_TIMEOUT_MS=90000;
-  var REASON_TEXT={
-    "permission-denied":"you declined Speech Recognition. Turn it on in iOS Settings › Permission › Speech Recognition, then record again.",
-    "permission-restricted":"Speech Recognition is restricted on this device (Screen Time or a device policy).",
-    "permission-notDetermined":"Speech Recognition hasn’t been allowed yet. Record again and choose Allow.",
-    "permission-unknown":"Speech Recognition isn’t authorised.",
-    "no-on-device":"your iPhone doesn’t have the offline dictation model for this language yet. Permission won’t send your audio anywhere, so download it in iOS Settings › General › Keyboard › Dictation, or tap Dictate to type it yourself.",
-    "recognizer-unavailable":"the speech recogniser isn’t available right now. Tap Dictate to add the words yourself.",
-    "no-recognizer":"there’s no speech recogniser for this language.",
-    "no-speech":"no speech was detected in that recording.",
-    "recognition-failed":"transcription didn’t finish.",
-    "no-audio":"the recording couldn’t be read.",
-    "bad-audio":"the recording couldn’t be read.",
-    "write-failed":"the recording couldn’t be prepared for transcription.",
-    "mic-busy":"the microphone is in use. Stop the recording first, then tap Dictate.",
-    "mic-denied":"the microphone permission was declined. Turn it on in iOS Settings › Permission.",
-    "mic-notDetermined":"the microphone hasn’t been allowed yet. Record once and choose Allow, then try Dictate.",
-    "mic-restricted":"the microphone is restricted on this device (Screen Time or a device policy).",
-    "mic-unknown":"the microphone isn’t available.",
-    "input-unavailable":"no microphone input is available right now.",
-    "no-audio-input":"the microphone is busy — recording and playback use it too. Record your entry and let it transcribe itself when you stop, which works without Dictate.",
-    "engine-failed":"the audio engine couldn’t start.",
-    "already-listening":"it’s already listening.",
-    "timeout":"transcription took too long and was stopped.",
-    "unsupported":"speech to text isn’t available on this device. Tap Dictate to add the words yourself."
-  };
-  function reasonText(reason, detail){
-    var base=REASON_TEXT[reason] || ("something went wrong (" + reason + ").");
-    if(detail && (reason==="recognition-failed"||reason==="engine-failed"||reason==="mic-busy")) base += " (" + detail + ")";
-    return base;
-  }
-  function extForMime(mime){
-    mime=(mime||"").toLowerCase();
-    if(mime.indexOf("wav")>-1) return "wav";
-    if(mime.indexOf("webm")>-1) return "webm";
-    if(mime.indexOf("aiff")>-1) return "aiff";
-    return "m4a";              // aac / mp4 — what both recorders produce
-  }
-
-  /* ---- FILE-BASED TRANSCRIPTION (runs after a recording finishes) ----
-     Never rejects; always resolves {ok, transcript} or {ok:false, reason}. */
-  function transcribeRecording(b64, mime){
-    var sr=srPlugin();
-    if(!capNative() || !sr || typeof sr.transcribeFile!=="function"){
-      return Promise.resolve({ ok:false, reason:"unsupported" });
-    }
-    if(!b64) return Promise.resolve({ ok:false, reason:"no-audio" });
-    return srRequestPermissions().then(function(){
-      var call;
-      try{
-        call=Promise.resolve(sr.transcribeFile({ data:b64, ext:extForMime(mime), language:"en-US" }));
-      }catch(e){ return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) }; }
-      var timeout=new Promise(function(res){
-        setTimeout(function(){ res({ ok:false, reason:"timeout" }); }, TRANSCRIBE_TIMEOUT_MS);
-      });
-      return Promise.race([
-        call.then(function(r){ return r||{ ok:false, reason:"recognition-failed" }; })
-            .catch(function(e){ return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) }; }),
-        timeout
-      ]);
-    }).catch(function(e){
-      return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) };
-    });
-  }
-  /* ---- FIRST-USE WARM-UP ----
-     Apple's on-device recogniser can need a moment the very first time it runs
-     on a device — the first attempt can come back empty or error even though
-     everything is authorised and the model reports as present. A first-time
-     user (or an App Review tester, who is always a fresh install) would just
-     see an empty transcript and no explanation.
-
-     So: before transcription has EVER succeeded on this device, a warm-up-ish
-     failure says what is happening and quietly tries once more. Once it has
-     worked once, this never runs again and the normal, accurate messages apply.
-     The success path is untouched. */
-  var LSK_STT_OK="perm_stt_ok";
-  var WARMUP_REASONS={ "no-speech":1, "recognition-failed":1, "timeout":1 };
-  function sttHasWorked(){ try{ return localStorage.getItem(LSK_STT_OK)==="1"; }catch(e){ return false; } }
-  function markSttWorked(){ try{ localStorage.setItem(LSK_STT_OK,"1"); }catch(e){} }
-  function trShowSuccess(r){
-    srCommitted=r.transcript; srPartial="";
-    if(!trUserEdited) trSet(r.transcript);
-    trStatus("Transcribed on this phone. The audio never left your device.");
-    markSttWorked();
-  }
-  function trShowFailure(reason, detail){
-    trStatus("Transcription unavailable — " + reasonText(reason, detail) +
-             " Your recording is safe either way.", true);
-  }
-  var trBusy=false;
-  function runTranscription(b64, mime){
-    if(trBusy) return Promise.resolve();
-    trBusy=true;
-    trStatus('<span class="tr-live"></span>Transcribing on this phone&hellip;');
-    return transcribeRecording(b64, mime).then(function(r){
-      if(r && r.diag){ srDiag=r.diag; renderDiag(); }
-      if(r && r.ok && r.transcript){ trBusy=false; trShowSuccess(r); return true; }
-
-      var reason=(r && r.reason) || "recognition-failed";
-      if(!WARMUP_REASONS[reason] || sttHasWorked()){
-        trBusy=false; trShowFailure(reason, r && r.detail); return false;
-      }
-      // one quiet retry, with an honest "preparing" message meanwhile
-      trStatus('<span class="tr-live"></span>Preparing on-device transcription&hellip; trying again in a moment.');
-      return new Promise(function(res){ setTimeout(res, 2500); })
-        .then(function(){ return transcribeRecording(b64, mime); })
-        .then(function(r2){
-          trBusy=false;
-          if(r2 && r2.diag){ srDiag=r2.diag; renderDiag(); }
-          if(r2 && r2.ok && r2.transcript){ trShowSuccess(r2); return true; }
-          var reason2=(r2 && r2.reason) || reason;
-          if(reason2==="no-speech"){
-            // twice in a row with nothing heard: that is genuinely silence,
-            // not a cold recogniser — say the true thing.
-            trShowFailure("no-speech");
-          } else {
-            trStatus("Preparing on-device transcription — this can take a moment the first time. " +
-                     "Record again in a few seconds and it should appear. Your recording is safe either way.", true);
-          }
-          return false;
-        });
-    }).catch(function(){
-      trBusy=false;
-      trStatus("Transcription unavailable — something went wrong. Your recording is safe either way.", true);
-      return false;
-    });
-  }
-
-  /* ---- LIVE DICTATION (the Dictate button only — never while recording) ---- */
-  function srDetach(){
-    srHandles.forEach(function(h){ try{ h && h.remove && h.remove(); }catch(e){} });
-    srHandles=[];
-  }
-  function srAttach(sr){
-    srDetach();
-    try{
-      var p=sr.addListener("partialResults", function(data){
-        var m=(data && data.matches) || [];
-        if(!m.length) return;
-        srPartial=String(m[0]||"");
-        if(!trUserEdited) trSet(trFull());
-      });
-      Promise.resolve(p).then(function(h){ srHandles.push(h); }).catch(function(){});
-    }catch(e){}
-    try{
-      var q=sr.addListener("listeningState", function(data){
-        var st=(data && (data.status||data.state))||"";
-        if(st==="stopped" && srListening){ srStop().then(syncDictateBtn); }
-      });
-      Promise.resolve(q).then(function(h){ srHandles.push(h); }).catch(function(){});
-    }catch(e){}
-  }
-  /* Resolves {ok:true} or {ok:false, reason} — the caller shows the reason. */
-  function srStart(mode){
-    var sr=srPlugin();
-    if(!capNative() || !sr || typeof sr.startLive!=="function"){
-      return Promise.resolve({ ok:false, reason:"unsupported" });
-    }
-    return srRequestPermissions().then(function(){
-      srAttach(sr);
-      return Promise.resolve(sr.startLive({ language:"en-US" }));
-    }).then(function(r){
-      if(r && r.diag){ srDiag=r.diag; renderDiag(); }
-      if(r && r.ok){
-        srMode=mode; srListening=true;
-        trStatus('<span class="tr-live"></span>Listening — your words are turned into text on this phone.');
-        return { ok:true };
-      }
-      srDetach();
-      return { ok:false, reason:(r && r.reason) || "recognizer-unavailable", detail:r && r.detail };
-    }).catch(function(e){
-      srDetach();
-      return { ok:false, reason:"recognition-failed", detail:String(e&&e.message||e) };
-    });
-  }
-  function srStop(){
-    if(!srListening) return Promise.resolve();
-    srListening=false;
-    var sr=srPlugin();
-    if(srPartial){ srCommitted=(srCommitted?srCommitted+" ":"")+srPartial; srPartial=""; }
-    if(!trUserEdited) trSet(trFull());
-    srDetach();
-    if(!sr || typeof sr.stopLive!=="function") return Promise.resolve();
-    try{ return Promise.resolve(sr.stopLive()).catch(function(){}); }catch(e){ return Promise.resolve(); }
-  }
-  function srReset(){
-    srStop(); srCommitted=""; srPartial=""; srMode=null; trUserEdited=false; trBusy=false;
-    trSet("");
-    trStatus("Your words are turned into text on your phone. Nothing is uploaded.");
-    syncDictateBtn();
-    srRefreshDiag();
-  }
-  function syncDictateBtn(){
-    var b=$("vDictate"); if(!b) return;
-    var on = srListening && srMode==="dictate";
-    b.textContent = on ? "Stop" : "Dictate";
-    b.classList.toggle("coral", on);
-  }
-  var trUserEdited=false, trProgrammatic=false;
-  $("vTranscript").addEventListener("input", function(){
-    if(trProgrammatic) return;
-    trUserEdited=true;   // hands off — the words are the user's now
-  });
-  /* Standalone dictation — the guaranteed path when file transcription can't
-     run. On failure it now says WHY, rather than a generic toast. */
-  $("vDictate").addEventListener("click", function(){
-    if(srListening && srMode==="dictate"){ srStop().then(syncDictateBtn); haptic(8); return; }
-    if(srListening){ toast("Already listening"); return; }
-    var existing=$("vTranscript").value.trim();
-    srCommitted=existing; srPartial=""; trUserEdited=false;
-    srStart("dictate").then(function(r){
-      if(r && r.ok){ haptic(10); }
-      else {
-        trStatus("Dictation unavailable — " + reasonText((r&&r.reason)||"recognizer-unavailable", r&&r.detail), true);
-      }
-      syncDictateBtn();
-    });
-  });
 
   /* ============================================================
      VIDEO ENTRY
@@ -1927,9 +1612,8 @@
     $("speakVoicePane").classList.toggle("hidden", mode!=="voice");
     $("speakVideoPane").classList.toggle("hidden", mode!=="video");
     if(mode==="video"){
-      // leaving voice: stop anything still listening/recording
+      // leaving voice: stop anything still recording
       if(nativeRec || (mediaRec && mediaRec.state==="recording")) stopRecord();
-      srStop().then(syncDictateBtn);
       disableSave($("vSave"), !vidBlob);
     } else {
       disableSave($("vSave"), !recBlob);
@@ -1950,16 +1634,12 @@
     $("playbackWrap").classList.add("hidden"); $("recBtn").classList.remove("recording");
     $("recIcon").outerHTML='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
     var wrap=$("wave"); wrap.classList.remove("on"); buildWave();
-    srReset(); clearVideo(); setSpeakMode("voice");
+    clearVideo(); setSpeakMode("voice");
     disableSave($("vSave"),true);
     showView("voice");
-    // Ask for BOTH permissions as soon as the Record screen opens — speech
-    // recognition is a SEPARATE permission from the microphone, and without it
-    // SFSpeechRecognizer just returns nothing. Doing it here (rather than in
-    // one recorder branch) means it happens whichever recorder is in use, and
-    // the prompt never interrupts a recording. Never awaited: a denial must
-    // not stop anyone from recording.
-    srRequestPermissions().catch(function(){});
+    // The microphone is the ONLY permission this screen needs now, and the
+    // recorder asks for it when recording actually starts. Nothing is
+    // requested just for opening the screen.
   }
   function recIcon(recording){ var svg = recording ? '<div class="sq"></div>' :
     '<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
@@ -1967,18 +1647,9 @@
   var nativeRec=false, fauxTimer=null;
   function vrPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VoiceRecorder) || null; }catch(e){ return null; } }
   function b64ToBlob(d,mime){ try{ var bin=atob(d),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime||"audio/aac"}); }catch(e){ return null; } }
-  /* Only needed on the web/MediaRecorder path — the native recorder already
-     returns base64, so a recording is never re-encoded on device. */
-  function blobToBase64(blob){
-    return new Promise(function(res){
-      try{
-        var fr=new FileReader();
-        fr.onloadend=function(){ var s=String(fr.result||""); var i=s.indexOf(","); res(i>-1?s.slice(i+1):""); };
-        fr.onerror=function(){ res(""); };
-        fr.readAsDataURL(blob);
-      }catch(e){ res(""); }
-    });
-  }
+  /* (blobToBase64 lived here. Its only caller was the transcriber — a
+     recording is stored as a Blob and never needs re-encoding. Removed
+     with speech-to-text in 1.4.0.) */
   function fauxWaveOn(on){ var bars=$("wave").children; if(on){ $("wave").classList.add("on"); fauxTimer=setInterval(function(){ for(var i=0;i<bars.length;i++){ bars[i].style.height=(9+Math.random()*28)+"px"; } },110); } else { if(fauxTimer)clearInterval(fauxTimer); fauxTimer=null; $("wave").classList.remove("on"); flatWave(); } }
   function finishNativeRec(){ var vp=vrPlugin(); if(!vp) return; clearInterval(recTimer); nativeRec=false; $("recBtn").classList.remove("recording"); recIcon(false); fauxWaveOn(false);
     Promise.resolve(vp.stopRecording()).then(function(res){ var v=(res&&res.value)?res.value:(res||{}); var mime=v.mimeType||"audio/aac";
@@ -1987,30 +1658,16 @@
       recBlob=b64?b64ToBlob(b64,mime):null;
       if(recBlob){
         $("playback").src=URL.createObjectURL(recBlob); $("playbackWrap").classList.remove("hidden"); disableSave($("vSave"),false); $("recHint").textContent="Listen back, then save — or tap the mic to re-record.";
-        // The recorder has released the microphone and the audio session, so
-        // it is now safe to run recognition — nothing to contend with.
-        // The native recorder already handed us base64, so no re-encoding.
-        runTranscription(b64, mime).then(syncDictateBtn);
       }
-      else { toast("Couldn’t capture audio"); trStatus("Transcription unavailable — the recording couldn’t be read.", true); }
-    }).catch(function(){ toast("Couldn’t stop recording"); trStatus("Transcription unavailable — the recording couldn’t be read.", true); }); }
+      else { toast("Couldn’t capture audio"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again."; }
+    }).catch(function(){ toast("Couldn’t stop recording"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again."; }); }
   function toggleRecord(){
     var vp=vrPlugin();
     if(capNative() && vp){ if(nativeRec){ finishNativeRec(); return; }
       recSeconds=0; recBlob=null;
-      // Ask for the speech permission UP FRONT, before recording starts, so the
-      // prompt never interrupts a recording and the answer is already known by
-      // the time we transcribe. Deliberately not awaited: a denial must never
-      // stop the user from recording.
-      srRequestPermissions().catch(function(){});
       Promise.resolve(vp.requestAudioRecordingPermission()).then(function(){ return vp.startRecording(); }).then(function(){
         nativeRec=true; $("recBtn").classList.add("recording"); recIcon(true); $("recHint").textContent="Recording… tap to stop."; $("recTime").textContent="0:00";
         fauxWaveOn(true); recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) finishNativeRec(); },1000); haptic(12);
-        // Recognition runs AFTER this recording stops — see finishNativeRec.
-        // Running it now would fight the recorder for the microphone, which is
-        // exactly what produced no transcript at all in 1.3.1.
-        srCommitted=""; srPartial=""; trUserEdited=false; trBusy=false; trSet("");
-        trStatus("Recording&hellip; your words will be turned into text on this phone when you stop.");
       }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; }); return; }
     if(mediaRec && mediaRec.state==="recording"){ stopRecord(); return; }
     if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording isn’t supported here"); return; }
@@ -2026,26 +1683,16 @@
         $("recHint").textContent="Listen back, then save — or tap the mic to re-record.";
         if(recStream){ recStream.getTracks().forEach(function(t){t.stop();}); }
         stopMeter();
-        // This branch only runs off-device (no native plugin), where there is
-        // no on-device recognizer. Say so plainly rather than showing nothing.
-        blobToBase64(recBlob).then(function(b64){
-          return runTranscription(b64, recBlob.type);
-        }).then(syncDictateBtn);
       };
       mediaRec.start();
       $("recBtn").classList.add("recording"); recIcon(true);
       $("recHint").textContent="Recording… tap to stop."; $("wave").classList.add("on");
       recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) stopRecord(); },1000);
       startMeter(stream); haptic(12);
-      // As on the native path: transcription runs after the recording stops
-      // (mediaRec.onstop), never alongside it.
-      srCommitted=""; srPartial=""; trUserEdited=false; trBusy=false; trSet("");
-      trStatus("Recording&hellip; your words will be turned into text on this phone when you stop.");
     }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; });
   }
   function stopRecord(){ if(nativeRec){ finishNativeRec(); return; } if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); } clearInterval(recTimer);
-    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave();
-    /* transcription is kicked off by mediaRec.onstop, once the mic is released */ }
+    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave(); }
   function startMeter(stream){ try{
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     var src=audioCtx.createMediaStreamSource(stream); analyser=audioCtx.createAnalyser(); analyser.fftSize=64; src.connect(analyser);
@@ -2067,13 +1714,12 @@
       return;
     }
     if(!recBlob){ toast("Record something first"); return; }
-    // The transcript rides along with the audio: both are stored on the entry,
-    // and the viewer shows them together.
-    var transcript=($("vTranscript").value||"").trim();
-    saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds, transcript:transcript })
+    /* No `transcript` field is written any more (1.4.0). Entries saved by
+       1.3.x keep theirs, and the viewer still shows them. */
+    saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds })
       .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); afterSaveSuccess(); showApp(); });
   });
-  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; srStop(); srCommitted=""; srPartial=""; clearVideo(); }
+  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; clearVideo(); }
 
   /* ============================================================
      DRAWING ENGINE (shared by Draw + Notebook)
@@ -2627,12 +2273,13 @@
     if(curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl=null; }
     if(e.type==="text"){ box.innerHTML='<div class="body">'+escapeHtml(e.text||"")+'</div>'; }
     else if(e.type==="voice"){ curObjUrl=URL.createObjectURL(e.audio);
-      // audio AND its transcript, together
+      /* Recordings made by 1.3.x carry a transcript. Those words are the
+         user's, so they are still shown. 1.4.0 records nothing to text, and a
+         recording without one is simply a recording — no apologetic note. */
       var tr=(e.transcript||"").trim();
       box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Voice reflection · '+fmtTime(e.duration||0)+'</div>'+
         '<audio controls playsinline src="'+curObjUrl+'" style="width:100%"></audio>'+
-        (tr ? '<div class="tr-lbl" style="margin:18px 0 8px;">Transcript</div><div class="body">'+escapeHtml(tr)+'</div>'
-            : '<div class="tr-status" style="margin-top:14px;">No transcript was saved with this recording.</div>'); }
+        (tr ? '<div class="tr-lbl" style="margin:18px 0 8px;">Transcript</div><div class="body">'+escapeHtml(tr)+'</div>' : ''); }
     else if(e.type==="video"){ curObjUrl=URL.createObjectURL(e.video);
       box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Video reflection</div>'+
         '<video class="vid" controls playsinline preload="metadata" src="'+curObjUrl+'"></video>'; }
@@ -2732,7 +2379,9 @@
      ============================================================ */
   document.querySelectorAll(".mode").forEach(function(m){ m.addEventListener("click", function(){
     haptic(10); var mode=m.dataset.mode;
-    if(mode==="text") startText(); else if(mode==="voice") startVoice(); else startDrawView();
+    /* Explicit, never a fall-through else: the Notebook tile is a .mode too
+       now, and an else-branch would have opened Draw underneath it. */
+    if(mode==="text") startText(); else if(mode==="voice") startVoice(); else if(mode==="draw") startDrawView();
   }); });
   document.querySelectorAll(".depth").forEach(function(b){ b.addEventListener("click", function(){ setMode(b.dataset.depth); haptic(6); }); });
   $("anotherPrompt").addEventListener("click", anotherPrompt);

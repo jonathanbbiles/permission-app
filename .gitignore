@@ -1,7 +1,9 @@
 node_modules/
-# ONLY the Capacitor-generated project at the repo root.
-# An unanchored "ios/" also matches native/permission-speech/ios/ and would
-# silently drop the speech plugin's Swift source from the commit.
+# ONLY the Capacitor-generated project at the repo root — it is rebuilt by
+# `npx cap add ios` / `cap sync` on every Codemagic build, so Info.plist keys
+# and the SPM manifest come from codemagic.yaml, not from here.
+# Stays anchored: an unanchored "ios/" would match any nested ios/ directory
+# (a first-party native plugin's source, say) and silently drop it from commits.
 /ios/
 build/
 .DS_Store

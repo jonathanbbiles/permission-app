@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.3.3 (transcription — first-party SPM-native speech plugin)
-**Date:** 2026-08-08 (transcription fix, 3rd attempt — true root cause)
+**Version:** 1.4.0 (speech-to-text removed; home options rebalanced to a 2x2)
+**Date:** 2026-08-13
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -56,7 +56,73 @@ copy is left behind.
 
 ---
 
+## 1.4.0 — speech-to-text removed, home options rebalanced
+
+Two changes, both requested directly.
+
+### 1. The Notebook now sits WITH the other options, not under them
+
+Write / Record / Draw were a 3-across row; Notebook was a full-width `.bigcard`
+underneath, which read as a different class of thing and left the row looking
+unaligned. All four are now identical `.mode` tiles in one **2x2 grid**
+(`.modes{grid-template-columns:1fr 1fr}`). Four-across was considered and
+rejected: at 375pt each tile would be ~85pt wide, a worse tap target than the
+three it replaced. 2x2 also carries over to the iPad two-column layout, where
+the tiles live in a half-width column and four-across would be worse still.
+
+One real hazard, fixed at the root: the `.mode` click delegation ended in a bare
+`else startDrawView()`. A fourth `.mode` tile would have opened **Draw
+underneath the Notebook**. The delegation is now explicit
+(`else if(mode==="draw")`), and the Notebook tile deliberately carries no
+`data-mode` — it opens through its own `#cardNotebook` listener, unchanged.
+
+### 2. Speech-to-text / Dictate removed entirely
+
+It crashed, and it is not wanted. The whole 1.3.x train was this feature failing
+in a new way each time: three releases where the plugin was silently absent from
+the IPA (SPM dropped it), then a hard crash in 1.3.5 from `installTap` on an
+invalid audio format. **Removed, not disabled** — half-removed features are how
+this kind of thing comes back.
+
+Gone: the Dictate button, the transcript panel and its diagnostic readout, live
+dictation, file-based transcription, the `native/permission-speech` plugin, its
+npm dependency, its type-check harness, and
+`NSSpeechRecognitionUsageDescription` (an app should not request a permission it
+never uses).
+
+**Recording is untouched and still works** — both paths (the native recorder and
+the WKWebView `MediaRecorder` fallback), the Voice/Video switch, playback, and
+saving the audio Blob to IndexedDB. Verified by 9 dedicated assertions plus a
+headless render of the real Record screen with zero page errors.
+
+**No user data was destroyed.** Voice notes saved by 1.3.x carry a `transcript`
+field of the user's own words. Those are still displayed in the entry viewer and
+still travel with a shared voice note. Nothing writes that field any more — it
+is read-only history.
+
+**The build guard was inverted rather than deleted.** `codemagic.yaml` used to
+BLOCK unless `PermissionSpeech` was in the generated SPM manifest. It now BLOCKS
+if speech-to-text reappears anywhere — the manifest, the plugin directory, or
+`www/index.html` — and it deletes `NSSpeechRecognitionUsageDescription` from the
+generated plist and fails if it survives. It also asserts the record button is
+still present, so this removal cannot quietly take recording with it.
+
+The privacy page's "Speech to text" section now says the feature was removed,
+rather than describing a capability the app no longer has.
+
+### Not disturbed: the in-review 1.3.6
+
+`submit_to_app_store` stays commented out in `codemagic.yaml`, so this build
+publishes to **TestFlight only** and cannot touch a version sitting in review.
+1.4.0 is a separate version record in App Store Connect.
+
+---
+
 ## 1.3.3 — the TRUE root cause: the speech plugin was never in the app
+
+> **Superseded by 1.4.0, which removed the feature entirely.** Kept as the
+> record of why: this is what the capability cost across four releases.
+
 
 Two previous attempts blamed the wrong thing. The actual cause, proved by running
 the build locally:

@@ -50,7 +50,6 @@ const SAMPLE = [
   {
     id: "s2", type: "voice", offsetMin: 26 * 60, duration: 84,
     prompt: "Where in your body do you feel most at home right now?",
-    transcript: "My shoulders, oddly. They dropped about an inch when I said out loud that nobody is grading me on this.",
   },
   {
     id: "s3", type: "text", offsetMin: 52 * 60,
@@ -60,7 +59,6 @@ const SAMPLE = [
   {
     id: "s4", type: "voice", offsetMin: 74 * 60, duration: 132,
     prompt: "What would you say to the version of you from ten years ago?",
-    transcript: "That you were not too much. You were just the only one in the room who was being honest about it.",
   },
   {
     id: "s5", type: "text", offsetMin: 99 * 60,
@@ -111,7 +109,7 @@ async function seed(page) {
       for (const e of rows) {
         const rec = { id: e.id, ts: Date.now() - e.offsetMin * 60000, type: e.type, prompt: e.prompt };
         if (e.type === "text") rec.text = e.text;
-        else { rec.audio = audio; rec.mime = "audio/mp4"; rec.duration = e.duration; rec.transcript = e.transcript; }
+        else { rec.audio = audio; rec.mime = "audio/mp4"; rec.duration = e.duration; }
         st.put(rec);
       }
       tx.oncomplete = res;
@@ -177,23 +175,11 @@ for (const d of DEVICES) {
   // 1 — home
   written.push(await shoot(page, dir, "01-home"));
 
-  // 2 — Record, with a transcript beside the recording
+  // 2 — Record (voice + video). Speech-to-text was removed in 1.4.0, so there
+  //     is nothing to stage here: the screen shoots as the user finds it.
   await page.click('.mode[data-mode="voice"]');
   await sleep(700);
-  await page.evaluate(() => {
-    const ta = document.getElementById("vTranscript");
-    ta.value = "I keep waiting to feel ready. Maybe ready is just the thing that shows up after you start.";
-    document.getElementById("trStatus").textContent =
-      "Transcribed on this phone. The audio never left your device.";
-    // The diagnostic line reports the LIVE engine state. In a desktop browser
-    // there is no native plugin, so it correctly reads "engine: none" — which
-    // is an artefact of the render environment, not of the app. Show the state
-    // it has on the device the app actually ships to.
-    const d = document.getElementById("trDiag");
-    d.textContent = "engine: native-sfspeechrecognizer · speech: authorized · mic: granted · available: yes · on-device: yes · en-US";
-    d.classList.remove("bad");
-  });
-  written.push(await shoot(page, dir, "02-record-transcript"));
+  written.push(await shoot(page, dir, "02-record"));
 
   // 3 — Notebook, with ink, showing both export controls
   await page.click('#v-voice [data-discard]');
@@ -267,16 +253,16 @@ for (const d of DEVICES) {
     (dw.actionsVisible && dw.actionsAboveCanvas && !dw.scrolls ? "  ✓ above canvas + fold, no scroll" : "")
   );
 
-  // 5 — an entry, audio + its transcript together
+  // 5 — a saved voice entry, played back in the viewer
   await page.click('#v-draw [data-discard]');
   await sleep(800);
   await page.evaluate(() => {
     const rows = [...document.querySelectorAll("#homeList .entry")];
-    const voice = rows.find((r) => /shoulders/i.test(r.textContent)) || rows[1] || rows[0];
+    const voice = rows.find((r) => /Voice note/i.test(r.textContent)) || rows[1] || rows[0];
     voice.click();
   });
   await sleep(900);
-  written.push(await shoot(page, dir, "05-entry-transcript"));
+  written.push(await shoot(page, dir, "05-entry-voice"));
 
   // ---- verify, don't assume ----
   const metrics = await page.evaluate(() => {
