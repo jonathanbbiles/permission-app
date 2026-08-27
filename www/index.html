@@ -241,6 +241,18 @@
   @keyframes pulse{0%{transform:scale(1); opacity:.7;} 100%{transform:scale(1.5); opacity:0;}}
   .rec-time{font-size:34px; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:300; letter-spacing:1px; margin:12px 0 4px; font-family:var(--display);}
   .rec-hint{font-size:13.5px; color:var(--muted); line-height:1.5; margin-top:2px;}
+  /* Paused is a THIRD visual state, not "not recording". The take is still
+     open and the audio is still there — the button must not look like the
+     idle mic, or pausing reads as having thrown the take away. */
+  .rec-btn.paused{background:linear-gradient(160deg,var(--accent),var(--accent-deep));
+    box-shadow:0 12px 30px rgba(255,45,120,.32), 0 0 0 4px var(--secondary-soft);}
+  .rec-btn.paused svg{width:34px; height:34px;}
+  .rec-actions{display:flex; gap:10px; justify-content:center; align-items:center; margin-top:12px; flex-wrap:wrap;}
+  .rec-actions.hidden{display:none;}
+  .rec-actions .btn{flex:none;}
+  /* "Start over" throws away a finished take, so it never sits next to Done
+     wearing the same clothes. */
+  .rec-actions .danger{color:var(--secondary); font-weight:700;}
   .wave{height:40px; display:flex; align-items:center; justify-content:center; gap:4px; margin:14px 0 2px;}
   .wave span{width:4px; height:10px; border-radius:3px; background:var(--secondary-soft); transition:height .1s;}
   .wave.on span{background:var(--secondary);}
@@ -726,6 +738,12 @@
         <div class="rec-time" id="recTime">0:00</div>
         <div class="wave" id="wave"></div>
         <div class="rec-hint" id="recHint">Tap to begin recording your voice.</div>
+        <!-- Done ends the take; Start over throws it away. Neither is ever the
+             big mic button, because the mic must always mean "keep going". -->
+        <div class="rec-actions hidden" id="recActions">
+          <button class="btn small" id="recDone" type="button">Done</button>
+          <button class="btn small ghost danger hidden" id="recRestart" type="button">Start over</button>
+        </div>
         <div id="playbackWrap" class="hidden"><audio id="playback" controls playsinline></audio></div>
       </div>
     </div>
@@ -733,14 +751,14 @@
     <!-- Transcript: written FROM the finished recording, saved WITH it.
          There is deliberately NO button in this header. The old "Dictate"
          control lived here and drove a live listener that crashed the app; it
-         is gone for good. Transcription starts by itself when you stop
-         recording, and the text stays editable so the words end up yours. -->
+         is gone for good. Transcription starts by itself when the take is
+         finished, and the text stays editable so the words end up yours. -->
     <div class="card" id="transcriptCard">
       <div class="tr-head">
         <div class="tr-lbl" id="trLabel">Transcript</div>
       </div>
-      <textarea id="vTranscript" class="transcript" placeholder="When you stop recording, your words appear here. You can edit them before saving." autocapitalize="sentences"></textarea>
-      <div class="tr-status" id="trStatus">When you stop recording, your words are turned into text on your phone. Nothing is uploaded.</div>
+      <textarea id="vTranscript" class="transcript" placeholder="When you tap Done, your words appear here. You can edit them before saving." autocapitalize="sentences"></textarea>
+      <div class="tr-status" id="trStatus">When you tap Done, your words are turned into text on your phone. Nothing is uploaded.</div>
       <div class="tr-diag hidden" id="trDiag"></div>
     </div>
   </div>
@@ -905,7 +923,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.5.0</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.6.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -915,7 +933,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.5.0";
+  var APP_VERSION = "1.6.0";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1812,14 +1830,14 @@
   function trNewTake(){
     trBusy=false; diagHide();
     if(!trUserEdited) trSet("");
-    trStatus("Recording&hellip; your words will be turned into text on this phone when you stop.");
+    trStatus("Recording&hellip; your words will be turned into text on this phone when you tap Done.");
   }
   /* Back to a clean slate: no text, no stale status, nothing in flight.
      Deliberately has no listener to stop — there is no live path to stop. */
   function trReset(){
     trUserEdited=false; trBusy=false;
     trSet("");
-    trStatus("When you stop recording, your words are turned into text on your phone. Nothing is uploaded.");
+    trStatus("When you tap Done, your words are turned into text on your phone. Nothing is uploaded.");
     diagHide();
     srRefreshDiag();
   }
@@ -1884,11 +1902,12 @@
     $("speakVoicePane").classList.toggle("hidden", mode!=="voice");
     $("speakVideoPane").classList.toggle("hidden", mode!=="video");
     if(mode==="video"){
-      // leaving voice: stop anything still recording
-      if(nativeRec || (mediaRec && mediaRec.state==="recording")) stopRecord();
+      // Leaving voice mid-take: END the take rather than abandoning a live
+      // recorder. Nothing is discarded — the audio is still there to come back to.
+      stopRecord();
       disableSave($("vSave"), !vidBlob);
     } else {
-      disableSave($("vSave"), !recBlob);
+      disableSave($("vSave"), recState!=="finished" || !recBlob);
     }
   }
   document.querySelectorAll("#speakSeg button").forEach(function(b){
@@ -1898,16 +1917,114 @@
   /* ============================================================
      VOICE ENTRY  (native VoiceRecorder + MediaRecorder fallback)
      ============================================================ */
+  /* ============================================================
+     VOICE ENTRY — ONE TAKE, PAUSED AND RESUMED AS OFTEN AS YOU LIKE
+
+     THE BUG THIS FIXES (1.6.0)
+     --------------------------
+     A tap on the mic to stop, then another to start, used to begin a brand new
+     recording: `chunks=[]; recSeconds=0; recBlob=null`. Everything said so far
+     was gone, and so was the transcript. People do not think of it that way —
+     they stop to gather a thought and expect to carry on.
+     (Worded without the removed feature's name on purpose: a test asserts that
+     word never appears in this file.)
+
+     So the mic button no longer stops anything. It means KEEP GOING:
+
+         idle  --tap-->  recording  --tap-->  paused  --tap-->  recording ...
+                                \                  /
+                                 `--- Done -------'  --> finished
+
+     Pause/resume is a real MediaRecorder pause, not a stop dressed up as one.
+     That matters: ONE recorder session produces ONE continuous, valid audio
+     file. The obvious alternative — stop, keep the blob, start a second
+     recorder, concatenate — does NOT work here, because WKWebView records
+     `audio/mp4`, and two MP4 files glued end to end are not a playable MP4.
+     Concatenating would have meant decoding every segment and re-encoding the
+     lot as WAV: ~10x the stored bytes for every voice note, and a quality loss,
+     to solve a problem pause/resume simply does not have.
+
+     Because it is one session, TRANSCRIPTION IS UNAFFECTED and still runs
+     exactly once, at Done, over the whole take. It has no idea the recording
+     was ever paused.
+
+     NOT REINTRODUCED: none of this touches speech recognition. There is still
+     no live listener, no AVAudioEngine and no installTap anywhere — pausing
+     the RECORDER is unrelated to the crash path removed in 1.4.0.
+     ============================================================ */
   var mediaRec=null, chunks=[], recTimer=null, recSeconds=0, recBlob=null, recStream=null, analyser=null, rafId=null, audioCtx=null;
+  /* idle → nothing captured yet · recording → live · paused → take is open and
+     holding audio · finished → take closed, blob + transcript ready to save. */
+  var recState="idle";
+  var REC_MAX_SECONDS=600;
+  /* Elapsed RECORDED time, measured rather than counted.
+     Counting 1-second interval ticks was wrong in two ways once a take could
+     be paused: setInterval drifts and is throttled in the background, and any
+     segment shorter than a tick counted as ZERO — so a take made of several
+     short bursts saved `duration: 0`. `recMs` banks each finished segment and
+     `segStart` measures the one in flight. */
+  var recMs=0, segStart=0;
   function buildWave(){ var w=$("wave"); w.innerHTML=""; for(var i=0;i<13;i++){ w.appendChild(document.createElement("span")); } }
+
+  function recIcon(kind){
+    var mic='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    var pauseBars='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v16M15 4v16"/></svg>';
+    var svg = kind==="recording" ? pauseBars : mic;
+    $("recBtn").innerHTML = (kind==="recording" ? '<span class="pulse"></span>' : '') + svg;
+  }
+  /* Every state change goes through here, so the button, the hint, the wave and
+     the Save button can never disagree about what is happening. */
+  function recSetState(next){
+    recState=next;
+    var btn=$("recBtn"), acts=$("recActions");
+    btn.classList.toggle("recording", next==="recording");
+    btn.classList.toggle("paused", next==="paused");
+    recIcon(next);
+    btn.setAttribute("aria-label",
+      next==="recording" ? "Pause recording" :
+      next==="paused"    ? "Continue recording" :
+      next==="finished"  ? "Start a new recording" : "Record");
+    // The mic is hidden once a take is finished: a familiar mic icon that
+    // silently discards a finished take is exactly the surprise being fixed.
+    btn.classList.toggle("hidden", next==="finished");
+    acts.classList.toggle("hidden", next==="idle");
+    $("recDone").classList.toggle("hidden", next==="finished");
+    $("recRestart").classList.toggle("hidden", next!=="finished");
+    $("recHint").textContent =
+      next==="recording" ? "Recording… tap to pause. Your take keeps going." :
+      next==="paused"    ? "Paused — nothing is lost. Tap to carry on, or Done when you have finished." :
+      next==="finished"  ? "Listen back, then save. Start over only if you want to discard this take." :
+                           "Tap to begin recording your voice.";
+    disableSave($("vSave"), next!=="finished" || !recBlob);
+    if(next!=="recording") fauxWaveOn(false);
+  }
+  function recElapsedMs(){ return recMs + (segStart ? (Date.now()-segStart) : 0); }
+  function recPaintTime(){ $("recTime").textContent=fmtTime(Math.floor(recElapsedMs()/1000)); }
+  /* Starts (or restarts, after a pause) the clock for a live segment. */
+  function recTick(onCap){
+    clearInterval(recTimer);
+    segStart=Date.now();
+    recPaintTime();
+    recTimer=setInterval(function(){
+      recPaintTime();
+      if(recElapsedMs()>=REC_MAX_SECONDS*1000){ toast("Ten minutes is the limit — wrapping this take up"); onCap(); }
+    },250);
+  }
+  /* Banks the live segment. Safe to call twice: segStart is cleared. */
+  function recStopTick(){
+    clearInterval(recTimer); recTimer=null;
+    if(segStart){ recMs += Date.now()-segStart; segStart=0; }
+    recPaintTime();
+  }
+  function recResetClock(){ recMs=0; segStart=0; recSeconds=0; clearInterval(recTimer); recTimer=null; $("recTime").textContent="0:00"; }
+
   function startVoice(){
-    $("vPrompt").textContent=currentPrompt; recSeconds=0; recBlob=null; chunks=[]; nativeRec=false;
-    $("recTime").textContent="0:00"; $("recHint").textContent="Tap to begin recording your voice.";
-    $("playbackWrap").classList.add("hidden"); $("recBtn").classList.remove("recording");
-    $("recIcon").outerHTML='<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
+    $("vPrompt").textContent=currentPrompt; recBlob=null; chunks=[]; nativeRec=false;
+    recResetClock();
+    $("playbackWrap").classList.add("hidden");
     var wrap=$("wave"); wrap.classList.remove("on"); buildWave();
     trReset(); clearVideo(); setSpeakMode("voice");
-    disableSave($("vSave"),true);
+    recSetState("idle");
     showView("voice");
     // Ask for SPEECH RECOGNITION as the Record screen opens. It is a separate
     // permission from the microphone (which the recorder requests for itself
@@ -1917,9 +2034,6 @@
     // must not stop anyone from recording.
     srRequestPermissions().catch(function(){});
   }
-  function recIcon(recording){ var svg = recording ? '<div class="sq"></div>' :
-    '<svg id="recIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>';
-    $("recBtn").innerHTML = (recording?'<span class="pulse"></span>':'')+svg; }
   var nativeRec=false, fauxTimer=null;
   function vrPlugin(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.VoiceRecorder) || null; }catch(e){ return null; } }
   function b64ToBlob(d,mime){ try{ var bin=atob(d),a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:mime||"audio/aac"}); }catch(e){ return null; } }
@@ -1936,62 +2050,153 @@
     });
   }
   function fauxWaveOn(on){ var bars=$("wave").children; if(on){ $("wave").classList.add("on"); fauxTimer=setInterval(function(){ for(var i=0;i<bars.length;i++){ bars[i].style.height=(9+Math.random()*28)+"px"; } },110); } else { if(fauxTimer)clearInterval(fauxTimer); fauxTimer=null; $("wave").classList.remove("on"); flatWave(); } }
-  function finishNativeRec(){ var vp=vrPlugin(); if(!vp) return; clearInterval(recTimer); nativeRec=false; $("recBtn").classList.remove("recording"); recIcon(false); fauxWaveOn(false);
-    Promise.resolve(vp.stopRecording()).then(function(res){ var v=(res&&res.value)?res.value:(res||{}); var mime=v.mimeType||"audio/aac";
-      if(v.msDuration){ recSeconds=Math.max(1,Math.round(v.msDuration/1000)); $("recTime").textContent=fmtTime(recSeconds); }
-      var b64=v.recordDataBase64||"";
-      recBlob=b64?b64ToBlob(b64,mime):null;
-      if(recBlob){
-        $("playback").src=URL.createObjectURL(recBlob); $("playbackWrap").classList.remove("hidden"); disableSave($("vSave"),false); $("recHint").textContent="Listen back, then save — or tap the mic to re-record.";
-        // The recorder has released the microphone and the audio session, so
-        // it is now safe to run recognition — nothing to contend with. The
-        // native recorder already handed us base64, so no re-encoding.
-        runTranscription(b64, mime);
-      }
-      else { toast("Couldn’t capture audio"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again."; trShowFailure("bad-audio"); }
-    }).catch(function(){ toast("Couldn’t stop recording"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again."; trShowFailure("bad-audio"); }); }
-  function toggleRecord(){
+
+  /* A finished take: show it, and transcribe the WHOLE thing exactly once. */
+  function takeFinished(blob, b64, mime){
+    recBlob=blob;
+    // Measured, not counted — and never 0 for a take that really has audio.
+    if(!recSeconds) recSeconds=Math.max(1, Math.round(recElapsedMs()/1000));
+    $("recTime").textContent=fmtTime(recSeconds);
+    if(!recBlob){
+      recSetState("idle");
+      toast("Couldn’t capture audio"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again.";
+      trShowFailure("bad-audio"); return;
+    }
+    $("playback").src=URL.createObjectURL(recBlob);
+    $("playbackWrap").classList.remove("hidden");
+    recSetState("finished");
+    // The recorder has released the microphone and the audio session, so it is
+    // now safe to run recognition — nothing to contend with.
+    if(b64) runTranscription(b64, mime);
+    else blobToBase64(recBlob).then(function(d){ return runTranscription(d, recBlob.type); });
+  }
+
+  /* ---------- native VoiceRecorder path ----------
+     capacitor-voice-recorder is knowingly absent from the IPA (it has no
+     Package.swift, so SPM drops it) and recording really runs on the
+     MediaRecorder path below. This branch is kept correct anyway, and it
+     pauses through the plugin when the plugin can — falling back to simply
+     staying live rather than ever discarding a take. */
+  function nativeCanPause(){
     var vp=vrPlugin();
-    if(capNative() && vp){ if(nativeRec){ finishNativeRec(); return; }
-      recSeconds=0; recBlob=null;
+    return !!(vp && typeof vp.pauseRecording==="function" && typeof vp.resumeRecording==="function");
+  }
+  function finishNativeRec(){
+    var vp=vrPlugin(); if(!vp) return;
+    recStopTick(); nativeRec=false; fauxWaveOn(false);
+    Promise.resolve(vp.stopRecording()).then(function(res){
+      var v=(res&&res.value)?res.value:(res||{}); var mime=v.mimeType||"audio/aac";
+      if(v.msDuration){ recSeconds=Math.max(1,Math.round(v.msDuration/1000)); }
+      var b64=v.recordDataBase64||"";
+      takeFinished(b64?b64ToBlob(b64,mime):null, b64, mime);
+    }).catch(function(){
+      recSetState("idle");
+      toast("Couldn’t stop recording"); $("recHint").textContent="That recording couldn’t be read. Tap the mic to try again.";
+      trShowFailure("bad-audio");
+    });
+  }
+
+  /* ---------- the mic button ----------
+     It only ever means "keep going": start, pause, or carry on. It never ends
+     a take and never throws one away. */
+  function toggleRecord(){
+    if(recState==="recording"){ pauseTake(); return; }
+    if(recState==="paused"){ resumeTake(); return; }
+    if(recState==="finished") return;      // the mic is hidden here anyway
+    startTake();
+  }
+  function startTake(){
+    var vp=vrPlugin();
+    if(capNative() && vp){
+      recBlob=null; recResetClock();
       Promise.resolve(vp.requestAudioRecordingPermission()).then(function(){ return vp.startRecording(); }).then(function(){
-        nativeRec=true; $("recBtn").classList.add("recording"); recIcon(true); $("recHint").textContent="Recording… tap to stop."; $("recTime").textContent="0:00";
-        fauxWaveOn(true); recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) finishNativeRec(); },1000); haptic(12);
-        // Recognition runs AFTER this recording stops — see finishNativeRec.
+        nativeRec=true;
+        recSetState("recording"); fauxWaveOn(true); recTick(finishTake); haptic(12);
+        // Recognition runs AFTER this take is finished — see takeFinished.
         // Running it now would fight the recorder for the microphone, which is
         // exactly what produced no transcript at all in 1.3.1.
         trNewTake();
-      }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; }); return; }
-    if(mediaRec && mediaRec.state==="recording"){ stopRecord(); return; }
+      }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; });
+      return;
+    }
     if(!navigator.mediaDevices || !window.MediaRecorder){ toast("Recording isn’t supported here"); return; }
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-      recStream=stream; chunks=[]; recSeconds=0; recBlob=null;
+      recStream=stream; chunks=[]; recBlob=null; recResetClock();
       var mime = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : (MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":"");
       mediaRec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream);
+      // Every chunk of the take lands in the SAME array, across every pause.
       mediaRec.ondataavailable=function(e){ if(e.data && e.data.size>0) chunks.push(e.data); };
       mediaRec.onstop=function(){
-        recBlob=new Blob(chunks,{type:mediaRec.mimeType||"audio/mp4"});
-        var url=URL.createObjectURL(recBlob); $("playback").src=url; $("playbackWrap").classList.remove("hidden");
-        disableSave($("vSave"),false);
-        $("recHint").textContent="Listen back, then save — or tap the mic to re-record.";
-        if(recStream){ recStream.getTracks().forEach(function(t){t.stop();}); }
+        var blob=new Blob(chunks,{type:mediaRec.mimeType||"audio/mp4"});
+        if(recStream){ recStream.getTracks().forEach(function(t){t.stop();}); recStream=null; }
         stopMeter();
         // Only after the tracks are stopped: the recogniser must never be
         // asked to work while anything still holds the microphone.
-        blobToBase64(recBlob).then(function(b64){ return runTranscription(b64, recBlob.type); });
+        takeFinished(blob, null, blob.type);
       };
       mediaRec.start();
-      $("recBtn").classList.add("recording"); recIcon(true);
-      $("recHint").textContent="Recording… tap to stop."; $("wave").classList.add("on");
-      recTimer=setInterval(function(){ recSeconds++; $("recTime").textContent=fmtTime(recSeconds); if(recSeconds>=600) stopRecord(); },1000);
+      recSetState("recording"); $("wave").classList.add("on");
+      recTick(finishTake);
       startMeter(stream); haptic(12);
-      // As on the native path: transcription runs after the recording stops
-      // (mediaRec.onstop), never alongside it.
+      // As on the native path: transcription runs after the take is finished,
+      // never alongside it.
       trNewTake();
     }).catch(function(){ toast("Microphone permission needed"); $("recHint").textContent="Permission is needed to record. You can still write or draw an entry."; });
   }
-  function stopRecord(){ if(nativeRec){ finishNativeRec(); return; } if(mediaRec && mediaRec.state==="recording"){ mediaRec.stop(); } clearInterval(recTimer);
-    $("recBtn").classList.remove("recording"); recIcon(false); $("wave").classList.remove("on"); flatWave(); }
+  /* PAUSE — the take stays open and every byte already captured stays in
+     `chunks`. If the platform somehow cannot pause, we keep RECORDING rather
+     than stopping: carrying on is always recoverable, discarding is not. */
+  function pauseTake(){
+    if(nativeRec){
+      var vp=vrPlugin();
+      if(!nativeCanPause()){ toast("Pause isn’t available here — tap Done when you’re finished"); return; }
+      Promise.resolve(vp.pauseRecording()).then(function(){
+        recStopTick(); recSetState("paused"); haptic(8);
+      }).catch(function(){ toast("Couldn’t pause — recording is still going"); });
+      return;
+    }
+    if(!mediaRec || mediaRec.state!=="recording") return;
+    if(typeof mediaRec.pause!=="function"){ toast("Pause isn’t available here — tap Done when you’re finished"); return; }
+    try{ mediaRec.pause(); }catch(e){ toast("Couldn’t pause — recording is still going"); return; }
+    if(mediaRec.state!=="paused"){ toast("Couldn’t pause — recording is still going"); return; }
+    recStopTick(); stopMeter(); recSetState("paused"); haptic(8);
+  }
+  function resumeTake(){
+    if(nativeRec){
+      var vp=vrPlugin();
+      if(!nativeCanPause()) return;
+      Promise.resolve(vp.resumeRecording()).then(function(){
+        recSetState("recording"); fauxWaveOn(true); recTick(finishTake); haptic(10);
+      }).catch(function(){ toast("Couldn’t continue — tap Done to keep what you have"); });
+      return;
+    }
+    if(!mediaRec || mediaRec.state!=="paused") return;
+    try{ mediaRec.resume(); }catch(e){ toast("Couldn’t continue — tap Done to keep what you have"); return; }
+    recSetState("recording"); $("wave").classList.add("on");
+    recTick(finishTake);
+    if(recStream) startMeter(recStream);
+    haptic(10);
+  }
+  /* DONE — the only thing that ends a take. Flushes the final chunk, which is
+     what makes the accumulated audio a single valid file. */
+  function finishTake(){
+    if(recState!=="recording" && recState!=="paused") return;
+    recStopTick();
+    if(nativeRec){ finishNativeRec(); return; }
+    if(mediaRec && mediaRec.state!=="inactive"){ try{ mediaRec.stop(); }catch(e){} }
+    fauxWaveOn(false);
+    haptic(12);
+  }
+  /* START OVER — the ONLY way to lose a take, and it says so on the button. */
+  function restartTake(){
+    recBlob=null; chunks=[]; nativeRec=false; mediaRec=null; recResetClock();
+    $("playbackWrap").classList.add("hidden");
+    try{ $("playback").removeAttribute("src"); $("playback").load(); }catch(e){}
+    trReset(); recSetState("idle"); haptic(8);
+  }
+  /* Leaving the screen mid-take: end it cleanly rather than abandoning a live
+     recorder that still holds the microphone. */
+  function stopRecord(){ if(recState==="recording"||recState==="paused") finishTake(); }
   function startMeter(stream){ try{
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     var src=audioCtx.createMediaStreamSource(stream); analyser=audioCtx.createAnalyser(); analyser.fftSize=64; src.connect(analyser);
@@ -2004,6 +2209,8 @@
   function flatWave(){ var bars=$("wave").children; for(var i=0;i<bars.length;i++){ bars[i].style.height="10px"; } }
   function disableSave(btn,dis){ btn.disabled=dis; btn.style.opacity=dis?".5":"1"; }
   $("recBtn").addEventListener("click", toggleRecord);
+  $("recDone").addEventListener("click", finishTake);
+  $("recRestart").addEventListener("click", restartTake);
   $("vSave").addEventListener("click", function(){
     if(speakMode==="video"){
       if(!vidBlob){ toast("Record a video first"); return; }
@@ -2020,7 +2227,7 @@
     saveEntry({ type:"voice", prompt:currentPrompt, promptTemplate:currentTemplate, audio:recBlob, mime:recBlob.type, duration:recSeconds, transcript:transcript })
       .then(function(){ toast("Saved to your journal"); haptic(14); cleanupVoice(); afterSaveSuccess(); showApp(); });
   });
-  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); clearInterval(recTimer); mediaRec=null; recBlob=null; trBusy=false; trUserEdited=false; clearVideo(); }
+  function cleanupVoice(){ try{ if(nativeRec && vrPlugin()){ Promise.resolve(vrPlugin().stopRecording()).catch(function(){}); } }catch(e){} nativeRec=false; if(fauxTimer){ clearInterval(fauxTimer); fauxTimer=null; } try{ if(recStream) recStream.getTracks().forEach(function(t){t.stop()}); }catch(e){} stopMeter(); recResetClock(); mediaRec=null; recBlob=null; chunks=[]; recStream=null; recState="idle"; trBusy=false; trUserEdited=false; clearVideo(); }
 
   /* ============================================================
      DRAWING ENGINE (shared by Draw + Notebook)
@@ -2692,7 +2899,7 @@
      no header shortcut, so a stray tap at the top can't land on the canvas. */
   document.querySelectorAll("[data-back]").forEach(function(b){ b.addEventListener("click", function(){ if($("v-notebook").classList.contains("active") && nbDirty){ nbSave().then(showApp); } else { showApp(); } }); });
   document.querySelectorAll("[data-discard]").forEach(function(b){ b.addEventListener("click", function(){
-    if(mediaRec && mediaRec.state==="recording") stopRecord(); cleanupVoice(); showApp(); }); });
+    stopRecord(); cleanupVoice(); showApp(); }); });
   $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
 
   function onViewportChange(){

@@ -301,12 +301,13 @@ workflows:
           # sequence keeps rising across the change.)
           NEXT="$(date -u +%Y%m%d%H%M)"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
-          # 1.5.0 — on-device transcription is BACK (file-based, runs when a
-          # recording stops). Live dictation stays removed; see the guard step.
+          # 1.6.0 — the mic button PAUSES a take instead of restarting it, so
+          # audio and transcript accumulate across stop/start (1.5.0 restored
+          # on-device transcription). Live dictation stays removed; see the guard.
           # Earlier versions are separate records in App Store Connect and are
           # NOT touched by this build: this lane publishes to TestFlight only
           # (see the review-submit toggle at the bottom, deliberately off).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.5.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.5.0" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.6.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.5.0" ios/App/App/Info.plist
 
           # Read BOTH values back out of the plist. An unexpanded variable or a
           # silent PlistBuddy no-op would otherwise ship a colliding build that
@@ -318,7 +319,7 @@ workflows:
             [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
             *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
           esac
-          [ "$GOT_V" = "1.5.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.5.0"; exit 1; }
+          [ "$GOT_V" = "1.6.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.6.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

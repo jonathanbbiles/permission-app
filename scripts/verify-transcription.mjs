@@ -114,37 +114,59 @@ async function boot(browser, { withVoiceRecorder, sttMode }) {
 
 /* Opens Record, records, stops. On the MediaRecorder path getUserMedia and
    MediaRecorder are stubbed in the page so the real onstop handler runs. */
+/* The whole web-recorder stub in one place: getUserMedia, a MediaRecorder that
+   models pause/resume, and a no-op AudioContext for the level meter. Every
+   section that drives the MediaRecorder path installs ALL of it — a partial
+   stub just makes startTake() fall into "Microphone permission needed". */
+async function stubWebRecorder(page) {
+  await page.evaluate(() => {
+    navigator.mediaDevices.getUserMedia = () => {
+      window.__calls.push("mic:acquire");
+      return Promise.resolve({ getTracks: () => [{ stop() { window.__calls.push("mic:release"); } }] });
+    };
+    /* Models the real thing where it matters: ONE ondataavailable at stop,
+       carrying everything captured across every record/pause segment. The
+       payload size tracks how long it was actually capturing, which is how the
+       tests prove a resumed take APPENDS instead of starting over. */
+    class FakeRec {
+      constructor() { this.state = "inactive"; this.mimeType = "audio/mp4"; this._ms = 0; this._t0 = 0; }
+      start() { this.state = "recording"; this._t0 = Date.now(); window.__calls.push("rec:start"); }
+      pause() {
+        if (this.state !== "recording") return;
+        this._ms += Date.now() - this._t0; this.state = "paused"; window.__calls.push("rec:pause");
+      }
+      resume() {
+        if (this.state !== "paused") return;
+        this._t0 = Date.now(); this.state = "recording"; window.__calls.push("rec:resume");
+      }
+      stop() {
+        if (this.state === "recording") this._ms += Date.now() - this._t0;
+        this.state = "inactive";
+        window.__calls.push("rec:stop");
+        window.__capturedMs = this._ms;
+        const n = Math.max(8, Math.round(this._ms / 10));
+        if (this.ondataavailable) this.ondataavailable({ data: new Blob([new Uint8Array(n)], { type: "audio/mp4" }) });
+        if (this.onstop) this.onstop();
+      }
+    }
+    FakeRec.isTypeSupported = () => true;
+    window.MediaRecorder = FakeRec;
+    // The level meter needs a real AudioContext; a no-op keeps it quiet.
+    window.AudioContext = function () {
+      return { createMediaStreamSource: () => ({ connect() {} }),
+               createAnalyser: () => ({ fftSize: 64, frequencyBinCount: 32, getByteFrequencyData() {} }),
+               close() {} };
+    };
+  });
+}
+
 async function recordAndStop(page, native) {
   await page.click('.mode[data-mode="voice"]');
   await sleep(500);
-  if (!native) {
-    await page.evaluate(() => {
-      navigator.mediaDevices.getUserMedia = () => {
-        window.__calls.push("mic:acquire");
-        return Promise.resolve({ getTracks: () => [{ stop() { window.__calls.push("mic:release"); } }] });
-      };
-      class FakeRec {
-        constructor() { this.state = "inactive"; this.mimeType = "audio/mp4"; }
-        start() { this.state = "recording"; }
-        stop() {
-          this.state = "inactive";
-          if (this.ondataavailable) this.ondataavailable({ data: new Blob([new Uint8Array([0, 0, 0, 32, 102, 116, 121, 112])], { type: "audio/mp4" }) });
-          if (this.onstop) this.onstop();
-        }
-      }
-      FakeRec.isTypeSupported = () => true;
-      window.MediaRecorder = FakeRec;
-      // The level meter needs a real AudioContext; a no-op keeps it quiet.
-      window.AudioContext = function () {
-        return { createMediaStreamSource: () => ({ connect() {} }),
-                 createAnalyser: () => ({ fftSize: 64, frequencyBinCount: 32, getByteFrequencyData() {} }),
-                 close() {} };
-      };
-    });
-  }
-  await page.click("#recBtn");
+  if (!native) await stubWebRecorder(page);
+  await page.click("#recBtn");     // start
   await sleep(600);
-  await page.click("#recBtn");
+  await page.click("#recDone");    // Done ends the take (the mic only pauses)
   await sleep(1400);
 }
 
@@ -260,8 +282,9 @@ section("4) the words end up the user's — edits are never clobbered");
   const { ctx, page, errors } = await boot(browser, { withVoiceRecorder: true, sttMode: "ok" });
   await page.click('.mode[data-mode="voice"]');
   await sleep(400);
+  await stubWebRecorder(page);
   await page.fill("#vTranscript", "My own words, typed before anything was recorded.");
-  await page.click("#recBtn"); await sleep(500); await page.click("#recBtn"); await sleep(1400);
+  await page.click("#recBtn"); await sleep(500); await page.click("#recDone"); await sleep(1500);
   const after = await page.inputValue("#vTranscript");
   const status = (await page.textContent("#trStatus")) || "";
   ok("a hand-typed transcript survives a transcription that follows it",
@@ -285,19 +308,129 @@ section("4) the words end up the user's — edits are never clobbered");
 }
 
 /* ---------------------------------------------------------------- 5 */
-section("5) re-recording starts from a clean slate");
+section("5) PAUSE/RESUME — the mic never ends a take, and never wipes one");
 {
-  const { ctx, page, errors } = await boot(browser, { withVoiceRecorder: true, sttMode: "ok" });
-  await recordAndStop(page, true);
-  ok("first recording transcribed", /Maybe ready/.test(await page.inputValue("#vTranscript")));
-  await page.click("#recBtn");             // start a second take
+  const { ctx, page, errors } = await boot(browser, { withVoiceRecorder: false, sttMode: "ok" });
+  await page.click('.mode[data-mode="voice"]');
   await sleep(400);
-  const during = await page.inputValue("#vTranscript");
-  const statusDuring = (await page.textContent("#trStatus")) || "";
-  ok("the old transcript is cleared when a new take starts", during === "", during);
-  ok("the status says the words come when you stop", /when you stop/.test(statusDuring), statusDuring);
-  await page.click("#recBtn"); await sleep(1400);
-  ok("the second take transcribes too", /Maybe ready/.test(await page.inputValue("#vTranscript")));
+  await stubWebRecorder(page);
+
+  ok("no Done/Start-over controls before anything is recorded",
+     await page.locator("#recActions.hidden").count() === 1);
+
+  await page.click("#recBtn");                    // start
+  await sleep(700);
+  const tRec = await page.textContent("#recTime");
+  await page.click("#recBtn");                    // PAUSE (used to be "stop")
+  await sleep(500);
+
+  const stateAfterPause = await page.evaluate(() => ({
+    recorder: window.__recState || null,
+    calls: window.__calls.slice(),
+    btnPaused: document.getElementById("recBtn").classList.contains("paused"),
+    btnHidden: document.getElementById("recBtn").classList.contains("hidden"),
+    hint: document.getElementById("recHint").textContent,
+    doneVisible: !document.getElementById("recDone").classList.contains("hidden"),
+    saveDisabled: document.getElementById("vSave").disabled,
+  }));
+  ok("tapping the mic PAUSES — the recorder is never stopped",
+     stateAfterPause.calls.includes("rec:pause") && !stateAfterPause.calls.includes("rec:stop"),
+     stateAfterPause.calls.join(" > "));
+  ok("the button shows a distinct paused state, not the idle mic", stateAfterPause.btnPaused);
+  ok("the hint says nothing is lost", /nothing is lost/i.test(stateAfterPause.hint), stateAfterPause.hint);
+  ok("Done is offered while paused", stateAfterPause.doneVisible);
+  ok("Save stays disabled until the take is finished", stateAfterPause.saveDisabled);
+
+  // the timer must FREEZE while paused
+  const tPause1 = await page.textContent("#recTime");
+  await sleep(1600);
+  const tPause2 = await page.textContent("#recTime");
+  ok("the timer freezes while paused", tPause1 === tPause2, `${tPause1} -> ${tPause2}`);
+
+  await page.click("#recBtn");                    // CONTINUE
+  await sleep(700);
+  const calls2 = await page.evaluate(() => window.__calls.slice());
+  ok("tapping again RESUMES the same recorder session",
+     calls2.includes("rec:resume") && calls2.filter((c) => c === "rec:start").length === 1,
+     calls2.join(" > "));
+  const tResume = await page.textContent("#recTime");
+  ok("the timer carries on from where it paused, not from zero",
+     tResume !== "0:00" && tResume >= tRec, `${tRec} -> ${tResume}`);
+
+  await page.click("#recDone");
+  await sleep(1500);
+  const fin = await page.evaluate(() => ({
+    calls: window.__calls.slice(),
+    capturedMs: window.__capturedMs,
+    micHidden: document.getElementById("recBtn").classList.contains("hidden"),
+    restartVisible: !document.getElementById("recRestart").classList.contains("hidden"),
+    doneHidden: document.getElementById("recDone").classList.contains("hidden"),
+    playbackVisible: !document.getElementById("playbackWrap").classList.contains("hidden"),
+    saveDisabled: document.getElementById("vSave").disabled,
+    transcript: document.getElementById("vTranscript").value,
+  }));
+  ok("Done stops the recorder exactly once",
+     fin.calls.filter((c) => c === "rec:stop").length === 1, fin.calls.join(" > "));
+  ok("the finished take spans BOTH segments, not just the last one",
+     fin.capturedMs > 1000, `captured ${fin.capturedMs}ms across two ~700ms segments`);
+  ok("the mic is hidden once a take is finished, so it cannot silently wipe it", fin.micHidden);
+  ok("Start over replaces it, named for what it does", fin.restartVisible && fin.doneHidden);
+  ok("playback of the whole take appears", fin.playbackVisible);
+  ok("Save is now enabled", !fin.saveDisabled);
+  ok("the whole accumulated take was transcribed, once",
+     /Maybe ready is just the thing/.test(fin.transcript) &&
+     fin.calls.filter((c) => c.startsWith("transcribeFile")).length === 1,
+     fin.calls.filter((c) => c.startsWith("transcribeFile")).join(","));
+
+  // and the saved entry carries the FULL take
+  await page.click("#vSave");
+  await sleep(900);
+  const v = await page.evaluate(async () => {
+    const db = await new Promise((res) => { const r = indexedDB.open("awaken_db"); r.onsuccess = () => res(r.result); });
+    return await new Promise((res) => {
+      const rows = []; const tx = db.transaction("entries", "readonly");
+      tx.objectStore("entries").openCursor().onsuccess = (e) => {
+        const c = e.target.result;
+        if (!c) return res(rows.find((r) => r.type === "voice"));
+        rows.push({ type: c.value.type, size: c.value.audio ? c.value.audio.size : 0, duration: c.value.duration, transcript: c.value.transcript });
+        c.continue();
+      };
+    });
+  });
+  ok("the saved audio is the accumulated take", !!v && v.size > 100, JSON.stringify(v));
+  ok("the saved duration covers both segments", !!v && v.duration >= 1, JSON.stringify(v));
+  ok("the saved transcript is the full one", !!v && /Maybe ready/.test(v.transcript || ""));
+  ok("no page errors across the whole pause/resume flow", errors.length === 0, errors.join(" | "));
+  await ctx.close();
+}
+
+/* ---------------------------------------------------------------- 6 */
+section("6) a SINGLE take (no pause) still behaves, and Start over is the only wipe");
+{
+  const { ctx, page, errors } = await boot(browser, { withVoiceRecorder: false, sttMode: "ok" });
+  await page.click('.mode[data-mode="voice"]');
+  await sleep(400);
+  await stubWebRecorder(page);
+  await page.click("#recBtn"); await sleep(700); await page.click("#recDone"); await sleep(1400);
+  const oneSeg = await page.evaluate(() => window.__capturedMs);
+  ok("an unpaused take finishes normally", oneSeg > 400 && oneSeg < 1200, `${oneSeg}ms`);
+  ok("its transcript arrived", /Maybe ready/.test(await page.inputValue("#vTranscript")));
+
+  await page.click("#recRestart");
+  await sleep(400);
+  const after = await page.evaluate(() => ({
+    time: document.getElementById("recTime").textContent,
+    transcript: document.getElementById("vTranscript").value,
+    playbackHidden: document.getElementById("playbackWrap").classList.contains("hidden"),
+    micVisible: !document.getElementById("recBtn").classList.contains("hidden"),
+    saveDisabled: document.getElementById("vSave").disabled,
+    actionsHidden: document.getElementById("recActions").classList.contains("hidden"),
+  }));
+  ok("Start over clears the timer", after.time === "0:00", after.time);
+  ok("Start over clears the transcript", after.transcript === "", after.transcript);
+  ok("Start over hides the old playback", after.playbackHidden);
+  ok("the mic comes back, ready for a new take", after.micVisible && after.actionsHidden);
+  ok("Save is disabled again", after.saveDisabled);
   ok("no page errors", errors.length === 0, errors.join(" | "));
   await ctx.close();
 }

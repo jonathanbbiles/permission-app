@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.5.0 (on-device transcription restored; live dictation stays removed)
-**Date:** 2026-08-26
+**Version:** 1.6.0 (recording pauses and resumes; transcription restored in 1.5.0)
+**Date:** 2026-08-27
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -53,6 +53,77 @@ copy is left behind.
 > writes a camera-captured video to the camera roll before handing it to the
 > page. It should not — a web file input receives a temp file, and saving to
 > Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
+
+---
+
+## 1.6.0 — the mic pauses a take instead of restarting it
+
+**The bug.** A tap on the mic to stop, then another to start, began a brand new
+recording — `chunks=[]; recSeconds=0; recBlob=null`. Everything said so far was
+gone, and the transcript with it. Nobody thinks of it that way: people stop to
+gather a thought and expect to carry on.
+
+**The fix.** The mic button no longer stops anything. It means *keep going*:
+
+    idle --tap--> recording --tap--> paused --tap--> recording ...
+                          \                    /
+                           `------ Done -------'  --> finished
+
+- **Done** is now the only thing that ends a take.
+- **Start over** is the only thing that discards one, and it says so on the
+  button. Once a take is finished the mic is *hidden*, so a familiar icon can
+  never silently throw away a recording again — which was the whole complaint.
+
+**Why a real pause and not stop-and-concatenate.** `MediaRecorder.pause()` keeps
+one session alive, so every chunk lands in the same array and the take is one
+continuous, valid audio file. The obvious alternative — stop, keep the blob,
+start a second recorder, glue the results — does not work here: WKWebView
+records `audio/mp4`, and two MP4s end to end are not a playable MP4. Making that
+work would have meant decoding every segment and re-encoding the lot as WAV:
+roughly **10x the stored bytes for every voice note**, plus a quality loss, to
+solve a problem pause/resume does not have.
+
+**Transcription is unaffected.** Because it is one session, it still runs
+exactly once, at Done, over the whole take — it has no idea the recording was
+ever paused. Verified: a paused-and-resumed take produces a single
+`transcribeFile` call and a transcript covering both segments.
+
+**A real accuracy bug fixed on the way.** Elapsed time was counted in 1-second
+`setInterval` ticks. Once a take could be paused that was wrong twice over:
+`setInterval` drifts and is throttled in the background, and any segment shorter
+than a tick counted as **zero** — so a take made of several short bursts saved
+`duration: 0`. Time is now measured (`recMs` banks each finished segment,
+`segStart` measures the one in flight), the clock stops dead on pause, and a
+real but sub-second take saves 1s rather than 0.
+
+**Not reintroduced.** None of this touches speech recognition. Pausing the
+*recorder* is unrelated to the live-dictation crash path removed in 1.4.0, and
+the build guard still fails on `AVAudioEngine` / `installTap` / `startLive` /
+a Dictate control. A dedicated assertion checks the 1.6.0 code introduced none
+of them.
+
+**Degradation, not data loss.** If a platform cannot pause, the app keeps
+**recording** and says so, rather than stopping: carrying on is always
+recoverable, discarding is not. The native `capacitor-voice-recorder` branch
+pauses through the plugin when it can — though that plugin is knowingly absent
+from the IPA (no `Package.swift`, so SPM drops it), and recording really runs on
+the MediaRecorder path.
+
+### Verification
+
+- `npm test` — 282 static assertions, 0 failures.
+- `node scripts/verify-transcription.mjs` — 58 assertions in a real browser.
+  The pause/resume suite proves, against a MediaRecorder stub that models
+  pause/resume faithfully: the mic tap emits `pause` and **never** `stop`; the
+  timer freezes and then carries on rather than resetting; resume reuses the
+  **same** session (exactly one `start`); Done stops it exactly once; the
+  finished take spans **both** segments; the whole thing is transcribed once;
+  the saved entry carries the full audio, duration and transcript; and Start
+  over is the only thing that clears any of it.
+- Screenshots re-rendered, including a new shot of the paused state.
+
+**Still device-gated** for the recorder itself: a stub proves the wiring, not
+WKWebView's MediaRecorder.
 
 ---
 

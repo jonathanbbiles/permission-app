@@ -326,13 +326,69 @@ ok("audio is still saved as a Blob on the entry", /audio:recBlob/.test(html) && 
 ok("playback after recording still appears", /id="playbackWrap"/.test(html) && /\$\("playback"\)\.src/.test(html));
 ok("a failed recording explains itself in the recorder's own words",
    /That recording couldn.t be read/.test(html));
+/* Ordering is enforced by CONTROL FLOW now, not by where the lines sit: the
+   only caller of takeFinished() on this path is mediaRec.onstop, and it stops
+   every track before calling it. Assert that shape inside the handler. */
 ok("transcription never runs while the recorder holds the microphone",
-   html.indexOf("recStream.getTracks().forEach(function(t){t.stop();})") <
-   html.indexOf("blobToBase64(recBlob).then"));
+   /mediaRec\.onstop=function\(\)\{[\s\S]{0,600}?recStream\.getTracks\(\)\.forEach\(function\(t\)\{t\.stop\(\);\}\);[\s\S]{0,200}?takeFinished\(/.test(html));
 ok("the Voice|Video switch still works", /id="speakSeg"/.test(html) && /function setSpeakMode/.test(html));
 ok("mic denial still leaves the rest of the app usable",
    /You can still write or draw an entry/.test(html));
 ok("saving is not blocked by anything that was removed", !/if\(!transcript\)/.test(html));
+
+section("8c) v1.6.0 — the mic PAUSES a take; it never ends or wipes one");
+/* The bug: stop-then-start began a brand new recording, silently discarding
+   the audio and the transcript. The fix is a real MediaRecorder pause/resume,
+   so one take is one continuous session and one valid file. */
+ok("there is an explicit take state machine",
+   /var recState="idle"/.test(html) && /function recSetState/.test(html));
+ok("the mic button dispatches on state and never stops a take",
+   /function toggleRecord\(\)\{[\s\S]{0,400}?if\(recState==="recording"\)\{ pauseTake\(\); return; \}/.test(html) &&
+   /if\(recState==="paused"\)\{ resumeTake\(\); return; \}/.test(html));
+ok("pause is a REAL MediaRecorder pause, not a stop in disguise",
+   /mediaRec\.pause\(\)/.test(html) && /mediaRec\.resume\(\)/.test(html));
+ok("pause verifies the recorder actually paused before saying so",
+   /if\(mediaRec\.state!=="paused"\)\{ toast/.test(html));
+ok("a platform that cannot pause keeps RECORDING rather than discarding",
+   /Pause isn.t available here/.test(html) && /recording is still going/.test(html));
+ok("every chunk of the take lands in the SAME array across pauses",
+   /Every chunk of the take lands in the SAME array/.test(html) &&
+   !/mediaRec\.onstop[\s\S]{0,300}?chunks=\[\]/.test(html));
+ok("only Done stops the recorder", /function finishTake\(\)\{[\s\S]{0,400}?mediaRec\.stop\(\)/.test(html));
+ok("Done and Start over exist as their own controls",
+   /id="recDone"/.test(html) && /id="recRestart"/.test(html) &&
+   /\$\("recDone"\)\.addEventListener\("click", finishTake\)/.test(html) &&
+   /\$\("recRestart"\)\.addEventListener\("click", restartTake\)/.test(html));
+ok("Start over is the ONLY thing that clears a take",
+   /function restartTake\(\)\{[\s\S]{0,300}?chunks=\[\]/.test(html));
+ok("the mic is hidden once a take is finished, so it cannot be mistaken for one",
+   /btn\.classList\.toggle\("hidden", next==="finished"\)/.test(html));
+ok("paused has its own look, distinct from idle",
+   /\.rec-btn\.paused\{/.test(html) && /btn\.classList\.toggle\("paused", next==="paused"\)/.test(html));
+ok("the paused hint promises nothing is lost", /Paused — nothing is lost/.test(html));
+ok("Save is enabled only for a finished take",
+   /disableSave\(\$\("vSave"\), next!=="finished" \|\| !recBlob\)/.test(html));
+/* Elapsed time is MEASURED. Counting 1s ticks made any segment shorter than a
+   tick count as zero, so a take of several short bursts saved duration 0. */
+ok("recorded time is measured, not counted in interval ticks",
+   /function recElapsedMs\(\)\{ return recMs \+/.test(html) && !/recSeconds\+\+/.test(html));
+ok("a paused segment is banked, and the clock stops with it",
+   /if\(segStart\)\{ recMs \+= Date\.now\(\)-segStart; segStart=0; \}/.test(html));
+ok("a real but sub-second take never saves duration 0",
+   /if\(!recSeconds\) recSeconds=Math\.max\(1, Math\.round\(recElapsedMs\(\)\/1000\)\)/.test(html));
+ok("the ten-minute cap now measures elapsed recorded time",
+   /recElapsedMs\(\)>=REC_MAX_SECONDS\*1000/.test(html));
+ok("the native recorder pauses through the plugin when it can",
+   /function nativeCanPause/.test(html) && /vp\.pauseRecording\(\)/.test(html) && /vp\.resumeRecording\(\)/.test(html));
+ok("leaving the screen mid-take ENDS it rather than abandoning a live recorder",
+   /function stopRecord\(\)\{ if\(recState==="recording"\|\|recState==="paused"\) finishTake\(\); \}/.test(html));
+/* The whole point: pausing the RECORDER has nothing to do with the removed
+   live-dictation crash path, and must not smuggle it back. */
+ok("pause/resume introduced no audio-engine or live-recognition API",
+   !/AVAudioEngine|installTap|startLive|webkitSpeechRecognition/.test(stripComments(html)));
+ok("transcription still runs exactly once, on the finished take",
+   (html.match(/runTranscription\(/g) || []).length === 3 &&
+   /function takeFinished[\s\S]{0,900}?runTranscription\(/.test(html));
 
 section("9) v1.3 — Speak: video option");
 ok("video pane + capture input present", /id="speakVideoPane"/.test(html) && /id="vidInput"/.test(html));
@@ -542,13 +598,13 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("zero network APIs still hold",
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
-ok("version moved past 1.4.x", /APP_VERSION = "1\.5\.\d+"/.test(html));
+ok("version moved past 1.5.x", /APP_VERSION = "1\.6\.\d+"/.test(html));
 
 /* ============================================================ */
-section("25) v1.5.0 — nothing else changed");
-ok("version bumped to 1.5.0", /APP_VERSION = "1\.5\.0"/.test(html) && />v1\.5\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.5\.0/.test(cm));
-ok("package.json agrees", /"version": "1\.5\.0"/.test(pkgRaw));
+section("25) v1.6.0 — nothing else changed");
+ok("version bumped to 1.6.0", /APP_VERSION = "1\.6\.0"/.test(html) && />v1\.6\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.6\.0/.test(cm));
+ok("package.json agrees", /"version": "1\.6\.0"/.test(pkgRaw));
 /* The build-number scheme must stay monotonic and 12-digit: computing it from
    "latest visible in TestFlight + 1" deadlocks silently, every build green and
    nothing ever landing. */

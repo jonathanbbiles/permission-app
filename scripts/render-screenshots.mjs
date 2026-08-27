@@ -183,6 +183,18 @@ for (const d of DEVICES) {
   await page.click('.mode[data-mode="voice"]');
   await sleep(700);
   await page.evaluate(() => {
+    /* Depict a FINISHED take: the state a real recording lands in. A headless
+       browser has no microphone and no native recogniser, so the screen is
+       dressed to show what the device actually does — never a capability the
+       app does not have. */
+    document.getElementById("recTime").textContent = "1:24";
+    document.getElementById("recBtn").classList.add("hidden");
+    document.getElementById("recActions").classList.remove("hidden");
+    document.getElementById("recDone").classList.add("hidden");
+    document.getElementById("recRestart").classList.remove("hidden");
+    document.getElementById("recHint").textContent =
+      "Listen back, then save. Start over only if you want to discard this take.";
+    document.getElementById("playbackWrap").classList.remove("hidden");
     document.getElementById("vTranscript").value =
       "I keep waiting to feel ready. Maybe ready is just the thing that shows up after you start.";
     document.getElementById("trStatus").textContent =
@@ -192,6 +204,25 @@ for (const d of DEVICES) {
     document.getElementById("trDiag").classList.add("hidden");
   });
   written.push(await shoot(page, dir, "02-record"));
+
+  // 2b — PAUSED mid-take: the 1.6.0 behaviour, and the reassurance that goes
+  //      with it. This is a real state of the screen, not a mock-up.
+  await page.evaluate(() => {
+    document.getElementById("recTime").textContent = "0:47";
+    document.getElementById("recBtn").classList.remove("hidden");
+    document.getElementById("recBtn").classList.add("paused");
+    document.getElementById("recBtn").innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v16M15 4v16"/></svg>';
+    document.getElementById("recDone").classList.remove("hidden");
+    document.getElementById("recRestart").classList.add("hidden");
+    document.getElementById("recHint").textContent =
+      "Paused — nothing is lost. Tap to carry on, or Done when you have finished.";
+    document.getElementById("playbackWrap").classList.add("hidden");
+    document.getElementById("vTranscript").value = "";
+    document.getElementById("trStatus").textContent =
+      "When you tap Done, your words are turned into text on your phone. Nothing is uploaded.";
+  });
+  written.push(await shoot(page, dir, "02b-record-paused"));
 
   // 3 — Notebook, with ink, showing both export controls
   await page.click('#v-voice [data-discard]');
