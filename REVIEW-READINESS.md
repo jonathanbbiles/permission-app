@@ -1,6 +1,6 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.6.0 (recording pauses and resumes; transcription restored in 1.5.0)
+**Version:** 1.7.0 (typefaces embedded — the app now makes NO network connections)
 **Date:** 2026-08-27
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
@@ -53,6 +53,72 @@ copy is left behind.
 > writes a camera-captured video to the camera roll before handing it to the
 > page. It should not — a web file input receives a temp file, and saving to
 > Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
+
+---
+
+## 1.7.0 — zero network: the typefaces are embedded
+
+**Why.** The app fetched three families from a font CDN. That was the *only*
+thing it ever requested, and it forced the privacy policy to hedge: no journal
+content was ever transmitted, but Google saw a font request and an IP address
+every time the app opened. One dependency, standing between a nearly-true claim
+and a literal one.
+
+**What changed.** The two `preconnect` hints and the stylesheet `<link>` are
+gone; the faces are embedded as `data:font/woff2;base64` inside a
+`<style id="embedded-fonts">` block. `scripts/build-embedded-fonts.py`
+regenerates it from the same css2 URL, so the faces stay exactly what Google
+would have served.
+
+**Size, and how it was kept sane.** A naive embed was 559 KB. It ships at
+**225 KB** (166 KB of woff2), because of two things:
+
+- **Dedupe.** Caveat and Oswald are *variable* fonts. Google answers a request
+  for four discrete weights with four `@font-face` rules pointing at the **same**
+  file. Embedding it four times would have quadrupled it for no visual
+  difference, so each file is embedded once and declared with a weight *range*.
+  Oswald went from 158 KB to 39 KB, Caveat from 203 KB to 73 KB.
+- **Subsets.** Google serves latin, latin-ext, cyrillic, cyrillic-ext,
+  vietnamese and devanagari. Only latin/latin-ext are reachable here. Poppins is
+  `--body` — every word the user writes renders in it — so it keeps **latin-ext**
+  and accented characters do not fall back. Caveat renders one app-authored
+  English phrase, so latin alone.
+
+`www/index.html` goes from ~172 KB to ~404 KB. It is a local file; there is no
+network cost, and the fonts now paint on the first frame instead of after a
+round trip.
+
+**Licence.** Caveat, Oswald and Poppins are all SIL Open Font License 1.1, which
+expressly permits embedding. The notice and attribution sit in the HTML.
+
+### The claim is now enforced, not just written
+
+`docs/privacy.html` says outright that the app makes **no network connections
+at all**, and the font disclosure is gone because there is nothing to disclose.
+An overstated privacy page is the 5.1.1(i) class, so `codemagic.yaml` blocks the
+build if any absolute `http(s)` URL is *loaded* by the page — `<link>`,
+`<script>`, media `src`, CSS `url()`, `@import` — or if the embedded faces
+disappear. Links the user taps are still fine: those hand an address to the
+browser, they do not fetch anything. Negative-tested: restoring the CDN
+`<link>` blocks the build.
+
+### Verification
+
+- `node scripts/verify-no-network.mjs` — **33 assertions**. Loads the app with
+  every non-local request **aborted at the browser** and checks it requested
+  nothing, threw nothing, and still booted. Then it measures every one of the
+  ten faces at 64px — including a line of accented characters, where a wrong
+  subset shows up first — against `test/font-baseline.json`, which was captured
+  **while the fonts were still being fetched from Google**.
+- Result: **all 20 measurements identical to 0.01px**, and the five real UI
+  elements (`.greet .hi`, `.prompt .kick`, `.prompt .q`, `.mode .nm`,
+  `.sechead h3`) measure the same. That is what proves the variable-weight
+  ranges resolve to the real 500/600/700 rather than synthesising faux-bold —
+  a screenshot would not have caught it.
+- `npm test` 295 assertions, `verify-transcription.mjs` 58 — both still green.
+
+**1.6.0 IS IN APP REVIEW AND WAS NOT TOUCHED.** This is a separate version
+record and this lane is TestFlight only.
 
 ---
 

@@ -1,0 +1,82 @@
+{
+  "Caveat/600/normal": {
+    "h": 80,
+    "w": 1081.02
+  },
+  "Caveat/600/normal/accents": {
+    "h": 80,
+    "w": 719.28
+  },
+  "Caveat/700/normal": {
+    "h": 80,
+    "w": 1085
+  },
+  "Caveat/700/normal/accents": {
+    "h": 80,
+    "w": 719.28
+  },
+  "Oswald/400/normal": {
+    "h": 94,
+    "w": 1166.22
+  },
+  "Oswald/400/normal/accents": {
+    "h": 94,
+    "w": 749.69
+  },
+  "Oswald/500/normal": {
+    "h": 94,
+    "w": 1238.09
+  },
+  "Oswald/500/normal/accents": {
+    "h": 94,
+    "w": 780.28
+  },
+  "Oswald/600/normal": {
+    "h": 94,
+    "w": 1275.83
+  },
+  "Oswald/600/normal/accents": {
+    "h": 94,
+    "w": 814.25
+  },
+  "Oswald/700/normal": {
+    "h": 94,
+    "w": 1305.48
+  },
+  "Oswald/700/normal/accents": {
+    "h": 94,
+    "w": 826.86
+  },
+  "Poppins/400/italic": {
+    "h": 95,
+    "w": 1520.58
+  },
+  "Poppins/400/italic/accents": {
+    "h": 95,
+    "w": 928.78
+  },
+  "Poppins/400/normal": {
+    "h": 95,
+    "w": 1506.7
+  },
+  "Poppins/400/normal/accents": {
+    "h": 95,
+    "w": 948.8
+  },
+  "Poppins/500/normal": {
+    "h": 95,
+    "w": 1534.73
+  },
+  "Poppins/500/normal/accents": {
+    "h": 95,
+    "w": 951.88
+  },
+  "Poppins/600/normal": {
+    "h": 95,
+    "w": 1556.23
+  },
+  "Poppins/600/normal/accents": {
+    "h": 95,
+    "w": 974.89
+  }
+}

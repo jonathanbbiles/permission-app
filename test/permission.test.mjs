@@ -390,6 +390,51 @@ ok("transcription still runs exactly once, on the finished take",
    (html.match(/runTranscription\(/g) || []).length === 3 &&
    /function takeFinished[\s\S]{0,900}?runTranscription\(/.test(html));
 
+section("8d) v1.7.0 — zero network: the typefaces are embedded");
+/* The app used to fetch three families from a font CDN. That was the ONE thing
+   it ever requested, and it forced the privacy policy to hedge. The policy now
+   says outright that the app makes no network connections, so these assertions
+   are what stops that from becoming a 5.1.1(i) misstatement. */
+const htmlCode = stripComments(html);
+ok("no font CDN host appears anywhere in the app", !/googleapis|gstatic/.test(html));
+ok("nothing is loaded over http(s) — no link, script, media, url() or @import",
+   !/<link\b[^>]*href=["']https?:/i.test(htmlCode) &&
+   !/<script\b[^>]*src=["']https?:/i.test(htmlCode) &&
+   !/<(?:img|video|audio|source|iframe)\b[^>]*src=["']https?:/i.test(htmlCode) &&
+   !/url\(\s*["']?https?:/i.test(htmlCode) &&
+   !/@import\s+(?:url\()?["']https?:/i.test(htmlCode));
+ok("the typefaces are embedded as data URIs",
+   /@font-face/.test(html) && /data:font\/woff2;base64,/.test(html));
+ok("all three families are present",
+   ["Caveat","Oswald","Poppins"].every((f) => new RegExp(`font-family:'${f}'`).test(html)));
+/* Caveat and Oswald are variable fonts: Google answers four discrete weights
+   with four rules pointing at ONE file. Embedding it four times would quadruple
+   it for no visual difference, so each is declared with a weight RANGE. */
+ok("the variable faces are embedded once, with a weight range",
+   /font-family:'Oswald';font-style:normal;font-weight:400 700/.test(html) &&
+   /font-family:'Caveat';font-style:normal;font-weight:600 700/.test(html));
+ok("only one copy of each variable file is embedded",
+   (html.match(/font-family:'Oswald'/g) || []).length === 2 &&
+   (html.match(/font-family:'Caveat'/g) || []).length === 1);
+/* Poppins carries every word the user writes, so it must keep latin-ext or
+   accented characters silently fall back to a system font. */
+ok("Poppins keeps latin-ext, for accented characters in entries",
+   (html.match(/font-family:'Poppins'/g) || []).length === 8);
+ok("the regenerator is committed, so the embed is reproducible",
+   fs.existsSync(path.join(ROOT, "scripts/build-embedded-fonts.py")));
+ok("the licence of the embedded fonts is stated",
+   /SIL Open Font License/.test(html) && /openfontlicense\.org/.test(html));
+ok("a baseline of how the fonts RENDER is committed",
+   fs.existsSync(path.join(ROOT, "test/font-baseline.json")));
+ok("the no-network check is runnable and wired up",
+   fs.existsSync(path.join(ROOT, "scripts/verify-no-network.mjs")) &&
+   /verify:no-network/.test(pkgRaw));
+ok("the build BLOCKS anything network-loaded creeping back",
+   /BLOCKED: the app would fetch something over the network/.test(cm) &&
+   /BLOCKED: the embedded typefaces are gone/.test(cm));
+/* The old claim was hedged because it had to be. It no longer is. */
+ok("the app still has zero network APIs", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
+
 section("9) v1.3 — Speak: video option");
 ok("video pane + capture input present", /id="speakVideoPane"/.test(html) && /id="vidInput"/.test(html));
 ok('video input uses a plain accept="video/*"', /accept="video\/\*"/.test(html));
@@ -598,13 +643,13 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("zero network APIs still hold",
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
-ok("version moved past 1.5.x", /APP_VERSION = "1\.6\.\d+"/.test(html));
+ok("version moved past 1.6.x", /APP_VERSION = "1\.7\.\d+"/.test(html));
 
 /* ============================================================ */
-section("25) v1.6.0 — nothing else changed");
-ok("version bumped to 1.6.0", /APP_VERSION = "1\.6\.0"/.test(html) && />v1\.6\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.6\.0/.test(cm));
-ok("package.json agrees", /"version": "1\.6\.0"/.test(pkgRaw));
+section("25) v1.7.0 — nothing else changed");
+ok("version bumped to 1.7.0", /APP_VERSION = "1\.7\.0"/.test(html) && />v1\.7\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.7\.0/.test(cm));
+ok("package.json agrees", /"version": "1\.7\.0"/.test(pkgRaw));
 /* The build-number scheme must stay monotonic and 12-digit: computing it from
    "latest visible in TestFlight + 1" deadlocks silently, every build green and
    nothing ever landing. */

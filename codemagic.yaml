@@ -153,6 +153,43 @@ workflows:
           # SPM-incompatible and excluded (recording runs on the WKWebView
           # MediaRecorder path), so this is a log statement, not a gate — but
           # the recorder UI must exist.
+          # ---------------------------------------------------------------
+          # ZERO NETWORK. Since 1.7.0 the privacy policy says outright that the
+          # app makes NO network connections — the typefaces that used to come
+          # from a font CDN are embedded as data: URIs. A privacy page that
+          # overstates the app is the 5.1.1(i) class, so the claim is enforced
+          # here rather than trusted: no absolute http(s) URL may be LOADED by
+          # the page (src=, href= on a stylesheet/script, url() in CSS, or an
+          # @import). Ordinary links the user taps are fine — those hand an
+          # address to the browser, they do not fetch anything.
+          # ---------------------------------------------------------------
+          python3 - <<'NETGUARD'
+          import re, sys
+          html = open("www/index.html", encoding="utf-8").read()
+          html = re.sub(r"<!--.*?-->", "", html, flags=re.S)          # prose names hosts
+          html = re.sub(r"/\*.*?\*/", "", html, flags=re.S)
+          bad = []
+          for m in re.finditer(r'<link\b[^>]*\bhref=["\'](https?://[^"\']+)', html, re.I):
+              bad.append("<link> " + m.group(1))
+          for m in re.finditer(r'<script\b[^>]*\bsrc=["\'](https?://[^"\']+)', html, re.I):
+              bad.append("<script> " + m.group(1))
+          for m in re.finditer(r'<(?:img|video|audio|source|iframe)\b[^>]*\bsrc=["\'](https?://[^"\']+)', html, re.I):
+              bad.append("media " + m.group(1))
+          for m in re.finditer(r'url\(\s*["\']?(https?://[^)"\']+)', html, re.I):
+              bad.append("css url() " + m.group(1))
+          for m in re.finditer(r'@import\s+(?:url\()?["\'](https?://[^"\']+)', html, re.I):
+              bad.append("@import " + m.group(1))
+          if bad:
+              print("BLOCKED: the app would fetch something over the network:")
+              for b in bad: print("   " + b)
+              print("The privacy policy states it makes NO network connections. Embed it or remove it.")
+              sys.exit(1)
+          if "@font-face" not in html or "data:font/woff2;base64" not in html:
+              print("BLOCKED: the embedded typefaces are gone — the app would fall back to system fonts.")
+              sys.exit(1)
+          print("OK - no network-loaded resources; typefaces are embedded.")
+          NETGUARD
+
           grep -q 'id="recBtn"' www/index.html || { echo "BLOCKED: the record button is gone — recording must keep working."; exit 1; }
           echo "OK — the voice recorder UI is intact."
           echo ""
@@ -301,13 +338,15 @@ workflows:
           # sequence keeps rising across the change.)
           NEXT="$(date -u +%Y%m%d%H%M)"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
-          # 1.6.0 — the mic button PAUSES a take instead of restarting it, so
-          # audio and transcript accumulate across stop/start (1.5.0 restored
-          # on-device transcription). Live dictation stays removed; see the guard.
+          # 1.7.0 — typefaces embedded as data: URIs, so the app now makes NO
+          # network connections at all (1.6.0 added pause/resume recording;
+          # 1.5.0 restored on-device transcription). 1.6.0 is a SEPARATE version
+          # record and is IN REVIEW — this lane is TestFlight only and cannot
+          # touch it.
           # Earlier versions are separate records in App Store Connect and are
           # NOT touched by this build: this lane publishes to TestFlight only
           # (see the review-submit toggle at the bottom, deliberately off).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.6.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.5.0" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.7.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.5.0" ios/App/App/Info.plist
 
           # Read BOTH values back out of the plist. An unexpanded variable or a
           # silent PlistBuddy no-op would otherwise ship a colliding build that
@@ -319,7 +358,7 @@ workflows:
             [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
             *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
           esac
-          [ "$GOT_V" = "1.6.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.6.0"; exit 1; }
+          [ "$GOT_V" = "1.7.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.7.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true
