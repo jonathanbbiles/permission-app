@@ -45,32 +45,109 @@ workflows:
         script: |
           [ -d ios ] || npx cap add ios
           npx cap sync ios
-      - name: Verify speech-to-text stays REMOVED, and list what actually compiled
+      - name: Type-check the speech plugin before xcodebuild ever sees it
+        script: |
+          # 1.3.3 shipped a Swift file that had only been SYNTAX-checked and
+          # failed on Codemagic with "overriding declaration requires an
+          # 'override' keyword". This harness type-checks the real file against
+          # the macOS SDK (Speech.framework is genuinely present there), so that
+          # class of failure is caught in seconds instead of after a full build.
+          chmod +x native/permission-speech/typecheck/run.sh
+          native/permission-speech/typecheck/run.sh || {
+            echo "BLOCKED: PermissionSpeechPlugin.swift does not type-check.";
+            exit 1;
+          }
+      - name: Verify transcription is IN, live dictation is OUT, and list what compiled
         script: |
           # ---------------------------------------------------------------
-          # 1.4.0 REMOVED speech-to-text entirely (the Dictate button, the
-          # transcript panel, the file-based transcriber and our own
-          # native/permission-speech SPM plugin). It had been broken or
-          # crashing for the whole 1.3.x train and is not wanted.
+          # 1.5.0 SPLITS the old speech feature in two and enforces the split
+          # here, because "we were careful" is not a mechanism.
           #
-          # This step used to REQUIRE the plugin. It now REQUIRES ITS ABSENCE,
-          # so the feature cannot creep back in unnoticed via a stray npm
-          # install or a revived import.
+          #   IN  — file transcription. The finished recording is transcribed
+          #         on-device via SFSpeechURLRecognitionRequest. It touches no
+          #         audio hardware and never crashed.
+          #   OUT — live dictation (the "Dictate" button). AVAudioEngine +
+          #         installTap raises an UNCATCHABLE ObjC exception on an
+          #         invalid input format; that killed the app in 1.3.5 and is
+          #         why 1.4.0 removed the whole capability.
+          #
+          # This step fails the build if the IN half is missing (the silent-drop
+          # bug that wasted 1.3.0-1.3.2) OR if any part of the OUT half returns.
           # ---------------------------------------------------------------
           SPM=ios/App/CapApp-SPM/Package.swift
           [ -f "$SPM" ] || { echo "BLOCKED: $SPM not found — cap add/sync did not run?"; exit 1; }
           echo "----- generated SPM manifest -----"; cat "$SPM"
-          if grep -q "PermissionSpeech" "$SPM"; then
-            echo "BLOCKED: PermissionSpeech is back in $SPM. Speech-to-text was removed in 1.4.0."
-            exit 1
-          fi
-          [ -d native/permission-speech ] && { echo "BLOCKED: native/permission-speech is back."; exit 1; }
-          if grep -qE "SpeechRecognition|PermissionSpeech|transcribeFile|id=\"vDictate\"" www/index.html; then
-            echo "BLOCKED: www/index.html still references speech-to-text."
-            grep -nE "SpeechRecognition|PermissionSpeech|transcribeFile|id=\"vDictate\"" www/index.html
-            exit 1
-          fi
-          echo "OK — no speech recogniser anywhere in the build."
+
+          # --- IN: the plugin must be in the artefact, not just in node_modules.
+          # `npx cap sync ios` SILENTLY DROPS SPM-incompatible plugins with a
+          # warning and builds anyway. Only this manifest proves inclusion.
+          grep -q "PermissionSpeech" "$SPM" || {
+            echo "BLOCKED: PermissionSpeech is NOT in $SPM — it would be dropped from the IPA,";
+            echo "which is exactly the bug that shipped three empty-transcript releases.";
+            exit 1;
+          }
+          [ -f native/permission-speech/Package.swift ] || { echo "BLOCKED: the plugin has no Package.swift"; exit 1; }
+          PLUG=native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift
+          [ -f "$PLUG" ] || { echo "BLOCKED: $PLUG missing"; exit 1; }
+          grep -q "SFSpeechURLRecognitionRequest" "$PLUG" || { echo "BLOCKED: file transcription is gone from the plugin"; exit 1; }
+          grep -q "transcribeFile" www/index.html || { echo "BLOCKED: www/index.html never calls the transcriber"; exit 1; }
+          grep -q 'id="vTranscript"' www/index.html || { echo "BLOCKED: the transcript panel is missing from the Record screen"; exit 1; }
+          echo "OK — on-device file transcription is present and will be in the IPA."
+
+          # --- ON-DEVICE ONLY: no server fallback, ever. Without this flag iOS
+          # may ship the audio to Apple, which would make the privacy claim a
+          # 5.1.1(i) misrepresentation.
+          grep -q "requiresOnDeviceRecognition = true" "$PLUG" || {
+            echo "BLOCKED: requiresOnDeviceRecognition = true is missing — audio could leave the device.";
+            exit 1;
+          }
+          grep -q "requiresOnDeviceRecognition = false" "$PLUG" && {
+            echo "BLOCKED: a server-recognition fallback was introduced.";
+            exit 1;
+          }
+          echo "OK — recognition is on-device or it does not happen."
+
+          # --- OUT: the crash path must not exist anywhere in the build.
+          #
+          # Grep the CODE, not the prose. Both files carry doc comments that
+          # name these exact APIs in order to explain why they are banned — a
+          # naive grep flags its own documentation and fails every build, which
+          # is worse than no guard because the fix is to delete the explanation.
+          python3 - <<'GUARD'
+          import re, sys
+
+          def code_only(path):
+              src = open(path, encoding="utf-8").read()
+              src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)      # /* block */
+              src = re.sub(r"<!--.*?-->", "", src, flags=re.S)      # <!-- html -->
+              # whole-line // comments only: a bare // strip would eat URLs
+              return "\n".join(l for l in src.split("\n") if not l.lstrip().startswith("//"))
+
+          BANNED = {
+            "native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift": [
+              "AVAudioEngine", "installTap", "SFSpeechAudioBufferRecognitionRequest",
+              "startLive", "stopLive", "setCategory", "setActive",
+            ],
+            "www/index.html": [
+              'id="vDictate"', "startLive", "stopLive", "partialResults",
+              "webkitSpeechRecognition", "new SpeechRecognition",
+            ],
+          }
+          bad = False
+          for path, syms in BANNED.items():
+              code = code_only(path)
+              for n, line in enumerate(code.split("\n"), 1):
+                  for sym in syms:
+                      if sym in line:
+                          print("  %s:%d  %s   -> %s" % (path, n, sym, line.strip()[:90]))
+                          bad = True
+          if bad:
+              print("BLOCKED: live dictation is back (see the lines above).")
+              print("installTap raises an ObjC exception Swift cannot catch. It crashed 1.3.5.")
+              sys.exit(1)
+          print("OK - no live dictation in the CODE of either file.")
+          GUARD
+          echo "OK — no live dictation anywhere: no Dictate button, no audio engine, no live listener."
 
           # RECORDING still has to work. capacitor-voice-recorder is knowingly
           # SPM-incompatible and excluded (recording runs on the WKWebView
@@ -126,7 +203,8 @@ workflows:
           # all, so every string must be re-applied here, every time.
           #
           # What triggers each key in www/index.html:
-          #   Microphone        — voice recording (speech recognition removed in 1.4.0)
+          #   Microphone        — voice recording
+          #   Speech recognition— transcribing a FINISHED recording on-device
           #   Camera            — <input accept="video/*"> "Record Video" (v1.3)
           #   Photo library     — same input's "Photo Library" source (v1.3)
           #   Face ID           — passcode-free unlock
@@ -138,11 +216,13 @@ workflows:
           CAM="Permission uses the camera only so you can record a video journal entry for yourself. Videos are kept inside the app on your device, are never added to your Photos library, and are never uploaded."
           PHO="Permission asks for your photo library only if you choose an existing video for a journal entry. Nothing is uploaded, and the app never reads your library on its own."
           FID="Permission uses Face ID so only you can unlock your journal. Your data never leaves your phone."
+          SPE="Permission turns your voice entries into text using your iPhone's on-device speech recognition, so you can read back what you said. Transcription happens entirely on your device and your recordings are never uploaded."
           setkey(){ /usr/libexec/PlistBuddy -c "Add :$1 string \"$2\"" "$P" || /usr/libexec/PlistBuddy -c "Set :$1 \"$2\"" "$P"; }
           setkey NSMicrophoneUsageDescription       "$MIC"
           setkey NSCameraUsageDescription           "$CAM"
           setkey NSPhotoLibraryUsageDescription     "$PHO"
           setkey NSFaceIDUsageDescription           "$FID"
+          setkey NSSpeechRecognitionUsageDescription "$SPE"
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$P" || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$P"
 
           # Print each key BACK so the build log proves it landed, and fail the
@@ -153,8 +233,9 @@ workflows:
           /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription"            "$P"
           /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription"      "$P"
           /usr/libexec/PlistBuddy -c "Print :NSFaceIDUsageDescription"            "$P"
+          /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$P"
           MISSING=0
-          for K in NSMicrophoneUsageDescription \
+          for K in NSMicrophoneUsageDescription NSSpeechRecognitionUsageDescription \
                    NSCameraUsageDescription NSPhotoLibraryUsageDescription \
                    NSFaceIDUsageDescription; do
             V=$(/usr/libexec/PlistBuddy -c "Print :$K" "$P" 2>/dev/null) || V=""
@@ -162,19 +243,6 @@ workflows:
           done
           [ "$MISSING" -eq 0 ] || { echo "BLOCKED: a required usage string is missing — this build would crash on device."; exit 1; }
 
-          # ---------------------------------------------------------------
-          # SPEECH RECOGNITION IS GONE (1.4.0). The app no longer touches
-          # SFSpeechRecognizer, so asking for the permission would be asking
-          # for something it never uses — the kind of thing App Review asks
-          # about. Strip the key if a stale plist template carries it, and
-          # fail if it somehow survives.
-          # ---------------------------------------------------------------
-          /usr/libexec/PlistBuddy -c "Delete :NSSpeechRecognitionUsageDescription" "$P" 2>/dev/null || true
-          if /usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$P" >/dev/null 2>&1; then
-            echo "BLOCKED: NSSpeechRecognitionUsageDescription is still present — speech-to-text was removed in 1.4.0."
-            exit 1
-          fi
-          echo "OK       NSSpeechRecognitionUsageDescription absent — the app cannot use speech recognition"
 
           # ---------------------------------------------------------------
           # RECORDINGS STAY IN THE APP.
@@ -209,17 +277,36 @@ workflows:
           PY
       - name: Set a unique build number
         script: |
-          # CFBundleVersion must be a monotonically increasing integer, higher than any prior build.
-          # Use a unix timestamp: always an integer, always increasing, immune to float app versions like 1.0.
-          NEXT=$(date +%s)
+          # CFBundleVersion must be a monotonically increasing integer, higher
+          # than any number EVER used for this version — including uploads that
+          # failed processing and are therefore invisible in TestFlight. Never
+          # compute it from "latest visible + 1": that deadlocks silently, every
+          # build green, nothing ever landing.
+          #
+          # A UTC minute-stamp is always a 12-digit integer, always increasing,
+          # needs no network round-trip, and cannot collide with a burned number.
+          # (It is also larger than the 10-digit unix stamps 1.4.x used, so the
+          # sequence keeps rising across the change.)
+          NEXT="$(date -u +%Y%m%d%H%M)"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
-          # 1.4.0 — speech-to-text/Dictate removed entirely; home screen is now a
-          # balanced 2x2 of Write / Record / Draw / Notebook.
-          # 1.3.6 is a separate version in App Store Connect and is NOT touched
-          # by this build: this lane publishes to TestFlight only (see the
-          # review-submit toggle at the bottom, deliberately commented out).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.4.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.4.0" ios/App/App/Info.plist
-          echo "CFBundleVersion = $NEXT (timestamp-based, always increasing); CFBundleShortVersionString=1.4.0"
+          # 1.5.0 — on-device transcription is BACK (file-based, runs when a
+          # recording stops). Live dictation stays removed; see the guard step.
+          # Earlier versions are separate records in App Store Connect and are
+          # NOT touched by this build: this lane publishes to TestFlight only
+          # (see the review-submit toggle at the bottom, deliberately off).
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.5.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.5.0" ios/App/App/Info.plist
+
+          # Read BOTH values back out of the plist. An unexpanded variable or a
+          # silent PlistBuddy no-op would otherwise ship a colliding build that
+          # Apple rejects asynchronously, long after this build goes green.
+          GOT_B=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/App/App/Info.plist)
+          GOT_V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" ios/App/App/Info.plist)
+          echo "CFBundleVersion=$GOT_B  CFBundleShortVersionString=$GOT_V"
+          case "$GOT_B" in
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+            *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
+          esac
+          [ "$GOT_V" = "1.5.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.5.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

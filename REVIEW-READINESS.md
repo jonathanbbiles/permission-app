@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.4.0 (speech-to-text removed; home options rebalanced to a 2x2)
-**Date:** 2026-08-13
+**Version:** 1.5.0 (on-device transcription restored; live dictation stays removed)
+**Date:** 2026-08-26
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -56,7 +56,105 @@ copy is left behind.
 
 ---
 
+## 1.5.0 — transcription is back; live dictation is not
+
+The 1.3.x feature was really two features sharing a name, and they had very
+different histories. 1.4.0 removed both to stop the bleeding. 1.5.0 brings back
+only the one that worked.
+
+| | how it worked | fate |
+|---|---|---|
+| **File transcription** | the FINISHED recording is handed to `SFSpeechURLRecognitionRequest` after the recorder releases the microphone. Touches no audio hardware. | **BACK in 1.5.0** |
+| **Live dictation ("Dictate")** | a live mic listener: `AVAudioEngine` + `installTap` streaming into `SFSpeechAudioBufferRecognitionRequest` | **STAYS REMOVED** |
+
+### Why the split is safe
+
+`installTap` raises an **Objective-C exception** — not a Swift error — when the
+input format is invalid (`sampleRate == 0` / `channelCount == 0`). Swift's
+`do/catch` cannot catch it; the process dies. That is the 1.3.5 crash, and it
+was easy to reach here because recording runs on WKWebView's `MediaRecorder`,
+so WebKit may already own the audio input.
+
+None of that API surface is in the build any more. `PermissionSpeechPlugin.swift`
+contains no `AVAudioEngine`, no `installTap`, no
+`SFSpeechAudioBufferRecognitionRequest`, no `startLive`/`stopLive`, and it never
+calls `setCategory`/`setActive` on the shared audio session. It does not even
+declare a live method to the Capacitor bridge, so JS cannot reach one. The
+isolation is structural, not a matter of remembering.
+
+The plugin also no longer requests the **microphone** — it only reads a file.
+The recorder asks for the mic itself, as it already did.
+
+### What the user gets back
+
+- A **Transcript** panel on the Record screen. It has **no button** — the old
+  Dictate control lived in that header and is gone. Transcription starts by
+  itself when a recording stops.
+- The text is **editable**, and edits win: a transcript never writes over words
+  a person typed (and the status line says so when it steps aside).
+- The transcript is **saved with the entry** and shown with the audio in the
+  viewer — which also reunites 1.3.x entries with the feature that made them.
+- Failures are **named, not silent**: "Transcription unavailable — <reason>.
+  Your recording is safe either way." Saving is never blocked by a failed
+  transcription.
+- The monospace diagnostic readout is kept but **hidden while healthy**. It
+  appears only when something would stop a transcript arriving — where
+  `engine: none` is exactly what the three silently-dropped-plugin releases
+  would have looked like — so a failure is diagnosable from a screenshot
+  without putting instrumentation in front of someone who is journaling.
+
+### Privacy is unchanged and still literal
+
+`requiresOnDeviceRecognition = true`. iOS transcribes locally **or the task
+fails** — there is deliberately no server fallback and no opt-in for one, so
+"no transcript" is the worst case, never a silent upload. The app still contains
+zero `fetch`/`XHR`/`WebSocket`/`sendBeacon`. `NSSpeechRecognitionUsageDescription`
+comes back (the app genuinely uses the API now) and states that transcription
+happens on-device and recordings are never uploaded.
+`NSPhotoLibraryAddUsageDescription` remains absent, so recordings still cannot
+reach Photos.
+
+### The build enforces both halves
+
+`codemagic.yaml` fails the build if:
+
+- `PermissionSpeech` is **not** in the generated `ios/App/CapApp-SPM/Package.swift`
+  (the silent-drop bug that wasted 1.3.0–1.3.2 — `cap sync` warns and builds
+  anyway, so only the artefact proves inclusion). **Verified locally: the
+  manifest lists `PermissionSpeech`.**
+- the transcript panel or the `transcribeFile` call goes missing from `www/index.html`
+- `requiresOnDeviceRecognition = true` is missing, or `= false` appears
+- any live-dictation symbol returns, in the plugin **or** the web app
+
+That last check greps the **code, not the comments** — both files document the
+banned APIs by name in order to explain why they are banned, and a naive grep
+would fail every build until someone deleted the explanation. It was
+negative-tested: adding `AVAudioEngine()` to the plugin blocks the build.
+
+The Swift type-check harness runs before `xcodebuild`, so a 1.3.3-class compile
+error (a missing `override`) is caught in seconds rather than after a full build.
+
+### Verification
+
+- `npm test` — 260 static assertions, 0 failures.
+- `node scripts/verify-transcription.mjs` — 35 assertions in a real browser,
+  driving the actual Record screen with a stubbed native plugin: both recorder
+  paths transcribe, the recogniser is proven to run only **after** the mic is
+  released, a refused transcription still saves the audio, hand-typed words
+  survive, a new take starts clean, and **no live method is ever reached**
+  (the stub records and rejects any call the real plugin does not expose).
+  Zero page errors throughout.
+- `npx cap add ios` locally — `PermissionSpeech` present in the SPM manifest.
+
+**Still device-gated.** On-device speech recognition cannot be proven in a
+browser: the stub proves the wiring, not Apple's recogniser. TestFlight only.
+
+---
+
 ## 1.4.0 — speech-to-text removed, home options rebalanced
+
+> **Superseded in part by 1.5.0**, which restored file transcription. The
+> removal of **live dictation** described below still stands and is permanent.
 
 Two changes, both requested directly.
 

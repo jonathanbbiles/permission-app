@@ -15,6 +15,14 @@ const ROOT = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(ROOT, "www/index.html"), "utf8");
 const pkgRaw = fs.readFileSync(path.join(ROOT, "package.json"), "utf8");
 const cm = fs.readFileSync(path.join(ROOT, "codemagic.yaml"), "utf8");
+const PLUGIN_SWIFT = "native/permission-speech/ios/Sources/PermissionSpeechPlugin/PermissionSpeechPlugin.swift";
+const pluginSrc = fs.readFileSync(path.join(ROOT, PLUGIN_SWIFT), "utf8");
+/* comment-free view: the doc comments quote the exact APIs they warn against,
+   so absence checks must not see them. Strips block comments AND // lines. */
+const pluginCode = pluginSrc
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+const pluginPkg = fs.readFileSync(path.join(ROOT, "native/permission-speech/Package.swift"), "utf8");
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra) {
@@ -182,37 +190,130 @@ ok("creator link jonathanscribbles.com present + clickable",
 ok("Jessica's link kept as the headline link", /SITE_URL="https:\/\/jessicaleighbiles\.com"/.test(html));
 
 /* ============================================================ */
-section("8) v1.4.0 — speech-to-text / Dictate fully removed");
-/* It crashed (1.3.5, installTap on an invalid audio format) after three
-   releases where the plugin was not even in the IPA. Jonathan does not want
-   it. These assertions are the fence: they fail if ANY part comes back. */
-ok("the Dictate button is gone", !/id="vDictate"/.test(html));
-ok("the transcript textarea is gone", !/id="vTranscript"/.test(html));
-ok("the diagnostic readout is gone", !/id="trDiag"/.test(html));
-ok("no speech plugin is depended on", !/permission-speech/.test(pkgRaw) &&
-   !/@capacitor-community\/speech-recognition/.test(pkgRaw));
-ok("the native plugin directory is deleted", !fs.existsSync(path.join(ROOT, "native/permission-speech")));
-ok("no Capacitor speech plugin lookup remains",
-   !/Capacitor\.Plugins\.(PermissionSpeech|SpeechRecognition)/.test(html));
-ok("no Web Speech API crept in as a replacement",
-   !/webkitSpeechRecognition|window\.SpeechRecognition|new SpeechRecognition/.test(html));
-for (const sym of ["srPlugin", "runTranscription", "transcribeRecording", "transcribeFile",
-                   "srStart", "srStop", "srReset", "srRequestPermissions", "srRefreshDiag",
-                   "syncDictateBtn", "renderDiag", "trUserEdited", "TRANSCRIBE_TIMEOUT_MS",
-                   "WARMUP_REASONS", "blobToBase64"]) {
-  ok(`no dangling reference to ${sym}`, !new RegExp(`\\b${sym}\\b`).test(stripComments(html)), sym);
-}
-ok("nothing writes a transcript onto new entries", !/transcript:transcript/.test(html));
-/* DATA IS NOT DESTROYED: voice notes saved by 1.3.x carry the user's own
-   words, and those are still shown and shared. Read-only, never written. */
-ok("1.3.x transcripts are still shown in the entry viewer",
-   /e\.transcript/.test(html) && /Transcript</.test(html));
-ok("1.3.x transcripts still travel with a shared voice note",
-   /var body=tr \? \("Permission — "/.test(html));
-ok("a recording with no transcript shows no apologetic note",
-   !/No transcript was saved with this recording/.test(html));
+section("8) v1.5.0 — TRANSCRIPTION is back; LIVE DICTATION stays gone");
+/* The two halves of the old feature had different fates and this is the fence
+   that keeps them apart.
+     IN  — file transcription: the finished recording is transcribed on-device.
+           It touches no audio hardware and never crashed.
+     OUT — live dictation ("Dictate"): AVAudioEngine + installTap raises an
+           ObjC exception Swift cannot catch. It crashed the app in 1.3.5. */
 
-section("8b) v1.4.0 — RECORDING itself still works");
+/* ---- the half that is IN ---- */
+ok("first-party speech plugin declared", /"permission-speech": "file:native\/permission-speech"/.test(pkgRaw));
+ok("the SPM-incompatible community plugin is still not used",
+   !/@capacitor-community\/speech-recognition/.test(pkgRaw));
+ok("plugin accessed through the guarded Capacitor.Plugins lookup",
+   /Capacitor\.Plugins\.PermissionSpeech/.test(html));
+ok("transcript textarea exists and is editable", /id="vTranscript"/.test(html) && /class="transcript"/.test(html));
+ok("transcription runs on the finished file, on BOTH recorder paths",
+   (html.match(/runTranscription\(/g) || []).length >= 3 && /transcribeFile/.test(html));
+ok("the transcript is persisted on the voice entry",
+   /type:"voice"[^}]*transcript:transcript/.test(html));
+ok("the transcript is rendered in the entry viewer alongside the audio",
+   /e\.transcript/.test(html) && /Transcript</.test(html));
+ok("user edits to the transcript are not clobbered", /trUserEdited/.test(html));
+ok("a stuck transcription times out rather than hanging", /TRANSCRIBE_TIMEOUT_MS/.test(html));
+ok("first-use warm-up retry retained", /WARMUP_REASONS/.test(html) && /LSK_STT_OK/.test(html));
+ok("transcripts saved by 1.3.x still travel with a shared voice note",
+   /var body=tr \? \("Permission — "/.test(html));
+
+/* ---- the half that is OUT: no Dictate control, no live listener ---- */
+ok("the Dictate button is gone", !/id="vDictate"/.test(html));
+ok("no Dictate control of any name is in the transcript header",
+   /<div class="tr-head">\s*<div class="tr-lbl" id="trLabel">Transcript<\/div>\s*<\/div>/.test(html));
+for (const sym of ["srStart", "srStop", "srAttach", "srDetach", "syncDictateBtn",
+                   "startLive", "stopLive", "srListening", "srPartial", "srHandles",
+                   "partialResults", "listeningState"]) {
+  ok(`no live-dictation symbol "${sym}" in the app`, !new RegExp(`\\b${sym}\\b`).test(stripComments(html)), sym);
+}
+/* Scoped, not blanket: MediaQueryList.addListener is a legitimate legacy
+   fallback elsewhere in the app. What must not exist is a listener on the
+   SPEECH PLUGIN — those only ever carried live dictation partials, and the
+   plugin no longer declares the method to the bridge at all. */
+ok("nothing subscribes to the speech plugin",
+   !/sr\.addListener|PermissionSpeech[\s\S]{0,80}?addListener/.test(stripComments(html)));
+ok("no Web Speech API crept in as a replacement",
+   !/webkitSpeechRecognition|window\.SpeechRecognition|new SpeechRecognition/.test(stripComments(html)));
+ok("no live-dictation-only failure copy remains",
+   !/"mic-busy":|"no-audio-input":|"engine-failed":|"already-listening":|"input-unavailable":/.test(html));
+
+/* ---- the crash APIs are absent from the native plugin, not merely unused ---- */
+ok("the plugin has NO audio engine", !/AVAudioEngine/.test(pluginCode));
+ok("the plugin never installs a tap (the uncatchable ObjC raise)", !/installTap/.test(pluginCode));
+ok("the plugin has no live buffer request", !/SFSpeechAudioBufferRecognitionRequest/.test(pluginCode));
+ok("the plugin exposes no live methods", !/func startLive|func stopLive|func teardownLive/.test(pluginCode));
+ok("the bridge does not even declare a live method to JS",
+   !/CAPPluginMethod\(name: "startLive"|CAPPluginMethod\(name: "stopLive"|CAPPluginMethod\(name: "addListener"/.test(pluginSrc));
+ok("the plugin never mutates the shared audio session",
+   !/setCategory|setActive/.test(pluginCode));
+ok("the plugin never requests the microphone (the recorder owns it)",
+   !/requestRecordPermission|AVAudioApplication\.requestRecordPermission/.test(pluginCode));
+
+/* ---- the plugin is still built the way that makes it un-droppable ---- */
+ok("our plugin HAS a Package.swift (the thing that was missing in 1.3.0-1.3.2)",
+   fs.existsSync(path.join(ROOT, "native/permission-speech/Package.swift")));
+ok("it declares an SPM library target", /\.library\(\s*name: "PermissionSpeech"/.test(pluginPkg));
+ok("source sits where SPM expects it", /path: "ios\/Sources\/PermissionSpeechPlugin"/.test(pluginPkg));
+ok("registered via CAPBridgedPlugin (pure Swift, no ObjC macro)",
+   /CAPBridgedPlugin/.test(pluginSrc) && /jsName = "PermissionSpeech"/.test(pluginSrc));
+ok("every JS-called method is declared to the bridge",
+   ["diagnostics","checkPermissions","requestPermissions","transcribeFile"]
+     .every((m) => new RegExp(`CAPPluginMethod\\(name: "${m}"`).test(pluginSrc)));
+ok("checkPermissions is an override", /@objc override public func checkPermissions/.test(pluginSrc));
+ok("requestPermissions is an override", /@objc override public func requestPermissions/.test(pluginSrc));
+ok("file transcription uses SFSpeechURLRecognitionRequest", /SFSpeechURLRecognitionRequest/.test(pluginSrc));
+ok("speech authorization is actually requested", /SFSpeechRecognizer\.requestAuthorization/.test(pluginSrc));
+ok("a real type-check harness is committed",
+   fs.existsSync(path.join(ROOT, "native/permission-speech/typecheck/run.sh")) &&
+   fs.existsSync(path.join(ROOT, "native/permission-speech/typecheck/CapacitorStubs.swift")));
+ok("the build runs that type-check before xcodebuild",
+   /typecheck\/run\.sh/.test(cm) && /does not type-check/.test(cm));
+
+/* ---- the build enforces both halves ---- */
+ok("build BLOCKS unless the plugin is in the GENERATED SPM manifest",
+   /CapApp-SPM\/Package\.swift/.test(cm) && /PermissionSpeech is NOT in/.test(cm));
+ok("build checks the artefact, not node_modules", !/node_modules\/@capacitor-community/.test(cm));
+ok("build BLOCKS if live dictation returns to the native plugin",
+   /"AVAudioEngine", "installTap", "SFSpeechAudioBufferRecognitionRequest"/.test(cm) &&
+   /"startLive", "stopLive", "setCategory", "setActive"/.test(cm) &&
+   /BLOCKED: live dictation is back/.test(cm));
+ok("build BLOCKS if a Dictate control returns to the web app",
+   /'id="vDictate"', "startLive", "stopLive", "partialResults"/.test(cm));
+/* A naive grep flags the doc comments that explain WHY these APIs are banned,
+   so it would fail every build until someone deleted the explanation. */
+ok("the guard reads code, not the comments that name the banned APIs",
+   /Grep the CODE, not the prose/.test(cm) &&
+   /l\.lstrip\(\)\.startswith\("\/\/"\)/.test(cm));
+ok("build BLOCKS if the transcript panel or transcriber goes missing",
+   /never calls the transcriber/.test(cm) && /transcript panel is missing/.test(cm));
+
+/* ---- on-device only, as before ---- */
+ok("on-device flag forced on the file request",
+   /SFSpeechURLRecognitionRequest[\s\S]{0,400}?requiresOnDeviceRecognition = true/.test(pluginSrc));
+ok("if on-device is unavailable it REFUSES rather than using the network",
+   /supportsOnDeviceRecognition/.test(pluginSrc) && /"reason": "no-on-device"/.test(pluginSrc));
+ok("no server-recognition fallback exists",
+   !/requiresOnDeviceRecognition = false/.test(pluginCode) && !/server/i.test(pluginCode));
+ok("the build refuses a server fallback too",
+   /requiresOnDeviceRecognition = true is missing/.test(cm) &&
+   /a server-recognition fallback was introduced/.test(cm));
+ok("the UI explains that refusal honestly", /won.t send your audio anywhere/.test(html));
+ok("no network APIs introduced", !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
+
+/* ---- failure is never silent ---- */
+ok("a visible 'Transcribing…' state exists", /Transcribing on this phone/.test(html));
+ok("success states that the audio stayed on device", /The audio never left your device/.test(html));
+ok("failures render as 'Transcription unavailable — <reason>'", /Transcription unavailable — /.test(html));
+for (const reason of ["permission-denied", "no-on-device", "recognizer-unavailable",
+                      "no-speech", "recognition-failed", "timeout", "unsupported"]) {
+  ok(`reason "${reason}" has human copy`, new RegExp(`"${reason}":`).test(html));
+}
+ok("a missing native engine is named, not silent",
+   /engine: none/.test(html) && /function renderDiag/.test(html));
+ok("the diagnostic line stays hidden while everything is healthy",
+   /if\(!bad\)\{ diagHide\(\); return; \}/.test(html));
+
+section("8b) v1.5.0 — RECORDING itself is untouched");
 ok("the record button and its handler are intact",
    /id="recBtn"/.test(html) && /\$\("recBtn"\)\.addEventListener\("click", toggleRecord\)/.test(html));
 ok("both recorder paths survive (native plugin + MediaRecorder fallback)",
@@ -223,8 +324,11 @@ ok("the microphone is still requested by the recorder itself",
    /getUserMedia\(\{audio:true\}\)/.test(html));
 ok("audio is still saved as a Blob on the entry", /audio:recBlob/.test(html) && /duration:recSeconds/.test(html));
 ok("playback after recording still appears", /id="playbackWrap"/.test(html) && /\$\("playback"\)\.src/.test(html));
-ok("a failed recording explains itself without mentioning transcription",
+ok("a failed recording explains itself in the recorder's own words",
    /That recording couldn.t be read/.test(html));
+ok("transcription never runs while the recorder holds the microphone",
+   html.indexOf("recStream.getTracks().forEach(function(t){t.stop();})") <
+   html.indexOf("blobToBase64(recBlob).then"));
 ok("the Voice|Video switch still works", /id="speakSeg"/.test(html) && /function setSpeakMode/.test(html));
 ok("mic denial still leaves the rest of the app usable",
    /You can still write or draw an entry/.test(html));
@@ -260,20 +364,26 @@ ok("usage strings are printed back so the build log proves they landed",
 ok("build FAILS if a usage string is missing", /BLOCKED: a required usage string is missing/.test(cm));
 ok("usage strings name the app and the reason (not 'we need access')",
    /Permission uses the camera only so you can record/.test(cm));
-/* 1.4.0: the app no longer touches SFSpeechRecognizer, so asking for the
-   permission would be asking for something it never uses. */
-ok("the speech usage string is NOT set any more", !/setkey NSSpeechRecognitionUsageDescription/.test(cm));
-ok("the build actively deletes it and fails if it survives",
-   /Delete :NSSpeechRecognitionUsageDescription/.test(cm) &&
-   /BLOCKED: NSSpeechRecognitionUsageDescription is still present/.test(cm));
-ok("the build blocks a returning speech plugin",
-   /BLOCKED: PermissionSpeech is back/.test(cm) &&
-   /BLOCKED: www\/index\.html still references speech-to-text/.test(cm));
+/* 1.5.0: transcription is back, so the permission it needs must be declared.
+   iOS hard-CRASHES (SIGABRT) the instant an app touches SFSpeechRecognizer
+   with no matching usage string — a missing key here is a shipped crash. */
+ok("the speech usage string is set again", /setkey NSSpeechRecognitionUsageDescription/.test(cm));
+ok("it is in the required-keys readback loop, so a miss FAILS the build",
+   /for K in NSMicrophoneUsageDescription NSSpeechRecognitionUsageDescription/.test(cm));
+ok("the string says transcription is on-device and nothing is uploaded",
+   /on-device speech recognition/.test(cm) && /never uploaded/.test(cm));
+ok("the build blocks a returning DICTATE control",
+   /'id="vDictate"', "startLive", "stopLive", "partialResults"/.test(cm) &&
+   /BLOCKED: live dictation is back/.test(cm));
 ok("the build still proves the recorder survived", /the record button is gone/.test(cm));
 
-section("12) v1.4.0 — the privacy promise is still literal (and now simpler)");
-ok("no recogniser of any kind is left to send audio anywhere",
-   !/SFSpeech|requiresOnDeviceRecognition|speechAuth/.test(html));
+section("12) v1.5.0 — the privacy promise is still literal");
+ok("the only recogniser is on-device, and refuses rather than uploading",
+   /requiresOnDeviceRecognition = true/.test(pluginSrc) &&
+   /"reason": "no-on-device"/.test(pluginSrc) &&
+   !/requiresOnDeviceRecognition = false/.test(pluginCode));
+ok("recordings still cannot be written to Photos",
+   !/NSPhotoLibraryAddUsageDescription *[:=]/.test(cm));
 ok("no network calls anywhere in the app",
    !/fetch\(["'`]https?:/.test(html) && !/XMLHttpRequest\(\)[\s\S]{0,80}https?:/.test(html));
 
@@ -432,16 +542,26 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("zero network APIs still hold",
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
-ok("version moved past 1.3.x", /APP_VERSION = "1\.4\.\d+"/.test(html));
+ok("version moved past 1.4.x", /APP_VERSION = "1\.5\.\d+"/.test(html));
 
 /* ============================================================ */
-section("25) v1.4.0 — nothing else changed");
-ok("version bumped to 1.4.0", /APP_VERSION = "1\.4\.0"/.test(html) && />v1\.4\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.4\.0/.test(cm));
-ok("package.json agrees", /"version": "1\.4\.0"/.test(pkgRaw));
+section("25) v1.5.0 — nothing else changed");
+ok("version bumped to 1.5.0", /APP_VERSION = "1\.5\.0"/.test(html) && />v1\.5\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.5\.0/.test(cm));
+ok("package.json agrees", /"version": "1\.5\.0"/.test(pkgRaw));
+/* The build-number scheme must stay monotonic and 12-digit: computing it from
+   "latest visible in TestFlight + 1" deadlocks silently, every build green and
+   nothing ever landing. */
+ok("build number is a 12-digit UTC stamp, read back and asserted",
+   /date -u \+%Y%m%d%H%M/.test(cm) && /is not a 12-digit stamp/.test(cm));
+ok("build number is never derived from the latest visible build",
+   !/get-latest-testflight-build-number/.test(cm));
+ok("this lane still publishes to TestFlight ONLY",
+   /submit_to_testflight: true/.test(cm) && !/^\s*submit_to_app_store: true/m.test(cm));
 ok("header still has no Notebook icon", !/id="btnNotebook"/.test(html));
 ok('Record label intact', /<div class="nm">Record<\/div>/.test(html) && /<div class="ttl serif">Record<\/div>/.test(html));
-ok("voice entries still saved with their audio + duration", /type:"voice"[\s\S]{0,160}?audio:recBlob/.test(html));
+ok("voice entries saved with audio, duration AND transcript",
+   /type:"voice"[\s\S]{0,200}?audio:recBlob/.test(html) && /transcript:transcript/.test(html));
 ok("video entries intact", /type:"video"/.test(html) && /id="vidInput"/.test(html));
 ok("Draw actions still above the canvas", html.indexOf('id="drawActions"') < html.indexOf('id="drawWrap"'));
 ok("scroll-does-not-draw guards intact", /function abortStroke/.test(html) && /addEventListener\("pointercancel",abortStroke\)/.test(html));

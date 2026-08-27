@@ -1,10 +1,11 @@
 {
   "name": "permission",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "Permission \u2014 a private journal (native iOS via Capacitor)",
   "scripts": {
-    "test": "node test/permission.test.mjs"
+    "test": "node test/permission.test.mjs",
+    "verify:transcription": "node scripts/verify-transcription.mjs"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",
@@ -14,7 +15,8 @@
     "@capacitor/ios": "latest",
     "@capacitor/share": "^8.0.0",
     "@capgo/capacitor-native-biometric": "^8.6.1",
-    "capacitor-voice-recorder": "^7.0.6"
+    "capacitor-voice-recorder": "^7.0.6",
+    "permission-speech": "file:native/permission-speech"
   },
   "devDependencies": {
     "@capacitor/assets": "latest",
