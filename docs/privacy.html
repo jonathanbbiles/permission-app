@@ -22,7 +22,7 @@
 </head>
 <body>
   <h1>Permission — Privacy Policy</h1>
-  <div class="eff">Effective August 8, 2026</div>
+  <div class="eff">Effective August 27, 2026</div>
 
   <p class="lead">Permission is built to be a completely private space. Your reflections belong to you and only you. The app does not collect, store on our servers, transmit, or share any personal information — because there are no servers and no accounts at all.</p>
 
@@ -33,15 +33,20 @@
     <li>We collect no analytics, usage data, diagnostics, or advertising identifiers.</li>
     <li>Your journal entries — whether typed, spoken, filmed, or drawn — are stored <strong>only on your device</strong> and are never uploaded.</li>
     <li>Your passcode is stored only on your device in a scrambled (hashed) form. We never see it, and it never leaves your phone.</li>
-    <li>The app works fully offline and makes no network connections. Your words never leave your phone.</li>
+    <li>Your words never leave your phone. Everything you write, say, film or draw stays on your device, and the app has no way to send any of it anywhere — it contains no code that uploads anything.</li>
+    <li>The app works fully offline. It makes exactly one kind of network request, and it has nothing to do with you: it loads its typefaces from Google Fonts, so Google sees that a device asked for a font file, and your IP address, the same as any web page you visit. No journal content, no identifier and no account is involved, because there is no account. Without a connection the app simply uses the fonts already on your phone and everything else works normally.</li>
     <li>We use no third-party advertising, tracking, or analytics services of any kind.</li>
   </ul>
 
   <h2>Microphone</h2>
   <p>If you choose to record a voice or video entry, Permission uses your device's microphone solely to create that recording. The audio is saved privately on your device alongside your other entries and is never transmitted anywhere. Permission does not use the microphone at any other time.</p>
 
-  <h2>Speech to text (removed)</h2>
-  <p>Earlier versions of Permission could turn a voice entry into a written transcript on your device. <strong>That feature was removed in version 1.4.0.</strong> Permission no longer uses speech recognition of any kind, and no longer asks for the Speech Recognition permission. Transcripts saved by an earlier version are still shown with their recordings, on your device, exactly as they were — nothing was deleted from your journal.</p>
+  <h2>Speech to text</h2>
+  <p>When you finish a voice entry, Permission can turn it into a written transcript so you can read back what you said. <strong>This happens entirely on your iPhone</strong>, using the on-device speech recognition built into iOS. The recording is never uploaded, and neither is the text.</p>
+  <p>This is worth being exact about, because Apple's speech recognition <em>can</em> work either on the device or by sending audio to Apple's servers. Permission requires the on-device mode. If your iPhone has no offline speech model for your language, <strong>Permission does not fall back to sending your audio anywhere — it simply tells you no transcript could be made.</strong> "No transcript" is the worst thing that can happen; your recording being uploaded is not one of the possibilities.</p>
+  <p>Because the app uses this feature, iOS asks for the Speech Recognition permission the first time you open the Record screen. You can decline, and everything else in the app keeps working — you just will not get transcripts. You can change your mind later in iOS Settings › Permission.</p>
+  <p>The transcript is yours to edit before you save it, and it is stored with the recording on your device like any other entry. Permission has <strong>no live dictation feature</strong> — it never listens to your microphone to turn speech into text as you talk. It only ever works on a recording you have already finished and chosen to make.</p>
+  <p>Transcripts saved by earlier versions are still shown with their recordings, exactly as they were — nothing was deleted from your journal.</p>
 
   <h2>Camera and video</h2>
   <p>If you choose to record a video entry, Permission uses your device's camera and microphone solely to create that recording, and only at the moment you ask for it. If you instead pick a video you already have, Permission receives only the single video you select — it never reads or scans your photo library. Permission does not use the camera at any other time.</p>
