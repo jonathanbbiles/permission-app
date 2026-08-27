@@ -216,13 +216,25 @@ workflows:
           CAM="Permission uses the camera only so you can record a video journal entry for yourself. Videos are kept inside the app on your device, are never added to your Photos library, and are never uploaded."
           PHO="Permission asks for your photo library only if you choose an existing video for a journal entry. Nothing is uploaded, and the app never reads your library on its own."
           FID="Permission uses Face ID so only you can unlock your journal. Your data never leaves your phone."
-          SPE="Permission turns your voice entries into text using your iPhone's on-device speech recognition, so you can read back what you said. Transcription happens entirely on your device and your recordings are never uploaded."
+          # NOTE: NO APOSTROPHES in any of these strings. PlistBuddy's -c parser
+          # treats a single quote as a quote character and dies with
+          # "Parse Error: Unclosed Quotes" — which is exactly how the first
+          # 1.5.0 build failed, on the word "iPhone's".
+          SPE="Permission turns your voice entries into text using the on-device speech recognition built into your iPhone, so you can read back what you said. Transcription happens entirely on your device and your recordings are never uploaded."
           setkey(){ /usr/libexec/PlistBuddy -c "Add :$1 string \"$2\"" "$P" || /usr/libexec/PlistBuddy -c "Set :$1 \"$2\"" "$P"; }
           setkey NSMicrophoneUsageDescription       "$MIC"
           setkey NSCameraUsageDescription           "$CAM"
           setkey NSPhotoLibraryUsageDescription     "$PHO"
           setkey NSFaceIDUsageDescription           "$FID"
           setkey NSSpeechRecognitionUsageDescription "$SPE"
+
+          # Catch the apostrophe trap BEFORE PlistBuddy turns it into an opaque
+          # "Unclosed Quotes" parse error six steps into the build.
+          for S in "$MIC" "$CAM" "$PHO" "$FID" "$SPE"; do
+            case "$S" in
+              *"'"*) echo "BLOCKED: a usage string contains an apostrophe, which PlistBuddy cannot parse:"; echo "  $S"; exit 1;;
+            esac
+          done
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$P" || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$P"
 
           # Print each key BACK so the build log proves it landed, and fail the
