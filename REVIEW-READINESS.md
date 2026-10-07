@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.7.0 (typefaces embedded — the app now makes NO network connections)
-**Date:** 2026-08-27
+**Version:** 1.7.1 (adds the `permissionjournal://` URL scheme; 1.7.0 embedded the typefaces)
+**Date:** 2026-10-07
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -53,6 +53,22 @@ copy is left behind.
 > writes a camera-captured video to the camera roll before handing it to the
 > page. It should not — a web file input receives a temp file, and saving to
 > Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
+
+---
+
+## 1.7.1 — Slow Burn can open Permission
+
+**What.** The app registers one URL scheme, `permissionjournal://`, so the
+Journal button in Slow Burn (the creators' couples app) opens Permission
+directly instead of an App Store page. Nothing else changed.
+
+**Why it is safe.** It is a bare launch: Permission reads nothing from the URL,
+so the scheme carries no data in or out, and the passcode / Face ID lock still
+stands in front of the journal. Still zero network. The build sets the scheme
+in Info.plist and fails if it does not read back; `npm test` §25 asserts both.
+
+**What's New (1.7.1):** You can now open Permission straight from Slow Burn's
+Journal button.
 
 ---
 

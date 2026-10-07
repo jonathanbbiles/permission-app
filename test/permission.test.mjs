@@ -646,10 +646,15 @@ ok("zero network APIs still hold",
 ok("version moved past 1.6.x", /APP_VERSION = "1\.7\.\d+"/.test(html));
 
 /* ============================================================ */
-section("25) v1.7.0 — nothing else changed");
-ok("version bumped to 1.7.0", /APP_VERSION = "1\.7\.0"/.test(html) && />v1\.7\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.7\.0/.test(cm));
-ok("package.json agrees", /"version": "1\.7\.0"/.test(pkgRaw));
+section("25) v1.7.1 — the permissionjournal:// URL scheme, nothing else changed");
+ok("version bumped to 1.7.1", /APP_VERSION = "1\.7\.1"/.test(html) && />v1\.7\.1</.test(html) &&
+   /CFBundleShortVersionString 1\.7\.1/.test(cm) && /expected 1\.7\.1/.test(cm));
+ok("package.json agrees", /"version": "1\.7\.1"/.test(pkgRaw));
+/* Slow Burn's Journal button opens Permission by this exact scheme
+   (SlowBurn-iOS www/index.html PERMISSION_URL). Renaming it breaks that
+   button silently, so the scheme is asserted AND read back in the build. */
+ok("URL scheme permissionjournal is registered and read back",
+   /CFBundleURLSchemes:0 string permissionjournal"/.test(cm) && /\[ "\$GOT_SCHEME" = "permissionjournal" \]/.test(cm));
 /* The build-number scheme must stay monotonic and 12-digit: computing it from
    "latest visible in TestFlight + 1" deadlocks silently, every build green and
    nothing ever landing. */
