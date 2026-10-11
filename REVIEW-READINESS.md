@@ -1,7 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.7.1 (adds the `permissionjournal://` URL scheme; 1.7.0 embedded the typefaces)
-**Date:** 2026-10-07
+**Version:** 1.8.0 (made for iPad and the iPhone Duo; 1.7.1 added the `permissionjournal://` URL scheme)
+**Date:** 2026-10-11
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
 ## §A VERDICT: **MECHANICAL CHECKS PASS** — zero blockers.
@@ -53,6 +53,46 @@ copy is left behind.
 > writes a camera-captured video to the camera roll before handing it to the
 > page. It should not — a web file input receives a temp file, and saving to
 > Photos is something an app must ask for. **Confirm on device** (item 6 of §C).
+
+---
+
+## 1.8.0 — made for iPad and the iPhone Duo
+
+**Why.** Jonathan, 2026-10-11: the big-screen layouts across the portfolio did
+not fill an iPad in portrait and did not change at all in landscape, and the
+iPhone Duo (on sale 2026-10-23; open screen ~669x951pt, and iOS ignores
+portrait-only there) needs the same care. Permission was already Universal by
+accident of Capacitor's template; now it is Universal on purpose.
+
+**Build.** `codemagic.yaml` step "Universal build" SETS
+`TARGETED_DEVICE_FAMILY = "1,2"`, `UIDeviceFamily [1,2]` and all four iPad
+orientations, and fails the build if any of them does not read back (a missing
+iPad orientation is ITMS-90474 after a green build). iPhone orientations are
+left exactly as generated.
+
+**Layout** (CSS only, width/orientation media queries, no device sniffing;
+under 600pt nothing changes, so the iPhone is untouched):
+
+| Screen | Layout |
+|---|---|
+| < 600pt (iPhone, Duo closed, Slide Over) | the phone layout, unchanged |
+| >= 600pt portrait (Duo open, iPad portrait, half Split View) | one column that fills the width; the four ways to answer in one row of four; from 760pt the journal is a 2-up grid of cards |
+| >= 760pt landscape (Duo sideways, iPad landscape) | Home in two columns (invitation + ways to answer, journal beside it); Write / Record / an entry put the prompt beside the page; Draw and the Notebook move their tools to a side column so the paper runs the full height |
+
+Drawing: on a big screen the Draw canvas is no longer capped at 760pt wide
+(iPad 13" portrait 966x960, landscape 870x826; Duo open 611x468, sideways
+541x472), tools are 44pt, and the canvas still sizes itself to the space left
+so Save / Discard are always on screen. `npm run verify:layout` renders every
+screen at 9 sizes and fails on horizontal overflow, an unreachable last
+control, Draw actions off screen, or a stroke that leaves no ink.
+
+**What's New (1.8.0):** Now made for iPad and the iPhone Duo: Permission fills
+the whole screen, and turning your iPad or Duo sideways gives you a two-column
+layout with your journal beside today's invitation and a bigger page to draw on.
+
+**Screenshots.** `screenshots/ipad13/` re-rendered from this build (2048x2732).
+This repo has no screenshot-upload lane: they go into App Store Connect by hand
+(13" iPad slot) when the version is prepared — see §A7.
 
 ---
 
