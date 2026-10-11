@@ -323,6 +323,58 @@ workflows:
           fi
           echo "OK       NSPhotoLibraryAddUsageDescription absent — the app CANNOT write to Photos"
           echo "----- Info.plist -----"; cat "$P"
+      - name: Universal build — iPhone + iPad (+ iPhone Duo), every iPad orientation
+        script: |
+          # ---------------------------------------------------------------
+          # 1.8.0 — Jonathan's 2026-10-11 decision: Permission is made for
+          # iPad and the iPhone Duo, not just tolerated on them. Until now the
+          # device family and iPad orientations were whatever Capacitor's
+          # template happened to generate (it is regenerated every build), so
+          # nothing guaranteed them. They are now SET here and READ BACK:
+          #   - TARGETED_DEVICE_FAMILY "1,2" / UIDeviceFamily [1,2]: a real
+          #     iPad app, not an iPhone window in compatibility mode that never
+          #     rotates. The CSS has a portrait and a landscape big-screen
+          #     layout (www/index.html, "iPAD / iPHONE DUO / LARGE SCREEN").
+          #   - all four iPad orientations: required for a Universal upload
+          #     (ITMS-90474 rejects it after a green build otherwise).
+          # iPhone orientations are left exactly as Capacitor generates them.
+          # ---------------------------------------------------------------
+          set -e
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          P=ios/App/App/Info.plist
+          [ -f "$PBX" ] || { echo "BLOCKED: $PBX not found"; exit 1; }
+          sed -i '' -E 's/TARGETED_DEVICE_FAMILY = [^;]*;/TARGETED_DEVICE_FAMILY = "1,2";/g' "$PBX"
+          N_UNI=$(grep -c 'TARGETED_DEVICE_FAMILY = "1,2";' "$PBX" || true)
+          N_ALL=$(grep -c 'TARGETED_DEVICE_FAMILY' "$PBX" || true)
+          echo "TARGETED_DEVICE_FAMILY: $N_UNI of $N_ALL build configurations are \"1,2\""
+          [ "$N_UNI" -ge 1 ] && [ "$N_UNI" -eq "$N_ALL" ] || { echo "BLOCKED: TARGETED_DEVICE_FAMILY is not \"1,2\" everywhere"; grep -n TARGETED_DEVICE_FAMILY "$PBX"; exit 1; }
+
+          set +e
+          /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" "$P" 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations~ipad" "$P" 2>/dev/null
+          set -e
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:1 integer 2" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations~ipad array" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations~ipad:0 string UIInterfaceOrientationPortrait" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations~ipad:1 string UIInterfaceOrientationPortraitUpsideDown" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations~ipad:2 string UIInterfaceOrientationLandscapeLeft" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations~ipad:3 string UIInterfaceOrientationLandscapeRight" "$P"
+
+          # Read back — a silent no-op here is an upload rejected after green.
+          GOT_FAM=$(/usr/libexec/PlistBuddy -c "Print :UIDeviceFamily" "$P" | tr -d ' \n')
+          GOT_IPAD=$(/usr/libexec/PlistBuddy -c "Print :UISupportedInterfaceOrientations~ipad" "$P")
+          echo "UIDeviceFamily: $GOT_FAM"
+          echo "iPad orientations:"; echo "$GOT_IPAD"
+          echo "iPhone orientations (unchanged, as generated):"
+          /usr/libexec/PlistBuddy -c "Print :UISupportedInterfaceOrientations" "$P" || echo "  (key absent)"
+          [ "$GOT_FAM" = "Array{12}" ] || { echo "BLOCKED: UIDeviceFamily is '$GOT_FAM', expected [1,2]"; exit 1; }
+          for O in UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown \
+                   UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight; do
+            echo "$GOT_IPAD" | grep -qx "[[:space:]]*$O" || { echo "BLOCKED: iPad orientation $O missing (ITMS-90474)"; exit 1; }
+          done
+          echo "OK — Universal (iPhone + iPad), all four iPad orientations."
       - name: Enable iOS audio session (record + playback of voice notes)
         script: |
           python3 - <<'PY'
@@ -351,6 +403,8 @@ workflows:
           # sequence keeps rising across the change.)
           NEXT="$(date -u +%Y%m%d%H%M)"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
+          # 1.8.0 — made for iPad and the iPhone Duo: Universal build, all four
+          # iPad orientations, portrait + landscape big-screen layouts.
           # 1.7.1 — the permissionjournal:// URL scheme (Slow Burn opens Permission).
           # 1.7.0 — typefaces embedded as data: URIs, so the app now makes NO
           # network connections at all (1.6.0 added pause/resume recording;
@@ -360,7 +414,7 @@ workflows:
           # Earlier versions are separate records in App Store Connect and are
           # NOT touched by this build: this lane publishes to TestFlight only
           # (see the review-submit toggle at the bottom, deliberately off).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.7.1" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.7.1" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.8.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.8.0" ios/App/App/Info.plist
 
           # Read BOTH values back out of the plist. An unexpanded variable or a
           # silent PlistBuddy no-op would otherwise ship a colliding build that
@@ -372,7 +426,7 @@ workflows:
             [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
             *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
           esac
-          [ "$GOT_V" = "1.7.1" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.7.1"; exit 1; }
+          [ "$GOT_V" = "1.8.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.8.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

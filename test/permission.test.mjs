@@ -510,14 +510,16 @@ ok("a large-screen @media block exists", bigMq.length > 0);
 ok("its breakpoint is in the iPad range the gate requires (620–899)",
    bigMq.some((m) => { const n = +m.match(/(\d+)px/)[1]; return n >= 620 && n <= 899; }),
    bigMq.join(" "));
-ok("body widens past the 540px phone column on iPad",
-   /@media[^{]*min-width: *7\d\dpx[^{]*\{[\s\S]{0,600}?body\{max-width:9\d\dpx/.test(html));
+ok("body widens past the 540px phone column from 600pt (Duo open, iPad)",
+   /@media \(min-width: 600px\)\{\s*body\{max-width:1\d\d\dpx/.test(html));
 ok("home becomes a two-column grid on iPad", /#v-home\.active\{display:grid/.test(html));
 ok("grid rows are assigned explicitly (auto-flow can't reshuffle)",
    /#v-home \.greet\s*\{grid-column:1 \/ -1; grid-row:1;\}/.test(html) &&
    /#v-home #homeList\{grid-column:2/.test(html));
-ok("editors keep a reading measure instead of stretching full width",
-   /#v-text, #v-voice, #v-draw, #v-entry, #v-journal\{max-width:7\d\dpx/.test(html));
+ok("editors keep a reading measure in portrait instead of stretching full width",
+   /#v-text, #v-voice, #v-entry\{max-width:8\d\dpx/.test(html));
+ok("Draw is NOT width-capped on a big screen (more width = more paper)",
+   !/#v-draw\{max-width/.test(html) && !/#v-draw, [^{]*\{max-width/.test(html));
 ok("notebook is NOT width-capped on iPad (more width = more paper)",
    !/#v-notebook\{max-width/.test(html));
 ok("settings sheet is centred at panel width, transform untouched",
@@ -643,13 +645,12 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("zero network APIs still hold",
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
-ok("version moved past 1.6.x", /APP_VERSION = "1\.7\.\d+"/.test(html));
+ok("version moved past 1.6.x", /APP_VERSION = "1\.([7-9])\.\d+"/.test(html));
 
 /* ============================================================ */
 section("25) v1.7.1 — the permissionjournal:// URL scheme, nothing else changed");
-ok("version bumped to 1.7.1", /APP_VERSION = "1\.7\.1"/.test(html) && />v1\.7\.1</.test(html) &&
-   /CFBundleShortVersionString 1\.7\.1/.test(cm) && /expected 1\.7\.1/.test(cm));
-ok("package.json agrees", /"version": "1\.7\.1"/.test(pkgRaw));
+/* exact version re-asserted in section 32 */
+ok("version moved past 1.7.0", /APP_VERSION = "1\.(7\.[1-9]|[8-9]\.\d+)"/.test(html));
 /* Slow Burn's Journal button opens Permission by this exact scheme
    (SlowBurn-iOS www/index.html PERMISSION_URL). Renaming it breaks that
    button silently, so the scheme is asserted AND read back in the build. */
@@ -702,6 +703,39 @@ ok("the Notebook tile carries NO data-mode, so the delegation ignores it",
 ok("iPad two-column layout no longer positions a .bigcard row",
    !/#v-home \.bigcard/.test(html));
 ok("the tiles still occupy the iPad's left column", /#v-home \.modes\s*\{grid-column:1/.test(html));
+
+section("32) v1.8.0 — made for iPad and the iPhone Duo");
+ok("version bumped to 1.8.0 everywhere it must agree",
+   /APP_VERSION = "1\.8\.0"/.test(html) && />v1\.8\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.8\.0/.test(cm) && /expected 1\.8\.0/.test(cm) &&
+   /"version": "1\.8\.0"/.test(pkgRaw));
+ok("build sets TARGETED_DEVICE_FAMILY \"1,2\" and reads it back",
+   /TARGETED_DEVICE_FAMILY = "1,2";/.test(cm) && /is not \\"1,2\\" everywhere/.test(cm));
+ok("build sets UIDeviceFamily [1,2] and asserts it",
+   /UIDeviceFamily:0 integer 1/.test(cm) && /UIDeviceFamily:1 integer 2/.test(cm) && /"\$GOT_FAM" = "Array\{12\}"/.test(cm));
+ok("all four iPad orientations are set and each one is asserted (ITMS-90474)",
+   ["Portrait", "PortraitUpsideDown", "LandscapeLeft", "LandscapeRight"].every((o) =>
+     new RegExp("UISupportedInterfaceOrientations~ipad:\\d string UIInterfaceOrientation" + o + '"').test(cm)) &&
+   /iPad orientation \$O missing/.test(cm));
+ok("iPhone is never forced on its own (no iPhone-only device family)",
+   !/TARGETED_DEVICE_FAMILY = "?1"?;/.test(cm) && !/UIDeviceFamily:0 integer 1"[^\n]*\n[^\n]*Print :UIDeviceFamily/.test(cm));
+ok("big-screen layout is width/orientation based, never device-sniffed",
+   /@media \(min-width: 600px\)/.test(html) &&
+   /@media \(min-width: 760px\) and \(orientation: landscape\)/.test(html) &&
+   !/navigator\.(userAgent|platform)|isIPad|isTablet/i.test(stripComments(html)));
+ok("portrait big screen: the four ways to answer go one row of four",
+   /#v-home \.modes\{grid-template-columns:repeat\(4,1fr\)/.test(html));
+ok("landscape: Write / Record / Entry put the prompt beside the page",
+   /#v-text\.active, #v-voice\.active, #v-entry\.active\{display:grid/.test(html));
+ok("landscape: Draw + Notebook tools move to a side column",
+   /#v-draw\.active, #v-notebook\.active\{display:grid; grid-template-columns:minmax\(0,1fr\) \d+px/.test(html));
+ok("canvas sizing only reserves room for controls actually BELOW the paper",
+   /if\(el\.getBoundingClientRect\(\)\.top < wr\.bottom - 1\) return;/.test(html));
+ok("home preview breakpoint matches the CSS (600pt)", /var BIG_SCREEN="\(min-width: 600px\)"/.test(html));
+ok("a browser layout check covers phone, Duo and iPad sizes",
+   fs.existsSync(path.join(ROOT, "scripts/check-layout.mjs")) && /"verify:layout"/.test(pkgRaw) &&
+   ["390, 844", "466, 678", "669, 951", "951, 669", "820, 1180", "1180, 820", "1024, 1366", "1366, 1024"].every((z) =>
+     fs.readFileSync(path.join(ROOT, "scripts/check-layout.mjs"), "utf8").includes("[" + z + "]")));
 
 section("29) v1.3.6 — dark-mode safe-area background");
 const capCfg = fs.readFileSync(path.join(ROOT, "capacitor.config.json"), "utf8");

@@ -408,19 +408,30 @@
   #v-notebook .tools .toolbtn svg{width:17px; height:17px;}
 
   /* ============================================================
-     iPAD / LARGE SCREEN  (Guideline 4 — "designed for iPad")
-     `npx cap add ios` produces a Universal build, so Apple reviews this on a
-     13" iPad. Without this block the 540px phone column just floats in the
-     middle of a 1024x1366pt screen, which reads as an iPhone app that was
-     never adapted. Everything below is layout only — no feature is added,
-     removed or hidden by screen size, so the iPad build is the same app.
+     iPAD / iPHONE DUO / LARGE SCREEN  (Guideline 4 — "designed for iPad")
+     The build is Universal (codemagic.yaml sets TARGETED_DEVICE_FAMILY 1,2
+     and all four iPad orientations), so Apple reviews it on an iPad and it
+     runs full-screen on the iPhone Duo's open screen. Everything below is
+     layout only — no feature is added, removed or hidden by screen size, so
+     the big-screen build is the same app. Width-based, never device-sniffed;
+     under 600pt NOTHING here applies, so the iPhone is unchanged.
 
-     700px catches every iPad in full screen (mini portrait is 744pt) while
-     leaving Slide Over / narrow Split View on the phone layout, which is
-     correct: at that width it genuinely is a phone-shaped column.
+     Three shapes (1.8.0, Jonathan's 2026-10-11 decision):
+       < 600pt               the phone layout (iPhone, Duo closed, Slide Over)
+       >= 600pt portrait     one wide column that FILLS the screen — Duo open
+                             (669pt), iPad portrait (744-1024pt), half-screen
+                             Split View. The four ways to answer sit in one
+                             row of four; from 760pt the journal is a 2-up grid.
+       >= 760pt landscape    a different layout, not a stretched one: Home is
+                             two columns (invitation + ways to answer | the
+                             journal); Write, Record and an entry put the
+                             prompt beside the page; Draw and the Notebook move
+                             their tools to a side column so the paper gets
+                             the full height of the screen. Duo sideways
+                             (951x669) and every iPad in landscape.
      ============================================================ */
-  @media (min-width: 700px){
-    body{max-width:940px; padding-left:34px; padding-right:34px;}
+  @media (min-width: 600px){
+    body{max-width:1180px; padding-left:28px; padding-right:28px;}
 
     /* a touch more air + a larger type scale, so it reads as a tablet app
        rather than a phone app at 200% */
@@ -433,12 +444,12 @@
     .greet{margin-bottom:20px;}
     .greet .hi{font-size:36px;}
     .greet .date{font-size:15px;}
-    .depth{font-size:14px; padding:9px 18px;}
+    .depth{font-size:14px; padding:12px 20px; min-height:44px;}
     .prompt{padding:30px 28px 24px;}
     .prompt .q{font-size:28px;}
     .prompt .kick{font-size:23px;}
     .prompt .quotemark{font-size:84px;}
-    .textlink{font-size:15px;}
+    .textlink{font-size:15px; min-height:44px;}
     .sechead h3{font-size:22px;}
     .mode{padding:22px 10px 18px;}
     .mode .ic{width:56px; height:56px; border-radius:17px;}
@@ -450,42 +461,41 @@
     .entry .meta .d{font-size:13.5px;}
     .entry .meta .p{font-size:15px;}
 
-    /* HOME becomes two columns: the invitation and the ways to answer it on
-       the left, the journal alongside it on the right — instead of the
-       journal being pushed a screen and a half down. Rows are assigned
-       explicitly so auto-flow can't reshuffle them. */
-    #v-home.active{display:grid; grid-template-columns:1fr 1fr; column-gap:30px; align-content:start;}
-    #v-home .greet   {grid-column:1 / -1; grid-row:1;}
-    #v-home .depths  {grid-column:1 / -1; grid-row:2;}
-    #v-home .prompt  {grid-column:1; grid-row:3;}
-    /* The four mode tiles stay 2x2 here too — the left column is half the
-       tablet, so four across would shrink each one to a phone-sized sliver. */
-    #v-home .modes   {grid-column:1; grid-row:4 / 6;}
-    #v-home .sechead {grid-column:2; grid-row:3;}
-    #v-home #homeList{grid-column:2; grid-row:4 / 7;}
+    /* HOME, portrait: the phone's order, at full width. The four ways to
+       answer become ONE row of four instead of a 2x2 block. */
+    #v-home .modes{grid-template-columns:repeat(4,1fr); gap:14px;}
 
-    /* Editors keep a comfortable reading measure instead of stretching text
-       and buttons the full width of the tablet. The Notebook is deliberately
-       NOT constrained — there, more width is more paper. */
-    #v-text, #v-voice, #v-draw, #v-entry, #v-journal{max-width:760px; margin:0 auto;}
+    /* Editors keep a comfortable reading measure (820pt) instead of
+       stretching text and buttons across a 13" screen. Draw and the Notebook
+       are deliberately NOT capped — there, more width is more paper. */
+    #v-text, #v-voice, #v-entry{max-width:820px; margin:0 auto;}
     textarea{min-height:260px; font-size:19px;}
     .btn{font-size:17px; padding:17px 20px;}
+    .btn.small{min-height:48px;}
     .editor-head .ttl{font-size:24px;}
     .promptmini .q{font-size:19px;}
     .viewer .body{font-size:19px;}
+    .chip{padding:11px 15px; font-size:15px; min-height:44px;}
+    .modeseg button{min-height:44px; font-size:14.5px;}
 
     /* The settings sheet as a full-bleed bar looks unfinished on a tablet;
        centre it at panel width. left/right:0 + margin:auto keeps the existing
        slide-up transform untouched. */
     .sheet{max-width:600px; margin-left:auto; margin-right:auto; border-radius:26px 26px 0 0;}
+    .seg button{min-height:40px; padding:9px 14px;}
 
-    /* On a phone the spacer is suppressed so the tool row fits two lines; a
-       tablet has room to push undo/redo/clear back over to the right. */
+    /* Drawing tools at finger size (44pt) on a tablet — the phone keeps its
+       compact row so the canvas stays big on a small screen. */
+    .drawbar{gap:12px;}
+    .drawbar .tools, #v-notebook .tools{gap:8px;}
+    .drawbar .tools .pen, #v-notebook .tools .pen{width:34px; height:34px;}
+    .drawbar .tools .sizedot, #v-notebook .tools .sizedot{width:44px; height:44px; border-radius:12px;}
+    .drawbar .tools .toolbtn, #v-notebook .tools .toolbtn{width:44px; height:44px; border-radius:12px;}
+    .drawbar .tools .toolbtn svg, #v-notebook .tools .toolbtn svg{width:20px; height:20px;}
+    .drawactions .btn{padding:12px 18px; font-size:15px;}
+    /* a tablet has room to push undo/redo/clear back over to the right */
     #v-notebook .tools .spacer{display:block; flex:1;}
-    #v-notebook .tools .pen{width:32px; height:32px;}
-    #v-notebook .tools .sizedot{width:38px; height:38px;}
-    #v-notebook .tools .toolbtn{width:44px; height:44px;}
-    #v-notebook .tools .toolbtn svg{width:20px; height:20px;}
+    .nb-bar .toolbtn{width:44px; height:44px;}
 
     /* lock + onboarding are already centred columns — just scale them up */
     #lock .locklogo{width:104px; height:104px;}
@@ -495,10 +505,92 @@
     #onboard > *:not(.ob-logo){max-width:560px; margin-left:auto; margin-right:auto; width:100%;}
   }
 
-  /* Landscape iPad / 13" — a little more room again. */
-  @media (min-width: 1100px){
-    body{max-width:1080px;}
-    #v-home.active{column-gap:38px;}
+  /* iPad portrait (744pt+): the journal becomes a 2-up grid of cards. */
+  @media (min-width: 760px){
+    #homeList, #allList{display:grid; grid-template-columns:1fr 1fr; column-gap:14px; align-content:start;}
+    #homeList .empty{grid-column:1 / -1;}
+  }
+
+  /* ============================================================
+     LANDSCAPE  (Duo sideways 951x669, iPad 1133-1366 wide)
+     ============================================================ */
+  @media (min-width: 760px) and (orientation: landscape){
+    body{max-width:1280px; padding-left:32px; padding-right:32px;}
+
+    /* HOME becomes two columns: the invitation and the ways to answer it on
+       the left, the journal alongside it on the right — instead of below the
+       fold. Rows are assigned explicitly so auto-flow can't reshuffle them. */
+    #v-home.active{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:36px; align-content:start;}
+    #v-home .greet   {grid-column:1 / -1; grid-row:1;}
+    #v-home .depths  {grid-column:1 / -1; grid-row:2;}
+    #v-home .prompt  {grid-column:1; grid-row:3;}
+    /* the left column is half the screen, so the tiles go back to 2x2 */
+    #v-home .modes   {grid-column:1; grid-row:4 / 6; grid-template-columns:1fr 1fr;}
+    /* The journal heading and list share the right column from the prompt's
+       row down. They overlap in one grid area on purpose: in separate rows the
+       list would start below the (much taller) prompt card, leaving a gap. */
+    #v-home .sechead {grid-column:2; grid-row:3; align-self:start; height:48px; margin:0 2px; align-items:center;}
+    #v-home #homeList{grid-column:2; grid-row:3 / 7; align-self:start; margin-top:58px; display:block;}
+
+    /* WRITE / RECORD / ENTRY: what you are answering on the left, the page
+       on the right. Width cap lifted — the two columns are the measure. */
+    #v-text.active, #v-voice.active, #v-entry.active{display:grid; max-width:none;
+      grid-template-columns:minmax(0,5fr) minmax(0,7fr); column-gap:28px; align-content:start; align-items:start;}
+    #v-text .editor-head, #v-voice .editor-head, #v-entry .editor-head{grid-column:1 / -1; grid-row:1;}
+
+    #v-text .promptmini {grid-column:1; grid-row:2;}
+    #v-text .chip-hint  {grid-column:1; grid-row:3; margin-top:0;}
+    #v-text .quickchips {grid-column:1; grid-row:4;}
+    #v-text textarea    {grid-column:2; grid-row:2 / 5; min-height:320px; height:calc(100vh - 330px); max-height:620px;}
+    #v-text .count      {grid-column:2; grid-row:5;}
+    #v-text .btnrow     {grid-column:2; grid-row:6;}
+
+    /* The voice pane's two cards are placed directly (display:contents);
+       the .hidden toggle between Voice and Video still wins (!important). */
+    #speakVoicePane{display:contents;}
+    #v-voice .promptmini      {grid-column:1; grid-row:2;}
+    #v-voice .modeseg         {grid-column:1; grid-row:3;}
+    #speakVoicePane > .card:first-child, #speakVideoPane{grid-column:1; grid-row:4;}
+    #transcriptCard           {grid-column:2; grid-row:2 / 5;}
+    #transcriptCard textarea.transcript{min-height:240px;}
+    #v-voice > .btnrow        {grid-column:2; grid-row:5; margin-top:0;}
+
+    #v-entry .prompt {grid-column:1; grid-row:2;}
+    #v-entry .btnrow {grid-column:1; grid-row:3; margin-top:0;}
+    #v-entry #eContent{grid-column:2; grid-row:2 / 5;}
+
+    /* DRAW + NOTEBOOK: tools in a side column, so the paper runs the full
+       height of a landscape screen instead of a short wide strip. The JS
+       sizes the canvas to the space left below its top, and only reserves
+       room for controls that are actually BELOW it. */
+    #v-draw.active, #v-notebook.active{display:grid; grid-template-columns:minmax(0,1fr) 320px; column-gap:24px; align-items:start;}
+    #v-draw .editor-head, #v-notebook .editor-head{grid-column:1 / -1; grid-row:1;}
+    #v-draw #drawWrap{grid-column:1; grid-row:2 / 5;}
+    #v-draw .promptmini{grid-column:2; grid-row:2;}
+    #v-draw .drawbar{grid-column:2; grid-row:3; flex-direction:column; align-items:stretch;}
+    .drawbar .tools{flex:0 0 auto;}
+    .drawbar .tools .swatches, #v-notebook .tools .swatches{flex-wrap:wrap; gap:7px;}
+    .drawbar .tools .pen, #v-notebook .tools .pen{width:32px; height:32px;}
+    .drawactions{margin-left:0;}
+    .drawactions .btn{flex:1;}
+
+    #v-notebook #nbWrap{grid-column:1; grid-row:2 / 7;}
+    #v-notebook .nb-bar{grid-column:2; grid-row:2;}
+    #v-notebook #nbTools{grid-column:2; grid-row:3; margin-top:0;}
+    #v-notebook .tools .spacer{flex-basis:100%; height:0;}
+    #v-notebook #nbExportRow{grid-column:2; grid-row:4; flex-direction:column; margin-top:14px;}
+    #v-notebook #nbExportRow .btn{width:100%; flex:none;}
+    #v-notebook #nbMeta{grid-column:2; grid-row:5; text-align:left;}
+    /* Save / Discard right under the prompt, ahead of the tools, so they are
+       on screen the moment Draw opens even on a short landscape screen. */
+    .drawactions{order:-1;}
+  }
+  /* A SHORT landscape screen (an iPhone on its side): the Notebook's exports
+     go above the tools so they stay on screen without scrolling. */
+  @media (min-width: 760px) and (orientation: landscape) and (max-height: 520px){
+    #v-notebook #nbExportRow{grid-row:3; flex-direction:row; margin-top:0; margin-bottom:10px;}
+    #v-notebook #nbExportRow .btn{width:auto; flex:1;}
+    #v-notebook #nbTools{grid-row:4;}
   }
 
   /* entry viewer */
@@ -958,7 +1050,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.7.1</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.8.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -968,7 +1060,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.7.1";
+  var APP_VERSION = "1.8.0";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1558,7 +1650,7 @@
   /* On a tablet the journal sits in its own column beside the prompt, so it
      has room for more than the phone's three. Purely how many are previewed —
      "See all" still shows everything on every device. */
-  var BIG_SCREEN="(min-width: 700px)";
+  var BIG_SCREEN="(min-width: 600px)";
   function homePreviewCount(){
     try{ return window.matchMedia(BIG_SCREEN).matches ? 6 : 3; }catch(e){ return 3; }
   }
@@ -2434,10 +2526,13 @@
   var CANVAS_MIN_H=240;
   function canvasSpace(wrapId, reserveIds){
     var wrap=$(wrapId); if(!wrap) return 0;
-    var top=wrap.getBoundingClientRect().top;
+    var wr=wrap.getBoundingClientRect(), top=wr.top;
     var below=0;
     (reserveIds||[]).forEach(function(id){
       var el=$(id); if(!el) return;
+      // In landscape on a big screen the tools sit BESIDE the paper, not
+      // under it — only what is actually below the canvas needs room.
+      if(el.getBoundingClientRect().top < wr.bottom - 1) return;
       var cs=getComputedStyle(el);
       below += el.getBoundingClientRect().height +
                (parseFloat(cs.marginTop)||0) + (parseFloat(cs.marginBottom)||0);

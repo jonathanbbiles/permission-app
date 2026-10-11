@@ -150,7 +150,8 @@ async function shoot(page, dir, name) {
   return file;
 }
 
-const browser = await chromium.launch();
+// CHROMIUM_PATH=/path/to/chrome picks a specific browser (e.g. a preinstalled one).
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const written = [];
 let failed = 0;
 
@@ -278,9 +279,11 @@ for (const d of DEVICES) {
       vh,
       canvasH: Math.round(c.height), canvasW: Math.round(c.width),
       saveBottom: Math.round(save.bottom), discardBottom: Math.round(disc.bottom),
-      // both must be fully on screen, and ABOVE the canvas
+      // both must be fully on screen, and ABOVE the canvas — or, in the
+      // big-screen landscape layout, BESIDE it in the tool column
       actionsVisible: save.bottom <= vh && disc.bottom <= vh,
-      actionsAboveCanvas: save.bottom <= c.top + 1 && disc.bottom <= c.top + 1,
+      actionsAboveCanvas: (save.bottom <= c.top + 1 && disc.bottom <= c.top + 1) ||
+                          (save.left >= c.right - 1 && disc.left >= c.right - 1),
       scrolls: document.documentElement.scrollHeight > vh + 1,
     };
   });
@@ -288,7 +291,7 @@ for (const d of DEVICES) {
     console.error(`  ✗ ${d.slot}: Draw actions below the fold (save@${dw.saveBottom} discard@${dw.discardBottom} vh=${dw.vh})`);
     failed++;
   }
-  if (!dw.actionsAboveCanvas) { console.error(`  ✗ ${d.slot}: Draw actions are not above the canvas`); failed++; }
+  if (!dw.actionsAboveCanvas) { console.error(`  ✗ ${d.slot}: Draw actions are not above (or beside) the canvas`); failed++; }
   if (dw.scrolls) { console.error(`  ✗ ${d.slot}: Draw view scrolls`); failed++; }
   console.log(
     `${"".padEnd(9)} draw canvas ${dw.canvasW}x${dw.canvasH}` +
