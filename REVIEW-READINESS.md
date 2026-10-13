@@ -91,8 +91,11 @@ the whole screen, and turning your iPad or Duo sideways gives you a two-column
 layout with your journal beside today's invitation and a bigger page to draw on.
 
 **Screenshots.** `screenshots/ipad13/` re-rendered from this build (2048x2732).
-This repo has no screenshot-upload lane: they go into App Store Connect by hand
-(13" iPad slot) when the version is prepared — see §A7.
+The `release` lane (`scripts/release.py`, ported from Slow Burn) uploads
+`screenshots/iphone69/`, `iphone65/` and `ipad13/` to the 6.9", 6.5" and 13" iPad
+slots when a committed `release.json` says `"screenshots": true`; What's New comes
+from `release-notes/1.8.0.txt`. No `release.json` is committed until Jonathan says
+"ship".
 
 ---
 

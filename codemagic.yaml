@@ -22,6 +22,13 @@ workflows:
           source: true
       # A newer push supersedes an in-flight build of the same branch.
       cancel_previous_builds: true
+    # Committing release.json is the ship gesture, not a code change: it starts only
+    # the `release` workflow below. (A changeset filter is a hint, not a guard — a
+    # stray build here is a harmless duplicate upload.)
+    when:
+      changeset:
+        excludes:
+          - 'release.json'
     integrations:
       app_store_connect: ChordLoopAPIKey   # reusing your existing account-wide App Store Connect API key
     environment:
@@ -440,6 +447,12 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+      email:
+        recipients:
+          - jonathanbbiles@gmail.com
+        notify:
+          success: true
+          failure: true
 
         # --- REVIEW-SUBMIT TOGGLE — deliberately OFF ---------------------------
         # As written, every green build goes to TestFlight and stops there.
@@ -455,3 +468,61 @@ workflows:
         # See PLAYBOOK.md "Submitting for review without the browser".
         # submit_to_app_store: true
         # release_type: MANUAL      # MANUAL | AFTER_APPROVAL | SCHEDULED
+
+  # --- App Store release lane ------------------------------------------------
+  # Ported from Slow Burn's proven lane (it submitted Slow Burn 1.2). Committing
+  # release.json to main IS the "ship": this workflow submits the named, already
+  # device-tested TestFlight build for review via scripts/release.py, which reads the
+  # submission back before it ever sends submitted:true. Nothing here builds or
+  # uploads a binary, and nothing declares submit_to_app_store.
+  release:
+    name: Permission -> submit for App Store review
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: false
+    when:
+      changeset:
+        includes:
+          - 'release.json'
+    integrations:
+      app_store_connect: ChordLoopAPIKey
+    environment:
+      vars:
+        BUNDLE_ID: "com.jonathanbiles.permission"
+        ASC_APP_ID: "6789405787"
+      node: 22
+    scripts:
+      - name: Release gate (the lane against a fake App Store Connect)
+        script: node scripts/verify-release.js
+      - name: Submit the tested build for review, then read the submission back
+        script: |
+          set -e
+          # The changeset filter is not a guarantee, so the lane checks for itself and
+          # acts only when THIS push changed release.json; a deliberate re-run sets
+          # FORCE_RELEASE=1.
+          if [ "${FORCE_RELEASE:-0}" != 1 ]; then
+            git rev-parse -q --verify HEAD~1 >/dev/null || git fetch -q --deepen=1 origin || true
+            CHANGED="$(git diff --name-only HEAD~1 HEAD -- release.json)" \
+              || { echo "ERROR: cannot diff against HEAD~1; re-run with FORCE_RELEASE=1"; exit 1; }
+            [ -n "$CHANGED" ] || { echo "release.json did not change in this push: nothing to release."; exit 0; }
+          fi
+          # codemagic-cli-tools' interpreter carries PyJWT; release.py falls back to openssl.
+          CLI_PY="$(head -1 "$(command -v app-store-connect)" | sed 's|^#!||' | awk '{print $1}')"
+          [ -x "$CLI_PY" ] || CLI_PY=python3
+          "$CLI_PY" scripts/release.py "${RELEASE_FILE:-release.json}"
+    artifacts:
+      - release-status.json
+    publishing:
+      email:
+        recipients:
+          - jonathanbbiles@gmail.com
+        notify:
+          success: true
+          failure: true
