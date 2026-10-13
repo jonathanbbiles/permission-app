@@ -4,7 +4,7 @@
   "private": true,
   "description": "Permission \u2014 a private journal (native iOS via Capacitor)",
   "scripts": {
-    "test": "node test/permission.test.mjs",
+    "test": "node test/permission.test.mjs && node scripts/verify-release.js",
     "verify:transcription": "node scripts/verify-transcription.mjs",
     "verify:no-network": "node scripts/verify-no-network.mjs",
     "verify:layout": "node scripts/check-layout.mjs"

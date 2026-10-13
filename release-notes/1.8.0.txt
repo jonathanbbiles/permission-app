@@ -1,0 +1,5 @@
+Now made for iPad and the iPhone Duo.
+
+Permission fills the whole screen on iPad, upright or sideways, and on the iPhone Duo, open or closed. Turn it sideways and it spreads into two columns: your journal beside today's invitation, and a bigger page to draw on, with the drawing tools in a side column.
+
+Held upright on iPhone, Permission looks just as it did. Everything still stays on your device.
