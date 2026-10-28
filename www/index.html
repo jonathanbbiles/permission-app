@@ -982,6 +982,7 @@
   <a id="siteLink" href="https://jessicaleighbiles.com" target="_blank" rel="noopener">A gift from Jessica Leigh Biles &#8599;</a>
   <div style="margin-top:6px;">your words never leave this phone</div>
   <div style="margin-top:6px;">Built by <a id="makerLink" href="https://jonathanscribbles.com" target="_blank" rel="noopener">jonathanscribbles.com &#8599;</a></div>
+  <div style="margin-top:12px;">A companion to <a id="slowburnLink" href="https://apps.apple.com/app/apple-store/id6787719986?pt=129125244&amp;ct=app-permission&amp;mt=8" target="_blank" rel="noopener">Open Slow Burn &#8599;</a></div>
 </div>
 
 <!-- SETTINGS SHEET -->
@@ -2975,6 +2976,11 @@
      ============================================================ */
   var SITE_URL="https://jessicaleighbiles.com";     // the app is a gift for Jessica's clients — her site stays the headline link
   var MAKER_URL="https://jonathanscribbles.com";    // who built it
+  /* Slow Burn, the closeness program from the same creators, has a reciprocal
+     "Open Permission" link; this is its mirror. A campaign link (ct=app-permission)
+     so App Analytics shows the installs Permission sends. Opens via the same
+     openSite() path as every other external link — no network from the app itself. */
+  var SLOWBURN_STORE="https://apps.apple.com/app/apple-store/id6787719986?pt=129125244&ct=app-permission&mt=8";
   function openSite(url){
     url = url || SITE_URL;
     var Browser=capPlugin("Browser");
@@ -2987,6 +2993,7 @@
   $("setSite").addEventListener("click", function(){ openSite(SITE_URL); });
   $("makerLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(MAKER_URL); });
   $("setMaker").addEventListener("click", function(){ openSite(MAKER_URL); });
+  $("slowburnLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(SLOWBURN_STORE); });
 
   /* ============================================================
      SETTINGS SHEET
