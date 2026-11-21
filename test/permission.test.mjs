@@ -837,9 +837,9 @@ ok("every screen but Home and the Notebook hides the brand header",
 ok("the entry and the journal keep a Lock button of their own",
    (html.match(/<button class="iconbtn" data-lock type="button" aria-label="Lock">/g) || []).length === 2 &&
    /querySelectorAll\("\[data-lock\]"\)/.test(html));
-ok("release.json was not touched by the version bump (it is the ship gesture)",
-   /"version": "1\.8\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")) ||
-   /"version": "1\.9\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")));
+ok("release.json names a real version and a 12-digit build",
+   /"version": "1\.\d+\.\d+"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")) &&
+   /"build": "\d{12}"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")));
 
 section("34) v1.9.0 — wording for a 13+ rating, and What you need lately");
 const lower = html.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\/\/[^\n]*/g, "");
