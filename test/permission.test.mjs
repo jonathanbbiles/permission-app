@@ -867,6 +867,14 @@ ok("it opens from Settings and from Affirm, and goes back where it came from",
 ok("a running practice waits while the questions are open",
    /if\(mRun && mRun\.plan\[mRun\.i\]\.timed && !mRun\.paused && !mRun\.rang\)\{ mPauseTap\(\); knResume=true; \}/.test(html));
 ok("the questions screen is themed like the other full-screen overlays", /#know\{position:fixed; inset:0/.test(html));
+const promptText = (html.match(/var PROMPTS=\[([\s\S]*?)\n  \];/) || ["", ""])[1];
+ok("no prompt uses the words pleasure, desire or intimate (13+ wording)", !/pleasure|desire|intimate/i.test(promptText));
+ok("the prompt pool is the same size as before the rewording", (promptText.match(/\{t:"/g) || []).length === 94);
+ok("the app no longer points to Slow Burn, in the footer or the store description",
+   !/id="slowburnLink"/.test(html) && !/\$\("slowburnLink"\)/.test(html) &&
+   !/Slow Burn/.test(fs.readFileSync(path.join(ROOT, "store/listing.json"), "utf8")) &&
+   !/Slow Burn/.test(fs.readFileSync(path.join(ROOT, "store/listing-1.9.0.json"), "utf8")));
+ok("Slow Burn can still open Permission by its URL scheme", /permissionjournal/.test(cm));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));
