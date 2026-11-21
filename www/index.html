@@ -593,6 +593,113 @@
     #v-notebook #nbTools{grid-row:4;}
   }
 
+
+  /* ============================================================
+     ONE HEADER PER SCREEN (1.9.0)
+     Write, Record, Draw, an entry, the journal and Morning each carry their
+     own back button and title, exactly as the Notebook has since 1.3.x. The
+     brand header above them was a second header; hiding it hands ~70pt back
+     to the page. Home keeps it. The entry and the journal get their own Lock
+     button, because those are the screens you might want to close quickly.
+     ============================================================ */
+  body.sub-view header{display:none;}
+
+  /* ============================================================
+     AUDIO PLAYER (1.9.0) — the app's own, instead of the system's grey pill,
+     which also read "0:00 / 0:00" for a fresh recording because WebKit does
+     not know a MediaRecorder file's length. The length we measured while
+     recording is used whenever the file cannot say.
+     ============================================================ */
+  .player{display:flex; align-items:center; gap:12px; background:var(--surface2); border-radius:999px; padding:8px 16px 8px 8px;}
+  .pl-btn{width:44px; height:44px; border-radius:50%; border:0; flex:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent); transition:transform .12s;}
+  .pl-btn:active{transform:scale(.93);}
+  .pl-btn svg{width:18px; height:18px;}
+  .pl-seek{flex:1; min-width:0; height:44px; margin:0; padding:0; background:transparent; -webkit-appearance:none; appearance:none; touch-action:none; cursor:pointer;}
+  .pl-seek::-webkit-slider-runnable-track{height:5px; border-radius:3px; background:linear-gradient(90deg,var(--accent) var(--pl,0%),var(--line2) var(--pl,0%));}
+  .pl-seek::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:var(--accent); margin-top:-6.5px; box-shadow:0 2px 5px rgba(0,0,0,.22);}
+  .pl-seek:focus{outline:none;}
+  .pl-time{font-size:12.5px; color:var(--ink-soft); font-weight:600; flex:none; font-variant-numeric:tabular-nums;}
+  #playbackWrap{margin-top:14px;}
+
+  /* ============================================================
+     MORNING (1.9.0) — six quiet practices before the day begins.
+     No streak, no score, no reminder: it is there if you want it.
+     ============================================================ */
+  .morningcard{display:flex; align-items:center; gap:13px; width:100%; text-align:left; font-family:inherit; cursor:pointer;
+    background:linear-gradient(180deg,var(--panel),var(--panel-tint)); border:1px solid var(--accent-soft); border-radius:var(--radius);
+    padding:13px 16px; margin:0 0 14px; box-shadow:var(--shadow-soft); color:var(--ink); transition:transform .12s; min-height:44px;}
+  .morningcard:active{transform:scale(.985);}
+  .morningcard .ic{width:46px; height:46px; border-radius:14px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
+  .morningcard .ic svg{width:23px; height:23px;}
+  .morningcard .tx{flex:1; min-width:0; display:block;}
+  .morningcard .nm{display:block; font-size:15px; font-weight:700; letter-spacing:.2px;}
+  .morningcard .dsc{display:block; font-size:12px; color:var(--muted); margin-top:2px;}
+  .morningcard .chev{color:var(--faint); flex:none; display:flex;}
+
+  #v-morning{max-width:620px; margin-left:auto; margin-right:auto;}
+  .m-label{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800; margin:4px 2px 8px;}
+  .m-steps{display:flex; flex-direction:column; gap:8px; margin-bottom:16px;}
+  .m-step{display:flex; align-items:center; gap:12px; width:100%; text-align:left; font-family:inherit; cursor:pointer;
+    background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line2); border-radius:var(--radius-sm);
+    padding:10px 13px; color:var(--ink); min-height:56px; transition:opacity .15s, transform .12s;}
+  .m-step:active{transform:scale(.985);}
+  .m-step .ic{width:36px; height:36px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent);}
+  .m-step .ic svg{width:18px; height:18px;}
+  .m-step .tx{flex:1; min-width:0; display:block;}
+  .m-step .nm{display:block; font-size:14.5px; font-weight:700;}
+  .m-step .dsc{display:block; font-size:12px; color:var(--muted); margin-top:1px;}
+  .m-step .ck{width:24px; height:24px; border-radius:50%; flex:none; border:2px solid var(--line2); display:flex; align-items:center; justify-content:center; color:transparent;}
+  .m-step .ck svg{width:14px; height:14px;}
+  .m-step[aria-pressed="true"] .ck{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+  .m-step[aria-pressed="false"]{opacity:.55;}
+  .m-row{display:flex; align-items:center; gap:12px; margin:0 2px 18px;}
+  .m-row .tx{flex:1; min-width:0;}
+  .m-row .t{font-size:14px; font-weight:700; color:var(--ink);}
+  .m-row .s{font-size:12px; color:var(--muted); margin-top:1px; line-height:1.4;}
+  .m-credit{font-size:12px; color:var(--muted); line-height:1.55; text-align:center; margin:20px 6px 6px;}
+  .m-credit .textlink{font-size:12.5px; min-height:44px;}
+  .m-dots{display:flex; gap:6px; margin:0 2px 14px;}
+  .m-dots i{flex:1; height:5px; border-radius:3px; background:var(--line2);}
+  .m-dots i.done{background:var(--accent);}
+  .m-dots i.now{background:var(--accent); opacity:.45;}
+  .m-stage{text-align:center; padding:24px 18px 22px;}
+  .m-kick{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800;}
+  .m-name{font-size:30px; text-transform:uppercase; letter-spacing:.6px; font-weight:700; color:var(--ink); margin:6px 0 8px; font-family:var(--display); line-height:1.15;}
+  .m-guide{font-size:15px; line-height:1.55; color:var(--ink-soft); max-width:420px; margin:0 auto;}
+  .m-ring{position:relative; width:190px; height:190px; margin:20px auto 2px;}
+  .m-ring svg{position:relative; width:100%; height:100%; transform:rotate(-90deg);}
+  .m-ring .trk{fill:none; stroke:var(--line2); stroke-width:8;}
+  .m-ring .bar{fill:none; stroke:var(--accent); stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset .3s linear;}
+  .m-time{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:44px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .m-ring.breathe::before{content:""; position:absolute; inset:24px; border-radius:50%; background:var(--accent-soft); opacity:.6; animation:mBreathe 9s ease-in-out infinite;}
+  @keyframes mBreathe{0%,100%{transform:scale(.7);} 45%,55%{transform:scale(1);}}
+  @media (prefers-reduced-motion: reduce){ .m-ring.breathe::before{animation:none;} }
+  #mAffirmWrap{margin-top:16px; text-align:left;}
+  #mAffirm{min-height:112px; font-size:16px; line-height:1.55;}
+  #mAffirmWrap .count{text-align:left;}
+  #mWriteWrap{margin-top:18px; text-align:left;}
+  #mWriteWrap .promptmini{margin-bottom:0;}
+  .m-doneic{width:64px; height:64px; border-radius:20px; margin:2px auto 12px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
+  .m-doneic svg{width:32px; height:32px;}
+  @media (min-width: 600px){
+    .morningcard{padding:18px 22px; margin-bottom:18px;}
+    .morningcard .nm{font-size:17px;} .morningcard .dsc{font-size:13.5px;}
+    .m-name{font-size:38px;} .m-guide{font-size:17px;}
+    .m-ring{width:230px; height:230px;} .m-time{font-size:54px;}
+  }
+  /* Landscape Home is an explicit two-column grid, so the card is placed by
+     row, not by where it sits in the page: beside the Mix/Quick/Deep/Playful
+     row, at the top of the journal column, whatever the time of day. Under
+     the tiles it would be below the fold on an 11-inch iPad. */
+  @media (min-width: 760px) and (orientation: landscape){
+    #v-home .depths{grid-column:1; align-self:center;}
+    #v-home #cardMorning{grid-column:2; grid-row:2; align-self:center; margin:0 0 14px;}
+  }
+
   /* entry viewer */
   .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
   .viewer .body{font-size:17px; line-height:1.68; color:var(--ink-soft); font-family:var(--body); white-space:pre-wrap; word-wrap:break-word;}
@@ -809,6 +916,14 @@
     </div>
   </div>
 
+  <!-- Morning: six quiet practices. showApp() moves this card to the top of
+       Home before noon and leaves it under the four tiles for the rest of the day. -->
+  <button class="morningcard" id="cardMorning" type="button">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7"/><path d="M4.22 10.22l1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="M18.36 11.64l1.42-1.42"/><path d="M23 22H1"/><path d="M8 6l4-4 4 4"/></svg></span>
+    <span class="tx"><span class="nm">Morning</span><span class="dsc" id="morningSub">Six quiet practices to begin the day</span></span>
+    <span class="chev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+  </button>
+
   <div class="sechead">
     <h3 class="serif">Your journal</h3>
     <button class="textlink" id="viewAll" style="display:none;">See all &rsaquo;</button>
@@ -816,11 +931,82 @@
   <div id="homeList"></div>
 </div>
 
+<!-- MORNING (1.9.0) -->
+<div class="view" id="v-morning">
+  <div class="editor-head">
+    <button class="iconbtn back" id="mBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Morning</div>
+  </div>
+
+  <div id="mSetup">
+    <div class="promptmini">
+      <div class="k">A gentle start</div>
+      <div class="q">Six small practices before the day asks anything of you. Do them all, or only the ones you want.</div>
+    </div>
+    <div class="m-label">Minutes for each</div>
+    <div class="modeseg" id="mMinutes">
+      <button type="button" data-min="1">1</button>
+      <button type="button" data-min="2">2</button>
+      <button type="button" data-min="5">5</button>
+      <button type="button" data-min="10">10</button>
+    </div>
+    <div class="m-label">This morning</div>
+    <div class="m-steps" id="mSteps"></div>
+    <div class="m-row">
+      <div class="tx"><div class="t">Chime when time is up</div><div class="s">Off unless you turn it on. It may pause music that is playing.</div></div>
+      <div class="toggle" id="mChime" role="switch" tabindex="0" aria-label="Chime when time is up" aria-checked="false"><div class="kn"></div></div>
+    </div>
+    <button class="btn primary" id="mBegin" type="button">Begin</button>
+    <div class="m-credit">
+      This practice is inspired by the S.A.V.E.R.S. routine in Hal Elrod&rsquo;s book <em>The Miracle Morning</em>.
+      Permission is an independent app and is not affiliated with or endorsed by Hal Elrod or Miracle Morning.<br/>
+      <button class="textlink" id="mCreditLink" type="button">Find the book &#8599;</button>
+    </div>
+  </div>
+
+  <div id="mRun" class="hidden">
+    <div class="m-dots" id="mDots"></div>
+    <div class="card m-stage">
+      <div class="m-kick" id="mKick"></div>
+      <div class="m-name" id="mName"></div>
+      <div class="m-guide" id="mGuide"></div>
+      <div class="m-ring" id="mRing">
+        <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="trk" cx="60" cy="60" r="54"/><circle class="bar" id="mBar" cx="60" cy="60" r="54"/></svg>
+        <div class="m-time" id="mTime">0:00</div>
+      </div>
+      <div id="mAffirmWrap" class="hidden">
+        <textarea id="mAffirm" placeholder="I am allowed to begin." aria-label="Your affirmations"></textarea>
+        <div class="count">Yours to keep. They will be here tomorrow morning.</div>
+      </div>
+      <div id="mWriteWrap" class="hidden">
+        <div class="promptmini"><div class="k">Today&rsquo;s invitation</div><div class="q" id="mInvite"></div></div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn ghost" id="mPause" type="button">Pause</button>
+      <button class="btn primary" id="mNext" type="button">Next</button>
+    </div>
+  </div>
+
+  <div id="mDone" class="hidden">
+    <div class="card m-stage">
+      <div class="m-doneic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7"/><path d="M4.22 10.22l1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="M18.36 11.64l1.42-1.42"/><path d="M23 22H1"/><path d="M8 6l4-4 4 4"/></svg></div>
+      <div class="m-name">That&rsquo;s your morning</div>
+      <div class="m-guide" id="mDoneSum"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn ghost" id="mDoneKeep" type="button">Keep a note</button>
+      <button class="btn primary" id="mDoneClose" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- JOURNAL (all entries) -->
 <div class="view" id="v-journal">
   <div class="editor-head">
     <button class="iconbtn back" data-back="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="ttl serif">Your journal</div>
+    <button class="iconbtn" data-lock type="button" aria-label="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
   </div>
   <div id="allList"></div>
 </div>
@@ -871,7 +1057,7 @@
           <button class="btn small" id="recDone" type="button">Done</button>
           <button class="btn small ghost danger hidden" id="recRestart" type="button">Start over</button>
         </div>
-        <div id="playbackWrap" class="hidden"><audio id="playback" controls playsinline></audio></div>
+        <div id="playbackWrap" class="hidden"><div id="playbackUi"></div><audio id="playback" playsinline preload="metadata"></audio></div>
       </div>
     </div>
 
@@ -966,6 +1152,7 @@
   <div class="editor-head">
     <button class="iconbtn back" id="entryBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="ttl serif">Entry</div>
+    <button class="iconbtn" data-lock type="button" aria-label="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
   </div>
   <div class="prompt" style="margin-bottom:16px;">
     <div style="font-size:12px; color:var(--accent-deep); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:8px;" id="eDate"></div>
@@ -1051,7 +1238,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.8.0</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.9.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -1061,7 +1248,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.8.0";
+  var APP_VERSION = "1.9.0";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1604,6 +1791,14 @@
     // nb-open / draw-open: that canvas view also FITS, so page scrolling can be
     // locked. All are cleared on the way out so no other view inherits them.
     document.body.classList.toggle("nb-view", id==="notebook");
+    // sub-view: every screen but Home carries its own back button and title,
+    // so the brand header is hidden there (the Notebook already did this).
+    document.body.classList.toggle("sub-view", id!=="home" && id!=="notebook");
+    // Leaving Morning by any route (back, lock, an entry) stops its timer,
+    // lets the screen sleep again and releases the chime.
+    if(id!=="morning") mStop();
+    // A recording does not keep playing behind another screen.
+    if(id!=="entry"){ var ea=document.getElementById("eAudio"); if(ea){ try{ ea.pause(); }catch(e){} } }
     if(id!=="notebook") document.body.classList.remove("nb-open");
     if(id!=="draw") document.body.classList.remove("draw-open");
     $("appFoot").style.display = (id==="home") ? "" : "none";
@@ -1613,7 +1808,7 @@
     document.querySelectorAll(".depth").forEach(function(b){ b.classList.toggle("on", b.dataset.depth===promptMode); });
     pickPrompt(false);
     $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate();
-    updateProfileSub();
+    updateProfileSub(); placeMorningCard();
     refreshLists(); showView("home");
   }
 
@@ -2191,6 +2386,7 @@
       trShowFailure("bad-audio"); return;
     }
     $("playback").src=URL.createObjectURL(recBlob);
+    bindPlayer($("playbackUi"), $("playback"), recSeconds);
     $("playbackWrap").classList.remove("hidden");
     recSetState("finished");
     // The recorder has released the microphone and the audio session, so it is
@@ -2917,8 +3113,9 @@
          recording without one is simply a recording — no apologetic note. */
       var tr=(e.transcript||"").trim();
       box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Voice reflection · '+fmtTime(e.duration||0)+'</div>'+
-        '<audio controls playsinline src="'+curObjUrl+'" style="width:100%"></audio>'+
-        (tr ? '<div class="tr-lbl" style="margin:18px 0 8px;">Transcript</div><div class="body">'+escapeHtml(tr)+'</div>' : ''); }
+        '<div id="ePlayer"></div><audio id="eAudio" playsinline preload="metadata" src="'+curObjUrl+'"></audio>'+
+        (tr ? '<div class="tr-lbl" style="margin:18px 0 8px;">Transcript</div><div class="body">'+escapeHtml(tr)+'</div>' : '');
+      bindPlayer($("ePlayer"), $("eAudio"), e.duration||0); }
     else if(e.type==="video"){ curObjUrl=URL.createObjectURL(e.video);
       box.innerHTML='<div style="text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px;">Video reflection</div>'+
         '<video class="vid" controls playsinline preload="metadata" src="'+curObjUrl+'"></video>'; }
@@ -2996,6 +3193,243 @@
   $("slowburnLink").addEventListener("click", function(ev){ ev.preventDefault(); openSite(SLOWBURN_STORE); });
 
   /* ============================================================
+     AUDIO PLAYER (1.9.0)
+     One small player for the take preview and for a saved voice entry: a
+     play/pause button, a scrubber and the time. `knownSec` is the length
+     measured while recording — WebKit reports Infinity for a MediaRecorder
+     file, which is why the system control showed "0:00 / 0:00".
+     ============================================================ */
+  var PL_PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>';
+  var PL_PAUSE='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4.5" height="14" rx="1.2"/><rect x="13.5" y="5" width="4.5" height="14" rx="1.2"/></svg>';
+  function bindPlayer(host, audio, knownSec){
+    host.innerHTML='<div class="player"><button class="pl-btn" type="button" aria-label="Play">'+PL_PLAY+'</button>'+
+      '<input class="pl-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Position in the recording"/>'+
+      '<div class="pl-time"></div></div>';
+    var btn=host.querySelector(".pl-btn"), seek=host.querySelector(".pl-seek"), time=host.querySelector(".pl-time"), dragging=false;
+    function dur(){ var d=audio.duration; return (isFinite(d) && d>0) ? d : (knownSec||0); }
+    function paint(){
+      var d=dur(), c=audio.currentTime||0; if(d && c>d) c=d;
+      time.textContent=fmtTime(c)+" / "+fmtTime(d);
+      if(!dragging){ var f=d?Math.min(1,c/d):0; seek.value=String(Math.round(f*1000)); seek.style.setProperty("--pl",(f*100)+"%"); }
+      var playing=!audio.paused && !audio.ended;
+      if(btn._playing!==playing){ btn._playing=playing; btn.innerHTML=playing?PL_PAUSE:PL_PLAY; btn.setAttribute("aria-label",playing?"Pause":"Play"); }
+    }
+    if(audio._plOff) audio._plOff();   // the take preview reuses one <audio>
+    var evs=["timeupdate","play","pause","ended","loadedmetadata","durationchange","emptied"];
+    evs.forEach(function(n){ audio.addEventListener(n, paint); });
+    audio._plOff=function(){ evs.forEach(function(n){ audio.removeEventListener(n, paint); }); };
+    btn.addEventListener("click", function(){
+      if(audio.paused || audio.ended){
+        if(audio.ended){ try{ audio.currentTime=0; }catch(e){} }
+        var p=audio.play(); if(p && p.catch) p.catch(function(){ toast("Couldn’t play this recording"); });
+      } else { audio.pause(); }
+      haptic(6);
+    });
+    seek.addEventListener("input", function(){ dragging=true; var f=seek.value/1000, d=dur();
+      seek.style.setProperty("--pl",(f*100)+"%"); time.textContent=fmtTime(f*d)+" / "+fmtTime(d); });
+    seek.addEventListener("change", function(){ var d=dur();
+      if(d){ try{ audio.currentTime=(seek.value/1000)*d; }catch(e){} }
+      dragging=false; paint(); });
+    paint();
+  }
+
+  /* ============================================================
+     MORNING (1.9.0)
+     Six quiet practices: Silence, Affirm, Picture, Move, Read, Write.
+     Inspired by the S.A.V.E.R.S. routine in Hal Elrod's The Miracle Morning
+     and credited on the screen itself; Permission is not affiliated.
+
+     Rules this keeps:
+       - no streak, no score, no reminder. The only thing remembered is that
+         today's is done, so the Home card can say so.
+       - a running practice is an END TIME, never a counter: the clock is
+         right after the phone sleeps or the app is put away and brought back.
+       - nothing leaves the phone and nothing is fetched. The one link opens
+         the book's site in the browser, like the other links in the app.
+       - the chime is off unless asked for. It is the only sound, it is made
+         with Web Audio only while a practice runs, and it is released the
+         moment the practice ends so recording is never affected.
+     ============================================================ */
+  var LSK_M_MIN="perm_morning_min", LSK_M_OFF="perm_morning_off", LSK_M_CHIME="perm_morning_chime",
+      LSK_M_LAST="perm_morning_last", LSK_AFFIRM="perm_affirm";
+  var BOOK_URL="https://miraclemorning.com";
+  function mSvg(inner){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>'; }
+  var M_STEPS=[
+    {id:"silence", nm:"Silence", timed:true, dsc:"Sit and breathe. Nothing to fix.",
+      guide:"Sit comfortably and breathe slowly. Let thoughts pass without following them.",
+      ic:mSvg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>')},
+    {id:"affirm", nm:"Affirm", timed:true, dsc:"Say what is true and kind.",
+      guide:"Read these aloud, or quietly to yourself. Change them whenever they stop being true.",
+      ic:mSvg('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>')},
+    {id:"picture", nm:"Picture", timed:true, dsc:"See today going well.",
+      guide:"Close your eyes. Picture one moment of today going well, in detail. Where are you? How does it feel?",
+      ic:mSvg('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')},
+    {id:"move", nm:"Move", timed:true, dsc:"Stretch, walk, dance in the kitchen.",
+      guide:"Stretch, walk, shake it out, dance in the kitchen. Any movement counts.",
+      ic:mSvg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>')},
+    {id:"read", nm:"Read", timed:true, dsc:"A page or two that feeds you.",
+      guide:"A page or two of anything that feeds you. Slowly.",
+      ic:mSvg('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>')},
+    {id:"write", nm:"Write", timed:false, dsc:"Finish on today’s page.",
+      guide:"Finish on the page. Today’s invitation is waiting for you.",
+      ic:mSvg('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>')}
+  ];
+  var M_CHECK=mSvg('<path d="M20 6L9 17l-5-5"/>');
+  var M_RING_C=2*Math.PI*54;
+  function lsGet(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function mMin(){ var n=parseInt(lsGet(LSK_M_MIN,"2"),10); return [1,2,5,10].indexOf(n)>=0 ? n : 2; }
+  function mOff(){ try{ var a=JSON.parse(lsGet(LSK_M_OFF,"[]")); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function mPlan(){ var off=mOff(); return M_STEPS.filter(function(st){ return off.indexOf(st.id)<0; }); }
+  function mTotalMin(){ return mPlan().filter(function(st){ return st.timed; }).length*mMin(); }
+  function mChimeOn(){ return lsGet(LSK_M_CHIME,"0")==="1"; }
+  function todayKey(){ var d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+  function mDoneToday(){ return lsGet(LSK_M_LAST,"")===todayKey(); }
+
+  /* Home: at the top before noon, under the four tiles after. One element,
+     moved — so there is exactly one Morning card whatever the hour. */
+  function placeMorningCard(){
+    var c=$("cardMorning"), home=$("v-home");
+    var am=new Date().getHours()<12;
+    home.insertBefore(c, am ? $("depths") : home.querySelector(".sechead"));
+    var n=mPlan().length, t=mTotalMin();
+    $("morningSub").textContent = mDoneToday() ? "Done for today. Come back whenever you like."
+      : (n===M_STEPS.length ? "Six quiet practices" : (n+(n===1?" quiet practice":" quiet practices")))+(t ? " · about "+t+" minutes" : "");
+  }
+
+  function mShow(which){ ["mSetup","mRun","mDone"].forEach(function(id){ $(id).classList.toggle("hidden", id!==which); }); window.scrollTo(0,0); }
+  function mPaintSetup(){
+    var min=mMin(), off=mOff(), t=mTotalMin(), n=mPlan().length;
+    $("mMinutes").querySelectorAll("button").forEach(function(b){ var on=parseInt(b.dataset.min,10)===min; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on?"true":"false"); });
+    $("mSteps").querySelectorAll(".m-step").forEach(function(b){ b.setAttribute("aria-pressed", off.indexOf(b.dataset.step)<0 ? "true" : "false"); });
+    var ch=$("mChime"); ch.classList.toggle("on", mChimeOn()); ch.setAttribute("aria-checked", mChimeOn()?"true":"false");
+    var bg=$("mBegin"); bg.disabled = n===0; bg.style.opacity = n===0 ? ".5" : "";
+    bg.textContent = n===0 ? "Choose at least one" : ("Begin" + (t ? " · " + t + " min" : ""));
+  }
+  function buildMorning(){
+    var wrap=$("mSteps"); wrap.innerHTML="";
+    M_STEPS.forEach(function(st){
+      var b=document.createElement("button"); b.type="button"; b.className="m-step"; b.dataset.step=st.id;
+      b.innerHTML='<span class="ic">'+st.ic+'</span><span class="tx"><span class="nm">'+st.nm+'</span><span class="dsc">'+escapeHtml(st.dsc)+'</span></span><span class="ck">'+M_CHECK+'</span>';
+      b.addEventListener("click", function(){
+        var off=mOff(), i=off.indexOf(st.id);
+        if(i>=0) off.splice(i,1); else off.push(st.id);
+        lsSet(LSK_M_OFF, JSON.stringify(off)); haptic(6); mPaintSetup();
+      });
+      wrap.appendChild(b);
+    });
+    $("mMinutes").querySelectorAll("button").forEach(function(b){ b.addEventListener("click", function(){ lsSet(LSK_M_MIN, b.dataset.min); haptic(6); mPaintSetup(); }); });
+    var flipChime=function(){ lsSet(LSK_M_CHIME, mChimeOn()?"0":"1"); haptic(6); mPaintSetup(); };
+    $("mChime").addEventListener("click", flipChime);
+    $("mChime").addEventListener("keydown", function(ev){ if(ev.key===" "||ev.key==="Enter"){ ev.preventDefault(); flipChime(); } });
+    $("cardMorning").addEventListener("click", function(){ haptic(10); openMorning(); });
+    $("mBegin").addEventListener("click", mBegin);
+    $("mBack").addEventListener("click", function(){ if(mRun){ mStop(); mPaintSetup(); mShow("mSetup"); } else { showApp(); } });
+    $("mPause").addEventListener("click", mPauseTap);
+    $("mNext").addEventListener("click", mNextTap);
+    $("mAffirm").addEventListener("input", function(){ lsSet(LSK_AFFIRM, $("mAffirm").value); });
+    $("mCreditLink").addEventListener("click", function(){ openSite(BOOK_URL); });
+    $("mDoneClose").addEventListener("click", function(){ showApp(); });
+    $("mDoneKeep").addEventListener("click", mKeepNote);
+    document.addEventListener("visibilitychange", function(){ if(mRun && document.visibilityState==="visible"){ mWake(true); mPaintTime(); } });
+  }
+  function openMorning(){ mStop(); mPaintSetup(); showView("morning"); mShow("mSetup"); }
+
+  /* ---- a running practice ---- */
+  var mRun=null, mTimer=null, mLock=null, mCtx=null, mDoneIds=[];
+  function mWake(on){
+    try{
+      if(on){ if(!mLock && navigator.wakeLock && navigator.wakeLock.request){
+        navigator.wakeLock.request("screen").then(function(l){ mLock=l; if(l.addEventListener) l.addEventListener("release", function(){ if(mLock===l) mLock=null; }); }).catch(function(){}); } }
+      else if(mLock){ var l=mLock; mLock=null; Promise.resolve(l.release()).catch(function(){}); }
+    }catch(e){}
+  }
+  function mAudioOn(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if(AC){ mCtx=new AC(); if(mCtx.resume) Promise.resolve(mCtx.resume()).catch(function(){}); } }catch(e){ mCtx=null; } }
+  function mAudioOff(){ if(mCtx){ var c=mCtx; mCtx=null; try{ Promise.resolve(c.close()).catch(function(){}); }catch(e){} } }
+  function mChime(){
+    if(!mCtx) return;
+    try{ var t=mCtx.currentTime;
+      [660,880].forEach(function(f,k){ var o=mCtx.createOscillator(), g=mCtx.createGain(), at=t+k*0.34;
+        o.type="sine"; o.frequency.value=f;
+        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.16, at+0.04); g.gain.exponentialRampToValueAtTime(0.0001, at+1.4);
+        o.connect(g); g.connect(mCtx.destination); o.start(at); o.stop(at+1.5); });
+    }catch(e){}
+  }
+  function mStopTick(){ if(mTimer){ clearInterval(mTimer); mTimer=null; } }
+  function mStop(){ mStopTick(); mWake(false); mAudioOff(); mRun=null; }
+  function mBegin(){
+    var plan=mPlan(); if(!plan.length) return;
+    mStop();
+    mRun={plan:plan, i:0, total:0, left:0, endsAt:0, paused:false, rang:false}; mDoneIds=[];
+    mWake(true); if(mChimeOn()) mAudioOn();
+    haptic(10); mShow("mRun"); mStep(0);
+  }
+  function mStep(i){
+    var r=mRun, st=r.plan[i]; r.i=i; r.rang=false; r.paused=false;
+    $("mKick").textContent=(i+1)+" of "+r.plan.length;
+    $("mName").textContent=st.nm; $("mGuide").textContent=st.guide;
+    var dots=$("mDots"); dots.innerHTML="";
+    r.plan.forEach(function(_,k){ var d=document.createElement("i"); if(k<i) d.className="done"; else if(k===i) d.className="now"; dots.appendChild(d); });
+    $("mAffirmWrap").classList.toggle("hidden", st.id!=="affirm");
+    if(st.id==="affirm") $("mAffirm").value=lsGet(LSK_AFFIRM,"");
+    $("mWriteWrap").classList.toggle("hidden", st.id!=="write");
+    if(st.id==="write") $("mInvite").textContent=currentPrompt;
+    $("mRing").classList.toggle("hidden", !st.timed);
+    $("mRing").classList.toggle("breathe", st.id==="silence");
+    mStopTick();
+    if(st.timed){
+      r.total=mMin()*60000; r.left=r.total; r.endsAt=Date.now()+r.total;
+      $("mPause").textContent="Pause"; $("mPause").disabled=false; $("mPause").style.opacity="";
+      $("mNext").textContent = (i===r.plan.length-1) ? "Finish" : "Next";
+      mTimer=setInterval(mPaintTime, 250);
+    } else {
+      $("mPause").textContent="Not today"; $("mPause").disabled=false; $("mPause").style.opacity="";
+      $("mNext").textContent="Write today’s page";
+    }
+    mPaintTime(); window.scrollTo(0,0);
+  }
+  function mPaintTime(){
+    var r=mRun; if(!r) return; var st=r.plan[r.i]; if(!st.timed) return;
+    var left = r.paused ? r.left : Math.max(0, r.endsAt-Date.now());
+    $("mTime").textContent=fmtTime(Math.ceil(left/1000));
+    var bar=$("mBar"); bar.style.strokeDasharray=String(M_RING_C); bar.style.strokeDashoffset=String(M_RING_C*(1-(r.total?left/r.total:0)));
+    if(left<=0 && !r.rang){
+      r.rang=true; mStopTick(); mChime(); haptic(30);
+      $("mKick").textContent="Time. Whenever you’re ready.";
+      $("mPause").disabled=true; $("mPause").style.opacity=".4";
+    }
+  }
+  function mPauseTap(){
+    var r=mRun; if(!r) return; var st=r.plan[r.i];
+    if(!st.timed){ mFinish(); return; }           // "Not today" on the Write practice
+    if(r.rang) return;
+    if(r.paused){ r.endsAt=Date.now()+r.left; r.paused=false; $("mPause").textContent="Pause"; if(!mTimer) mTimer=setInterval(mPaintTime, 250); }
+    else { r.left=Math.max(0, r.endsAt-Date.now()); r.paused=true; $("mPause").textContent="Resume"; mStopTick(); }
+    haptic(6); mPaintTime();
+  }
+  function mNextTap(){
+    var r=mRun; if(!r) return; var st=r.plan[r.i];
+    mDoneIds.push(st.id); haptic(8);
+    if(st.id==="write"){ lsSet(LSK_M_LAST, todayKey()); mStop(); startText(); return; }
+    if(r.i>=r.plan.length-1){ mFinish(); return; }
+    mStep(r.i+1);
+  }
+  function mDoneNames(){ return M_STEPS.filter(function(st){ return mDoneIds.indexOf(st.id)>=0; }).map(function(st){ return st.nm; }); }
+  function mFinish(){
+    var names=mDoneNames();
+    mStop(); lsSet(LSK_M_LAST, todayKey());
+    $("mDoneSum").textContent = names.length ? (names.join(" · ")+". The rest of the day can have you now.") : "You showed up. That counts.";
+    $("mDoneKeep").style.display = names.length ? "" : "none";
+    mShow("mDone");
+  }
+  function mKeepNote(){
+    var names=mDoneNames(), aff=lsGet(LSK_AFFIRM,"").trim();
+    var text=names.join(" · ") + (aff && mDoneIds.indexOf("affirm")>=0 ? "\n\n"+aff : "");
+    saveEntry({type:"text", prompt:"Morning practice", text:text}).then(function(){ afterSaveSuccess(); toast("Kept in your journal"); showApp(); })
+      .catch(function(){ toast("Couldn’t save that"); });
+  }
+
+  /* ============================================================
      SETTINGS SHEET
      ============================================================ */
   function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); updateProfileSub(); }
@@ -3016,6 +3450,7 @@
   $("setErase").addEventListener("click", function(){
     if(confirm("Erase ALL entries and notebook pages permanently? This cannot be undone.")){
       if(confirm("Are you sure? Everything will be gone forever.")){
+        try{ localStorage.removeItem(LSK_AFFIRM); localStorage.removeItem(LSK_M_LAST); }catch(e){}
         Promise.all([dbClear(), nbClear()]).then(function(){ nbPages=[""]; nbIndex=0; nbLoaded=false; toast("Everything erased"); closeSheet(); showApp(); }); } }
   });
 
@@ -3038,6 +3473,9 @@
   document.querySelectorAll("[data-discard]").forEach(function(b){ b.addEventListener("click", function(){
     stopRecord(); cleanupVoice(); showApp(); }); });
   $("btnLock").addEventListener("click", function(){ closeSheet(); showLock("enter", showApp); });
+  document.querySelectorAll("[data-lock]").forEach(function(b){ b.addEventListener("click", function(){
+    var ea=document.getElementById("eAudio"); if(ea){ try{ ea.pause(); }catch(e){} }
+    showLock("enter", showApp); }); });
 
   function onViewportChange(){
     if($("v-draw").classList.contains("active") && drawPad){ setTimeout(drawFit,50); }
@@ -3049,7 +3487,7 @@
   /* ============================================================
      BOOT
      ============================================================ */
-  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad();
+  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad(); buildMorning();
 
   function bootAfterPin(firstRun){
     if(firstRun && !hasProfile()){
@@ -3063,7 +3501,7 @@
   else { showLock("set", function(){ bootAfterPin(true); }); }
 
   /* expose a tiny bridge for debugging / potential future modules */
-  window.Permission = { showView: showView, showApp: showApp, refreshLists: refreshLists, version: APP_VERSION };
+  window.Permission = { showView: showView, showApp: showApp, refreshLists: refreshLists, player: bindPlayer, version: APP_VERSION };
 })();
 </script>
 </body>
