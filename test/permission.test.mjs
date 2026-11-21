@@ -924,6 +924,10 @@ ok("reminders make no network request", !/fetch\(|XMLHttpRequest|sendBeacon/.tes
 ok("the plugin is a dependency and the build refuses to ship without it",
    /"@capacitor\/local-notifications": "\^8\.0\.0"/.test(pkgRaw) && /grep -q "local-notifications" "\$SPM" \|\| \{/.test(cm));
 
+section("36) the build uses the iOS 27 SDK (Apple's ITMS-90725)");
+ok("the TestFlight lane is pinned to Xcode 27 or later, not `latest`",
+   /\n      xcode: (2[7-9]|[3-9]\d)(\.\d+)*\n/.test(cm) && !/\n      xcode: latest\n/.test(cm));
+
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));
 console.log(`${pass} passed, ${fail} failed`);

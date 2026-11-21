@@ -43,7 +43,10 @@ workflows:
         XCODE_SCHEME: "App"
         APP_APPLE_ID: "6789405787"     # <-- after you create the app record in App Store Connect, paste its Apple ID (the number) here so build numbers auto-increment
       node: 22               # Capacitor CLI needs Node 22
-      xcode: latest
+      # Pinned, not `latest`: on 2026-11-21 Codemagic's `latest` still built with the
+      # iOS 26.5 SDK and every upload drew Apple's ITMS-90725 warning (from April 2027
+      # uploads must use the iOS 27 SDK, which ships in Xcode 27).
+      xcode: 27.0
       cocoapods: default
     scripts:
       - name: Install npm dependencies
