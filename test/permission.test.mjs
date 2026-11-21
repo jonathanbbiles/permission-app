@@ -840,6 +840,34 @@ ok("release.json was not touched by the version bump (it is the ship gesture)",
    /"version": "1\.8\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")) ||
    /"version": "1\.9\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")));
 
+section("34) v1.9.0 — wording for a 13+ rating, and What you need lately");
+const lower = html.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\n\s*\/\/[^\n]*/g, "");
+ok("nothing shown to the reader is about touch or an intimate life",
+   !/slow touch|someone’s you love|intimate life|your own touch/i.test(lower));
+ok("Move is about enjoying your body, said plainly",
+   /Move the way that feels good, not the way that looks good\. Your body is allowed to enjoy this\./.test(html));
+ok("the store screenshot sample was changed with it",
+   !/intimate/i.test(fs.readFileSync(path.join(ROOT, "scripts/render-screenshots.mjs"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")));
+const knBlock = html.slice(html.indexOf("var KN_LOUD=["), html.indexOf("var knDraft="));
+const knLinesAll = [...knBlock.matchAll(/l:\[("(?:[^"\\]|\\.)*"(?:,"(?:[^"\\]|\\.)*")*)\]/g)].map((m) => JSON.parse("[" + m[1] + "]"));
+ok("sixteen answers, each said three ways (gentle, straight, playful)",
+   knLinesAll.length === 16 && knLinesAll.every((a) => a.length === 3 && a.every((t) => t.length > 8 && t.length < 70)), String(knLinesAll.length));
+ok("every affirmation it can produce is first person and none repeats",
+   (() => { const all = knLinesAll.flat(); return new Set(all).size === all.length && all.filter((t) => /\b(I|I’m|My|me|my)\b/.test(t)).length >= all.length - 12; })());
+ok("the questions ask nothing private and collect no free text",
+   !/<input[^>]*id="kn/.test(html) && !/<textarea[^>]*id="kn/.test(html) &&
+   !/sex|pleasure|desire|intima|weight|diet|diagnos/i.test(knBlock));
+ok("answers stay on the phone and go with Erase everything",
+   /lsSet\(LSK_KNOW, JSON\.stringify\(/.test(html) && /localStorage\.removeItem\(LSK_KNOW\)/.test(html) &&
+   !/fetch\(|XMLHttpRequest/.test(html.slice(html.indexOf("WHAT YOU NEED LATELY (1.9.0)\n     Three questions"), html.indexOf("SETTINGS SHEET\n"))));
+ok("it opens from Settings and from Affirm, and goes back where it came from",
+   /\$\("setKnow"\)\.addEventListener\("click", function\(\)\{ closeSheet\(\); openKnow\("settings"\); \}\)/.test(html) &&
+   /\$\("mFit"\)\.addEventListener\("click", function\(\)\{ openKnow\("affirm"\); \}\)/.test(html) &&
+   /if\(knFrom==="settings"\) openSheet\(\);/.test(html));
+ok("a running practice waits while the questions are open",
+   /if\(mRun && mRun\.plan\[mRun\.i\]\.timed && !mRun\.paused && !mRun\.rang\)\{ mPauseTap\(\); knResume=true; \}/.test(html));
+ok("the questions screen is themed like the other full-screen overlays", /#know\{position:fixed; inset:0/.test(html));
+
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));
 console.log(`${pass} passed, ${fail} failed`);
