@@ -171,12 +171,30 @@ for (const d of DEVICES) {
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
+  // A fixed morning, so Home is the same in every render: "Good morning", and
+  // the Morning card at the top where it sits before noon. Timers still run.
+  const T0 = new Date(2026, 10, 21, 7, 5, 0);
+  await page.clock.setFixedTime(T0);
   await page.goto(URL, { waitUntil: "networkidle" });
   await unlock(page);
   await seed(page);
 
   // 1 — home
   written.push(await shoot(page, dir, "01-home"));
+
+  // 1b / 1c — Morning (1.9.0): what you choose, then a practice under way.
+  //           36 real seconds pass on the clock, so the ring is a real state.
+  await page.click("#cardMorning");
+  await sleep(600);
+  written.push(await shoot(page, dir, "01b-morning"));
+  await page.click("#mBegin");
+  await sleep(400);
+  await page.clock.setFixedTime(new Date(T0.getTime() + 36000));
+  await sleep(900);
+  written.push(await shoot(page, dir, "01c-morning-practice"));
+  await page.clock.setFixedTime(T0);
+  await page.click("#mBack"); await sleep(300);
+  await page.click("#mBack"); await sleep(600);
 
   // 2 — Record, with the transcript the finished recording produced.
   //     Staged, because a headless browser has no native recogniser: the
@@ -195,6 +213,7 @@ for (const d of DEVICES) {
     document.getElementById("recRestart").classList.remove("hidden");
     document.getElementById("recHint").textContent =
       "Listen back, then save. Start over only if you want to discard this take.";
+    window.Permission.player(document.getElementById("playbackUi"), document.getElementById("playback"), 84);
     document.getElementById("playbackWrap").classList.remove("hidden");
     document.getElementById("vTranscript").value =
       "I keep waiting to feel ready. Maybe ready is just the thing that shows up after you start.";

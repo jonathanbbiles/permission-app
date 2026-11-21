@@ -522,7 +522,13 @@ const SCENARIOS = [
   // No release.json is committed until the owner says "ship"; these run only once it is.
   if (fs.existsSync(path.join(ROOT, 'release.json'))) {
     const r = JSON.parse(fs.readFileSync(path.join(ROOT, 'release.json'), 'utf8'));
-    check(`release.json version ${r.version} matches the build's version string ${shipVersion}`, shipVersion === r.version);
+    // release.json stays as the record of the LAST ship until the owner ships again
+    // (editing it at all starts the release lane, so a version bump must not touch it).
+    // Older than the build's version = the previous release, fine. Newer = a mistake.
+    // At ship time release.py itself refuses a build whose version differs from it.
+    const vnum = (v) => String(v).split('.').map(Number).concat(0, 0).slice(0, 3).reduce((a, n) => a * 1000 + n, 0);
+    check(`release.json version ${r.version} is the build's version string ${shipVersion}, or the previous release`,
+      shipVersion === r.version || vnum(r.version) < vnum(shipVersion));
     const wn = r.whatsNew || (fs.existsSync(path.join(ROOT, 'release-notes', `${r.version}.txt`)) ? 'file' : '');
     check(`release.json has What's New (whatsNew or release-notes/${r.version}.txt)`, !!wn || !!r.keepCopy);
     check('release.json build is a 12-digit build number', /^\d{12}$/.test(String(r.build)));

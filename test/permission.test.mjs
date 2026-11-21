@@ -705,10 +705,10 @@ ok("iPad two-column layout no longer positions a .bigcard row",
 ok("the tiles still occupy the iPad's left column", /#v-home \.modes\s*\{grid-column:1/.test(html));
 
 section("32) v1.8.0 — made for iPad and the iPhone Duo");
-ok("version bumped to 1.8.0 everywhere it must agree",
-   /APP_VERSION = "1\.8\.0"/.test(html) && />v1\.8\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.8\.0/.test(cm) && /expected 1\.8\.0/.test(cm) &&
-   /"version": "1\.8\.0"/.test(pkgRaw));
+ok("version is 1.9.0 everywhere it must agree",
+   /APP_VERSION = "1\.9\.0"/.test(html) && />v1\.9\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.9\.0/.test(cm) && /expected 1\.9\.0/.test(cm) &&
+   /"version": "1\.9\.0"/.test(pkgRaw));
 ok("build sets TARGETED_DEVICE_FAMILY \"1,2\" and reads it back",
    /TARGETED_DEVICE_FAMILY = "1,2";/.test(cm) && /is not \\"1,2\\" everywhere/.test(cm));
 ok("build sets UIDeviceFamily [1,2] and asserts it",
@@ -757,6 +757,60 @@ ok("color-scheme follows the chosen theme",
    /:root\[data-theme="dark"\]\{color-scheme:dark;\}/.test(html));
 ok("theme-color meta still tracks the theme", /tc\.setAttribute\("content", dark\?"#160512":"#FCE9F0"\)/.test(html));
 ok("full-screen overlays stay themed", /#lock\{position:fixed; inset:0/.test(html) && /#onboard\{position:fixed; inset:0/.test(html));
+
+
+section("33) v1.9.0 — Morning practice, the app's own audio player, one header per screen");
+const code19 = stripComments(html);
+ok("Home has exactly one Morning card, and it is a real <button>",
+   (html.match(/id="cardMorning"/g) || []).length === 1 && /<button class="morningcard" id="cardMorning" type="button">/.test(html));
+ok("the card moves with the time of day instead of being duplicated",
+   /function placeMorningCard\(\)[\s\S]{0,260}?insertBefore\(c, am \? \$\("depths"\) : home\.querySelector\("\.sechead"\)\)/.test(html) &&
+   /updateProfileSub\(\); placeMorningCard\(\);/.test(html));
+ok("landscape Home places Morning explicitly, above the journal column",
+   /#v-home #cardMorning\{grid-column:2; grid-row:2;/.test(html) && /#v-home \.depths\{grid-column:1; align-self:center;\}/.test(html));
+ok("there are six practices, in order", (() => {
+  const ids = [...html.matchAll(/\{id:"(silence|affirm|picture|move|read|write)", nm:"/g)].map((m) => m[1]);
+  return ids.join(",") === "silence,affirm,picture,move,read,write"; })());
+ok("only Write is untimed", (html.match(/timed:false/g) || []).length === 1 && /id:"write", nm:"Write", timed:false/.test(html));
+ok("a running practice is an end time, not a counter",
+   /r\.endsAt=Date\.now\(\)\+r\.total/.test(html) && /Math\.max\(0, r\.endsAt-Date\.now\(\)\)/.test(html));
+ok("pause keeps what is left and resume re-derives the end time",
+   /r\.left=Math\.max\(0, r\.endsAt-Date\.now\(\)\); r\.paused=true/.test(html) && /r\.endsAt=Date\.now\(\)\+r\.left; r\.paused=false/.test(html));
+ok("leaving Morning by any route stops the timer, the wake lock and the chime",
+   /if\(id!=="morning"\) mStop\(\);/.test(html) && /function mStop\(\)\{ mStopTick\(\); mWake\(false\); mAudioOff\(\); mRun=null; \}/.test(html));
+ok("the chime is off unless asked for, and only exists while a practice runs",
+   /function mChimeOn\(\)\{ return lsGet\(LSK_M_CHIME,"0"\)==="1"; \}/.test(html) &&
+   /if\(mChimeOn\(\)\) mAudioOn\(\);/.test(html) && (code19.match(/new AC\(\)/g) || []).length === 1);
+ok("Morning adds no streak, no score and no notification",
+   !/streak/i.test(code19.replace(/no streak/gi, "")) && !/LocalNotifications|Notification\.requestPermission|new Notification\(/.test(code19));
+ok("Morning fetches nothing", !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket\(/.test(html.slice(html.indexOf("MORNING (1.9.0)\n     Six quiet"), html.indexOf("SETTINGS SHEET"))));
+ok("the source is credited on the screen, with a plain non-affiliation line",
+   /inspired by the S\.A\.V\.E\.R\.S\. routine in Hal Elrod&rsquo;s book <em>The Miracle Morning<\/em>/.test(html) &&
+   /not affiliated with or endorsed by Hal Elrod or Miracle Morning/.test(html) && /id="mCreditLink"/.test(html));
+ok("the feature is named Morning: the mark appears once, in the credit, nowhere in the UI",
+   (html.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").match(/S\.A\.V\.E\.R\.S|SAVERS/g) || []).length === 1);
+ok("affirmations are the user's words: kept on the phone, erased with everything else",
+   /lsSet\(LSK_AFFIRM, \$\("mAffirm"\)\.value\)/.test(html) && /localStorage\.removeItem\(LSK_AFFIRM\)/.test(html));
+ok("Write hands over to the real Write screen with today's invitation",
+   /if\(st\.id==="write"\)\{ lsSet\(LSK_M_LAST, todayKey\(\)\); mStop\(\); startText\(\); return; \}/.test(html));
+ok("a kept note is an ordinary text entry, so viewing and export already work",
+   /saveEntry\(\{type:"text", prompt:"Morning practice", text:text\}\)/.test(html));
+ok("the system audio control is gone from both places", !/<audio[^>]*\bcontrols\b/.test(html));
+ok("both recordings use the app's player, fed the measured length",
+   /bindPlayer\(\$\("playbackUi"\), \$\("playback"\), recSeconds\)/.test(html) &&
+   /bindPlayer\(\$\("ePlayer"\), \$\("eAudio"\), e\.duration\|\|0\)/.test(html));
+ok("the player falls back to the measured length when the file cannot say",
+   /function dur\(\)\{ var d=audio\.duration; return \(isFinite\(d\) && d>0\) \? d : \(knownSec\|\|0\); \}/.test(html));
+ok("the scrubber is draggable anywhere on the page", /\.pl-seek\{[^}]*touch-action:none/.test(html) && /\.pl-seek\{[^}]*height:44px/.test(html));
+ok("every screen but Home and the Notebook hides the brand header",
+   /body\.sub-view header\{display:none;\}/.test(html) &&
+   /classList\.toggle\("sub-view", id!=="home" && id!=="notebook"\)/.test(html));
+ok("the entry and the journal keep a Lock button of their own",
+   (html.match(/<button class="iconbtn" data-lock type="button" aria-label="Lock">/g) || []).length === 2 &&
+   /querySelectorAll\("\[data-lock\]"\)/.test(html));
+ok("release.json was not touched by the version bump (it is the ship gesture)",
+   /"version": "1\.8\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")) ||
+   /"version": "1\.9\.0"/.test(fs.readFileSync(path.join(ROOT, "release.json"), "utf8")));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

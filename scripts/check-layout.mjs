@@ -145,6 +145,17 @@ for (const [w, h] of SIZES) {
   if (h >= w && w < 1100 && home.sideBySide) fail(`${tag} home: portrait unexpectedly two columns`);
   await checkScreen(page, tag, "1-home", "#homeList .entry, .foot a");
 
+  /* MORNING — the setup screen, then a running practice */
+  await page.click("#cardMorning"); await sleep(450);
+  await checkScreen(page, tag, "9-morning", "#mCreditLink");
+  await page.click("#mBegin"); await sleep(450);
+  await checkScreen(page, tag, "9b-morning-run", "#mNext");
+  const hdr = await page.evaluate(() => getComputedStyle(document.querySelector("header")).display);
+  if (hdr !== "none") fail(`${tag} morning: the brand header is still showing on a sub-screen`);
+  await page.click("#mBack"); await sleep(300);
+  await page.click("#mBack"); await sleep(450);
+  if (!(await page.locator("#v-home").isVisible())) fail(`${tag} morning: Back did not return Home`);
+
   /* WRITE */
   await page.click('.mode[data-mode="text"]'); await sleep(450);
   await checkScreen(page, tag, "2-write", "#tSave");
