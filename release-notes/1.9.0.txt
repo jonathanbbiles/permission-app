@@ -1,9 +1,11 @@
 New: Morning.
 
-Six quiet practices to begin the day: silence, affirmations, picturing the day, moving, reading and writing. Choose one, two, five or ten minutes for each, and leave out any you don't want. Your affirmations are kept for tomorrow, and the last practice opens today's page. There is still no streak and nothing to keep up with.
+Six small ways to land in your body before the day asks anything of you: silence, affirmations, picturing the day, moving, reading and writing. Choose one, two, five or ten minutes for each, and leave out any you don't want. Your affirmations are kept for tomorrow, and you finish on today's page, typed or written by hand. Your morning is kept in your journal by itself. There is still no streak and nothing to keep up with.
 
 Also in this update:
+- Pick any accent colour you like.
 - Voice entries have a new player that matches the rest of the app and shows the real length of a recording.
 - Write, Record, Draw and your entries now use the whole screen.
+- Settings has a Done button, and stays open while you change things.
 
 Everything still stays on your device.

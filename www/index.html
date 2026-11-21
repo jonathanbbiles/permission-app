@@ -681,7 +681,27 @@
   #mAffirm{min-height:112px; font-size:16px; line-height:1.55;}
   #mAffirmWrap .count{text-align:left;}
   #mWriteWrap{margin-top:18px; text-align:left;}
-  #mWriteWrap .promptmini{margin-bottom:0;}
+  #mWriteWrap .promptmini{margin-bottom:12px;}
+  #mWriteWrap .modeseg{margin-bottom:12px;}
+  #mWrite{min-height:180px; font-size:16.5px; line-height:1.6;}
+  #mPadWrap{margin-bottom:10px;}
+  .m-padbar{display:flex; gap:8px; justify-content:flex-end;}
+  .m-padbar .btn{width:auto; flex:none;}
+  .m-chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;}
+  .m-chips .chip{font-size:13px;}
+  .m-chips-lbl{font-size:12px; color:var(--muted); margin-top:14px;}
+  .m-kept{font-size:13px; color:var(--muted); margin-top:12px;}
+  #mDone .btnrow .btn{flex:1;}
+  /* Settings: a Done button, so closing is not a tap on the dimmed page. */
+  .sheet-head{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  .sheet-head h3{margin:0;}
+  .sheet-done{border:0; background:linear-gradient(180deg,var(--accent),var(--accent-deep)); color:var(--on-accent); font-family:inherit; font-weight:700;
+    font-size:14px; border-radius:999px; padding:0 20px; min-height:44px; cursor:pointer; flex:none;}
+  .sheet-done:active{transform:scale(.95);}
+  /* Any colour: the seventh swatch opens the system colour picker. */
+  .aswatch.custom{position:relative; display:block; overflow:hidden;
+    background:conic-gradient(#FF2D78,#F4820B,#F7D447,#3FB56B,#0FB5AE,#2D8CFF,#A05CE6,#FF2D78);}
+  .aswatch.custom input{position:absolute; inset:-6px; width:calc(100% + 12px); height:calc(100% + 12px); opacity:0; cursor:pointer; border:0; padding:0;}
   .m-doneic{width:64px; height:64px; border-radius:20px; margin:2px auto 12px; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(155deg,var(--accent),var(--accent-deep)); color:var(--on-accent);}
   .m-doneic svg{width:32px; height:32px;}
@@ -791,7 +811,7 @@
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   #toast svg{width:17px; height:17px; color:var(--accent-soft); flex:none;}
 
-  .foot{text-align:center; color:var(--faint); font-size:11px; margin:20px 0 4px; letter-spacing:.4px;}
+  .foot{text-align:center; color:var(--faint); font-size:12.5px; margin:20px 0 4px; letter-spacing:.4px;}
   .foot a{color:var(--accent); text-decoration:none; font-weight:700; letter-spacing:.2px;}
   .hidden{display:none !important;}
 </style>
@@ -941,7 +961,7 @@
   <div id="mSetup">
     <div class="promptmini">
       <div class="k">A gentle start</div>
-      <div class="q">Six small practices before the day asks anything of you. Do them all, or only the ones you want.</div>
+      <div class="q">Six small ways to land in your body before the day asks anything of you. Do them all, or only the ones you want. No homework.</div>
     </div>
     <div class="m-label">Minutes for each</div>
     <div class="modeseg" id="mMinutes">
@@ -953,7 +973,7 @@
     <div class="m-label">This morning</div>
     <div class="m-steps" id="mSteps"></div>
     <div class="m-row">
-      <div class="tx"><div class="t">Chime when time is up</div><div class="s">Off unless you turn it on. It may pause music that is playing.</div></div>
+      <div class="tx"><div class="t">Chime when time is up</div><div class="s">Turn it on to hear it. It may pause music that is playing.</div></div>
       <div class="toggle" id="mChime" role="switch" tabindex="0" aria-label="Chime when time is up" aria-checked="false"><div class="kn"></div></div>
     </div>
     <button class="btn primary" id="mBegin" type="button">Begin</button>
@@ -975,11 +995,25 @@
         <div class="m-time" id="mTime">0:00</div>
       </div>
       <div id="mAffirmWrap" class="hidden">
-        <textarea id="mAffirm" placeholder="I am allowed to begin." aria-label="Your affirmations"></textarea>
-        <div class="count">Yours to keep. They will be here tomorrow morning.</div>
+        <textarea id="mAffirm" placeholder="I&rsquo;m allowed to want this." aria-label="Your affirmations"></textarea>
+        <div class="count">Yours to keep, and yours to change. They&rsquo;ll be here tomorrow morning.</div>
+        <div class="m-chips-lbl">Tap to add one</div>
+        <div class="m-chips" id="mAffirmChips"></div>
       </div>
       <div id="mWriteWrap" class="hidden">
         <div class="promptmini"><div class="k">Today&rsquo;s invitation</div><div class="q" id="mInvite"></div></div>
+        <div class="modeseg" id="mWriteMode">
+          <button type="button" data-wmode="type">Type</button>
+          <button type="button" data-wmode="draw">Write by hand</button>
+        </div>
+        <textarea id="mWrite" placeholder="Let it come out messy. No one reads this but you." aria-label="Today&rsquo;s page"></textarea>
+        <div id="mPadBox" class="hidden">
+          <div class="canvas-wrap" id="mPadWrap"><canvas id="mPadCanvas" class="pad"></canvas></div>
+          <div class="m-padbar">
+            <button class="btn tiny" id="mPadUndo" type="button">Undo</button>
+            <button class="btn tiny" id="mPadClear" type="button">Clear</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="btnrow">
@@ -993,10 +1027,10 @@
       <div class="m-doneic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7"/><path d="M4.22 10.22l1.42 1.42"/><path d="M1 18h2"/><path d="M21 18h2"/><path d="M18.36 11.64l1.42-1.42"/><path d="M23 22H1"/><path d="M8 6l4-4 4 4"/></svg></div>
       <div class="m-name">That&rsquo;s your morning</div>
       <div class="m-guide" id="mDoneSum"></div>
+      <div class="m-kept" id="mDoneKept"></div>
     </div>
     <div class="btnrow">
-      <button class="btn ghost" id="mDoneKeep" type="button">Keep a note</button>
-      <button class="btn primary" id="mDoneClose" type="button">Done</button>
+      <button class="btn primary" id="mDoneClose" type="button">Go have your day</button>
     </div>
   </div>
 </div>
@@ -1166,9 +1200,9 @@
 </div>
 
 <div class="foot" id="appFoot">
-  <a id="siteLink" href="https://jessicaleighbiles.com" target="_blank" rel="noopener">A gift from Jessica Leigh Biles &#8599;</a>
+  <a id="siteLink" href="https://jessicaleighbiles.com" target="_blank" rel="noopener">A gift from Glitoris &#8599;</a>
   <div style="margin-top:6px;">your words never leave this phone</div>
-  <div style="margin-top:6px;">Built by <a id="makerLink" href="https://jonathanscribbles.com" target="_blank" rel="noopener">jonathanscribbles.com &#8599;</a></div>
+  <div style="margin-top:6px;">Built by <a id="makerLink" href="https://jonathanscribbles.com" target="_blank" rel="noopener">Honeywood &#8599;</a></div>
   <div style="margin-top:12px;">A companion to <a id="slowburnLink" href="https://apps.apple.com/app/apple-store/id6787719986?pt=129125244&amp;ct=app-permission&amp;mt=8" target="_blank" rel="noopener">Open Slow Burn &#8599;</a></div>
 </div>
 
@@ -1176,7 +1210,7 @@
 <div id="sheet-scrim"></div>
 <div class="sheet" id="settingsSheet">
   <div class="grab"></div>
-  <h3 class="serif">Settings</h3>
+  <div class="sheet-head"><h3 class="serif">Settings</h3><button class="sheet-done" id="sheetDone" type="button">Done</button></div>
   <div class="sub">Permission keeps everything private, on this phone. Nothing is ever uploaded or shared unless you choose to export it.</div>
 
   <div class="setrow">
@@ -1220,14 +1254,14 @@
   <div class="setrow" id="setSite" style="cursor:pointer;">
     <div class="l">
       <div class="si" style="color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
-      <div class="tx"><div class="a">Visit Jessica&rsquo;s website</div><div class="b">jessicaleighbiles.com</div></div>
+      <div class="tx"><div class="a">Visit Glitoris</div><div class="b">jessicaleighbiles.com</div></div>
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
   </div>
   <div class="setrow" id="setMaker" style="cursor:pointer;">
     <div class="l">
       <div class="si" style="color:var(--secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-      <div class="tx"><div class="a">Who made this app</div><div class="b">jonathanscribbles.com</div></div>
+      <div class="tx"><div class="a">Who made this app</div><div class="b">Honeywood</div></div>
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
   </div>
@@ -1238,7 +1272,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care for Jessica&rsquo;s clients &middot; <span id="verLabel">v1.9.0</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care by Honeywood, for Glitoris &middot; <span id="verLabel">v1.9.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -1505,13 +1539,31 @@
     var tc=document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute("content", dark?"#160512":"#FCE9F0");
     document.querySelectorAll("#themeSeg button").forEach(function(b){ b.classList.toggle("on", b.dataset.theme===pref); });
   }
+  /* Any colour (1.9.0). A picked colour is used as given for fills; the deeper
+     shade, which is also the colour of links and small labels, is darkened
+     until it is readable, and the text ON the accent flips to dark ink when
+     the colour is pale. So yellow is allowed and still legible. */
+  var LSK_ACCENT_HEX="perm_accent_hex";
+  function hexRgb(h){ h=String(h||"").replace("#",""); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n=parseInt(h,16); return (h.length===6 && !isNaN(n)) ? [(n>>16)&255,(n>>8)&255,n&255] : null; }
+  function rgbHex(c){ return "#"+c.map(function(v){ v=Math.max(0,Math.min(255,Math.round(v))); return (v<16?"0":"")+v.toString(16); }).join("").toUpperCase(); }
+  function relLum(c){ var f=function(v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }; return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]); }
+  function customAccent(hex){
+    var c=hexRgb(hex); if(!c) return null;
+    var d=c.map(function(v){ return v*0.86; }), guard=0;
+    while(relLum(d)>0.22 && guard++<40) d=d.map(function(v){ return v*0.93; });
+    return {id:"custom", a:rgbHex(c), d:rgbHex(d), on: relLum(c)>0.55 ? "#3A0E2E" : "#FFFFFF"};
+  }
   function applyAccent(){
     var id=localStorage.getItem(LSK_ACCENT)||"rose";
-    var ac=ACCENTS.filter(function(x){return x.id===id;})[0]||ACCENTS[0];
+    var ac = id==="custom" ? customAccent(localStorage.getItem(LSK_ACCENT_HEX)) : null;
+    if(!ac) ac=ACCENTS.filter(function(x){return x.id===id;})[0]||ACCENTS[0];
     var r=document.documentElement;
     r.style.setProperty("--accent", ac.a);
     r.style.setProperty("--accent-deep", ac.d);
+    if(ac.on) r.style.setProperty("--on-accent", ac.on); else r.style.removeProperty("--on-accent");
     document.querySelectorAll(".aswatch").forEach(function(s){ s.classList.toggle("on", s.dataset.accent===ac.id); });
+    var pick=document.getElementById("accentPick"); if(pick && ac.id==="custom") pick.value=ac.a.toLowerCase();
   }
   if(mq){ try{ mq.addEventListener("change", applyTheme); }catch(e){ try{ mq.addListener(applyTheme); }catch(e2){} } }
 
@@ -1527,6 +1579,14 @@
       s.addEventListener("click", function(){ localStorage.setItem(LSK_ACCENT, ac.id); applyAccent(); haptic(6); });
       row.appendChild(s);
     });
+    // The seventh swatch: any colour at all, from the system colour picker.
+    var c=document.createElement("label"); c.className="aswatch custom"; c.dataset.accent="custom";
+    c.setAttribute("aria-label","Choose any colour");
+    var inp=document.createElement("input"); inp.type="color"; inp.id="accentPick";
+    inp.value=(localStorage.getItem(LSK_ACCENT_HEX)||"#ff2d78").toLowerCase();
+    var pickIt=function(){ localStorage.setItem(LSK_ACCENT_HEX, inp.value); localStorage.setItem(LSK_ACCENT, "custom"); applyAccent(); };
+    inp.addEventListener("input", pickIt); inp.addEventListener("change", pickIt);
+    c.appendChild(inp); row.appendChild(c);
   }
 
   /* ============================================================
@@ -1694,7 +1754,7 @@
     faceUnlock().then(function(){ haptic(12); afterAuth(); })
       .catch(function(){ $("lockLabel").textContent="Enter your passcode"; });
   }
-  var afterAuthGoesToOnboarding=false;
+  var afterAuthGoesToOnboarding=false, obFromSettings=false;
   function afterAuth(){
     var cb=onUnlock; onUnlock=null; buf=""; firstPin="";
     $("lock").classList.remove("show");
@@ -1739,6 +1799,9 @@
     $("obSave").addEventListener("click", function(){
       saveProfile({ gender:obDraft.gender, genderText:obDraft.genderText, pronoun:obDraft.pronoun, pronounText:obDraft.pronounText });
       closeOnboard(); toast("Saved"); haptic(12);
+      // Changed from Settings? Go back to Settings — people change several
+      // things in one visit, not one thing per trip.
+      if(obFromSettings){ obFromSettings=false; openSheet(); }
     });
     $("obSkip").addEventListener("click", function(){
       saveProfile({ gender:"na", genderText:"", pronoun:"they", pronounText:"" });
@@ -3103,7 +3166,7 @@
      ============================================================ */
   var curEntry=null, curObjUrl=null;
   function openEntry(id){ dbGet(id).then(function(e){ if(!e) return; curEntry=e;
-    $("eDate").textContent=fmtDate(e.ts); $("ePrompt").textContent=e.prompt||"";
+    $("eDate").textContent=fmtDate(e.ts)+(e.morning ? " · Morning" : ""); $("ePrompt").textContent=e.prompt||"";
     var box=$("eContent");
     if(curObjUrl){ URL.revokeObjectURL(curObjUrl); curObjUrl=null; }
     if(e.type==="text"){ box.innerHTML='<div class="body">'+escapeHtml(e.text||"")+'</div>'; }
@@ -3242,38 +3305,48 @@
      Rules this keeps:
        - no streak, no score, no reminder. The only thing remembered is that
          today's is done, so the Home card can say so.
+       - finishing keeps the morning in the journal by itself. Nothing to
+         decide: what was written or drawn is saved as an ordinary entry.
        - a running practice is an END TIME, never a counter: the clock is
          right after the phone sleeps or the app is put away and brought back.
        - nothing leaves the phone and nothing is fetched. The one link opens
          the book's site in the browser, like the other links in the app.
-       - the chime is off unless asked for. It is the only sound, it is made
-         with Web Audio only while a practice runs, and it is released the
-         moment the practice ends so recording is never affected.
+       - the chime is off unless asked for, and plays once when it is turned
+         on so you know what you chose. It is a short sound file made on the
+         phone and played through an ordinary media element — Web Audio is
+         silenced by an iPad's mute setting, which is why the first build's
+         chime was never heard. It is paused the moment a practice ends.
      ============================================================ */
   var LSK_M_MIN="perm_morning_min", LSK_M_OFF="perm_morning_off", LSK_M_CHIME="perm_morning_chime",
       LSK_M_LAST="perm_morning_last", LSK_AFFIRM="perm_affirm";
   var BOOK_URL="https://miraclemorning.com";
   function mSvg(inner){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>'; }
+  /* The words are Glitoris's: short, warm, a little juicy, never clinical. */
   var M_STEPS=[
-    {id:"silence", nm:"Silence", timed:true, dsc:"Sit and breathe. Nothing to fix.",
-      guide:"Sit comfortably and breathe slowly. Let thoughts pass without following them.",
+    {id:"silence", nm:"Silence", timed:true, dsc:"Sit. Breathe. Nothing to fix.",
+      guide:"Get comfortable and breathe slow. You don’t have to do this well. Just land.",
       ic:mSvg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>')},
-    {id:"affirm", nm:"Affirm", timed:true, dsc:"Say what is true and kind.",
-      guide:"Read these aloud, or quietly to yourself. Change them whenever they stop being true.",
+    {id:"affirm", nm:"Affirm", timed:true, dsc:"Say what’s true and kind.",
+      guide:"Say these out loud, or just to yourself. Change them the second they stop being true.",
       ic:mSvg('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>')},
     {id:"picture", nm:"Picture", timed:true, dsc:"See today going well.",
-      guide:"Close your eyes. Picture one moment of today going well, in detail. Where are you? How does it feel?",
+      guide:"Close your eyes. Picture one moment of today going well. Where are you? What does it feel like in your body?",
       ic:mSvg('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')},
-    {id:"move", nm:"Move", timed:true, dsc:"Stretch, walk, dance in the kitchen.",
-      guide:"Stretch, walk, shake it out, dance in the kitchen. Any movement counts.",
+    {id:"move", nm:"Move", timed:true, dsc:"Stretch, dance, touch. Feel good.",
+      guide:"Stretch, walk, shake it out, dance in the kitchen. Pleasure counts too: slow touch, your own or someone’s you love. Whatever gets you back in your body.",
       ic:mSvg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>')},
     {id:"read", nm:"Read", timed:true, dsc:"A page or two that feeds you.",
-      guide:"A page or two of anything that feeds you. Slowly.",
+      guide:"A real book if you have one nearby. A page or two of something that feeds you. Slowly.",
       ic:mSvg('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>')},
     {id:"write", nm:"Write", timed:false, dsc:"Finish on today’s page.",
-      guide:"Finish on the page. Today’s invitation is waiting for you.",
+      guide:"Type it or write it by hand. No one is grading this.",
       ic:mSvg('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>')}
   ];
+  /* A place to start, for someone who has never written one. They are only a
+     start: the box is the user's, and what is in it is what is kept. */
+  var M_AFFIRM_START=["I’m allowed to want this.","My body gets to have opinions.","I get to feel more, not do more."];
+  var M_AFFIRM_MORE=["Wanting is not too much.","I can begin before I’m ready.","Pleasure is not homework.","I am not behind.",
+    "I get to take up room.","Rest counts.","I am safe to land in.","Today I choose what feels good."];
   var M_CHECK=mSvg('<path d="M20 6L9 17l-5-5"/>');
   var M_RING_C=2*Math.PI*54;
   function lsGet(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
@@ -3319,7 +3392,8 @@
       wrap.appendChild(b);
     });
     $("mMinutes").querySelectorAll("button").forEach(function(b){ b.addEventListener("click", function(){ lsSet(LSK_M_MIN, b.dataset.min); haptic(6); mPaintSetup(); }); });
-    var flipChime=function(){ lsSet(LSK_M_CHIME, mChimeOn()?"0":"1"); haptic(6); mPaintSetup(); };
+    var flipChime=function(){ lsSet(LSK_M_CHIME, mChimeOn()?"0":"1"); haptic(6); mPaintSetup();
+      if(mChimeOn()){ mAudioOn(); mChime(); } };   // hear what you just chose
     $("mChime").addEventListener("click", flipChime);
     $("mChime").addEventListener("keydown", function(ev){ if(ev.key===" "||ev.key==="Enter"){ ev.preventDefault(); flipChime(); } });
     $("cardMorning").addEventListener("click", function(){ haptic(10); openMorning(); });
@@ -3328,9 +3402,22 @@
     $("mPause").addEventListener("click", mPauseTap);
     $("mNext").addEventListener("click", mNextTap);
     $("mAffirm").addEventListener("input", function(){ lsSet(LSK_AFFIRM, $("mAffirm").value); });
+    var chips=$("mAffirmChips");
+    M_AFFIRM_MORE.forEach(function(txt){
+      var b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=txt;
+      b.addEventListener("click", function(){
+        var ta=$("mAffirm"), cur=ta.value.replace(/\s+$/,"");
+        if(cur.split("\n").indexOf(txt)<0){ ta.value = cur ? cur+"\n"+txt : txt; lsSet(LSK_AFFIRM, ta.value); }
+        b.classList.add("on"); setTimeout(function(){ b.classList.remove("on"); }, 500); haptic(6);
+      });
+      chips.appendChild(b);
+    });
+    $("mWriteMode").querySelectorAll("button").forEach(function(b){ b.addEventListener("click", function(){ mSetWriteMode(b.dataset.wmode); haptic(6); }); });
+    $("mPadUndo").addEventListener("click", function(){ if(mPad) mPad.undo(); });
+    $("mPadClear").addEventListener("click", function(){ if(mPad) mPad.clear(); });
     $("mCreditLink").addEventListener("click", function(){ openSite(BOOK_URL); });
-    $("mDoneClose").addEventListener("click", function(){ showApp(); });
-    $("mDoneKeep").addEventListener("click", mKeepNote);
+    $("mDoneClose").addEventListener("click", function(){ haptic(10); showApp(); });
+    window.addEventListener("resize", function(){ if(mPad && mWriteModeNow==="draw" && $("v-morning").classList.contains("active")) setTimeout(function(){ mPad.resize(true); }, 60); });
     document.addEventListener("visibilitychange", function(){ if(mRun && document.visibilityState==="visible"){ mWake(true); mPaintTime(); } });
   }
   function openMorning(){ mStop(); mPaintSetup(); showView("morning"); mShow("mSetup"); }
@@ -3344,16 +3431,39 @@
       else if(mLock){ var l=mLock; mLock=null; Promise.resolve(l.release()).catch(function(){}); }
     }catch(e){}
   }
-  function mAudioOn(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if(AC){ mCtx=new AC(); if(mCtx.resume) Promise.resolve(mCtx.resume()).catch(function(){}); } }catch(e){ mCtx=null; } }
-  function mAudioOff(){ if(mCtx){ var c=mCtx; mCtx=null; try{ Promise.resolve(c.close()).catch(function(){}); }catch(e){} } }
+  /* The chime: two soft notes, synthesised once into a small WAV and played
+     through a media element. mAudioOn() must run inside a tap (Begin, or the
+     switch itself): that is what lets the element play later on its own. */
+  var mChimeEl=null, mChimeUrl=null;
+  function mChimeWav(){
+    var sr=22050, n=Math.round(sr*1.9), buf=new ArrayBuffer(44+n*2), v=new DataView(buf), i;
+    var str=function(o,t){ for(var k=0;k<t.length;k++) v.setUint8(o+k, t.charCodeAt(k)); };
+    str(0,"RIFF"); v.setUint32(4,36+n*2,true); str(8,"WAVE"); str(12,"fmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+    v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); str(36,"data"); v.setUint32(40,n*2,true);
+    var note=function(t,f,at){ if(t<at) return 0; var x=t-at; return Math.sin(2*Math.PI*f*x)*Math.min(1,x/0.012)*Math.exp(-x*3.2); };
+    for(i=0;i<n;i++){ var t=i/sr, y=0.42*note(t,660,0)+0.42*note(t,880,0.34);
+      v.setInt16(44+i*2, Math.max(-1,Math.min(1,y))*32767, true); }
+    return URL.createObjectURL(new Blob([buf], {type:"audio/wav"}));
+  }
+  function mAudioOn(){
+    try{
+      if(!mChimeEl){ mChimeEl=new Audio(); mChimeEl.preload="auto"; mChimeEl.setAttribute("playsinline","");
+        mChimeUrl=mChimeUrl||mChimeWav(); mChimeEl.src=mChimeUrl; }
+      mCtx=mChimeEl;
+    }catch(e){ mCtx=null; }
+  }
+  /* Unlock without a sound: a muted play inside the tap, stopped at once. */
+  function mAudioPrime(){
+    if(!mCtx) return;
+    try{ var el=mCtx; el.muted=true; var p=el.play();
+      var done=function(){ try{ el.pause(); el.currentTime=0; }catch(e){} el.muted=false; };
+      if(p && p.then) p.then(done, function(){ el.muted=false; }); else done();
+    }catch(e){}
+  }
+  function mAudioOff(){ if(mCtx){ try{ mCtx.pause(); }catch(e){} mCtx=null; } }
   function mChime(){
     if(!mCtx) return;
-    try{ var t=mCtx.currentTime;
-      [660,880].forEach(function(f,k){ var o=mCtx.createOscillator(), g=mCtx.createGain(), at=t+k*0.34;
-        o.type="sine"; o.frequency.value=f;
-        g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.16, at+0.04); g.gain.exponentialRampToValueAtTime(0.0001, at+1.4);
-        o.connect(g); g.connect(mCtx.destination); o.start(at); o.stop(at+1.5); });
-    }catch(e){}
+    try{ mCtx.muted=false; mCtx.currentTime=0; var p=mCtx.play(); if(p && p.catch) p.catch(function(){}); }catch(e){}
   }
   function mStopTick(){ if(mTimer){ clearInterval(mTimer); mTimer=null; } }
   function mStop(){ mStopTick(); mWake(false); mAudioOff(); mRun=null; }
@@ -3361,7 +3471,8 @@
     var plan=mPlan(); if(!plan.length) return;
     mStop();
     mRun={plan:plan, i:0, total:0, left:0, endsAt:0, paused:false, rang:false}; mDoneIds=[];
-    mWake(true); if(mChimeOn()) mAudioOn();
+    mWake(true); if(mChimeOn()){ mAudioOn(); mAudioPrime(); }
+    $("mWrite").value=""; if(mPad) mPad.clear(); mSetWriteMode("type");
     haptic(10); mShow("mRun"); mStep(0);
   }
   function mStep(i){
@@ -3371,9 +3482,13 @@
     var dots=$("mDots"); dots.innerHTML="";
     r.plan.forEach(function(_,k){ var d=document.createElement("i"); if(k<i) d.className="done"; else if(k===i) d.className="now"; dots.appendChild(d); });
     $("mAffirmWrap").classList.toggle("hidden", st.id!=="affirm");
-    if(st.id==="affirm") $("mAffirm").value=lsGet(LSK_AFFIRM,"");
+    if(st.id==="affirm"){
+      // First time: a few to start from, kept like any others once shown.
+      if(lsGet(LSK_AFFIRM,null)===null) lsSet(LSK_AFFIRM, M_AFFIRM_START.join("\n"));
+      $("mAffirm").value=lsGet(LSK_AFFIRM,"");
+    }
     $("mWriteWrap").classList.toggle("hidden", st.id!=="write");
-    if(st.id==="write") $("mInvite").textContent=currentPrompt;
+    if(st.id==="write"){ $("mInvite").textContent=currentPrompt; mSetWriteMode(mWriteModeNow); }
     $("mRing").classList.toggle("hidden", !st.timed);
     $("mRing").classList.toggle("breathe", st.id==="silence");
     mStopTick();
@@ -3383,9 +3498,10 @@
       $("mNext").textContent = (i===r.plan.length-1) ? "Finish" : "Next";
       mTimer=setInterval(mPaintTime, 250);
     } else {
-      $("mPause").textContent="Not today"; $("mPause").disabled=false; $("mPause").style.opacity="";
-      $("mNext").textContent="Write today’s page";
+      // Write: no clock. The page is right here, and Finish keeps it.
+      $("mNext").textContent="Finish";
     }
+    $("mPause").classList.toggle("hidden", !st.timed);
     mPaintTime(); window.scrollTo(0,0);
   }
   function mPaintTime(){
@@ -3395,14 +3511,13 @@
     var bar=$("mBar"); bar.style.strokeDasharray=String(M_RING_C); bar.style.strokeDashoffset=String(M_RING_C*(1-(r.total?left/r.total:0)));
     if(left<=0 && !r.rang){
       r.rang=true; mStopTick(); mChime(); haptic(30);
-      $("mKick").textContent="Time. Whenever you’re ready.";
+      $("mKick").textContent="Time. No rush.";
       $("mPause").disabled=true; $("mPause").style.opacity=".4";
     }
   }
   function mPauseTap(){
     var r=mRun; if(!r) return; var st=r.plan[r.i];
-    if(!st.timed){ mFinish(); return; }           // "Not today" on the Write practice
-    if(r.rang) return;
+    if(!st.timed || r.rang) return;
     if(r.paused){ r.endsAt=Date.now()+r.left; r.paused=false; $("mPause").textContent="Pause"; if(!mTimer) mTimer=setInterval(mPaintTime, 250); }
     else { r.left=Math.max(0, r.endsAt-Date.now()); r.paused=true; $("mPause").textContent="Resume"; mStopTick(); }
     haptic(6); mPaintTime();
@@ -3410,23 +3525,49 @@
   function mNextTap(){
     var r=mRun; if(!r) return; var st=r.plan[r.i];
     mDoneIds.push(st.id); haptic(8);
-    if(st.id==="write"){ lsSet(LSK_M_LAST, todayKey()); mStop(); startText(); return; }
     if(r.i>=r.plan.length-1){ mFinish(); return; }
     mStep(r.i+1);
   }
-  function mDoneNames(){ return M_STEPS.filter(function(st){ return mDoneIds.indexOf(st.id)>=0; }).map(function(st){ return st.nm; }); }
-  function mFinish(){
-    var names=mDoneNames();
-    mStop(); lsSet(LSK_M_LAST, todayKey());
-    $("mDoneSum").textContent = names.length ? (names.join(" · ")+". The rest of the day can have you now.") : "You showed up. That counts.";
-    $("mDoneKeep").style.display = names.length ? "" : "none";
-    mShow("mDone");
+  /* Write, inside Morning: type it, or write it by hand (Apple Pencil or a
+     finger). One screen — no hop to another page and no Save button. */
+  var mPad=null, mWriteModeNow="type";
+  function mSetWriteMode(mode){
+    mWriteModeNow = mode==="draw" ? "draw" : "type";
+    $("mWriteMode").querySelectorAll("button").forEach(function(b){ var on=b.dataset.wmode===mWriteModeNow; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on?"true":"false"); });
+    $("mWrite").classList.toggle("hidden", mWriteModeNow!=="type");
+    $("mPadBox").classList.toggle("hidden", mWriteModeNow!=="draw");
+    if(mWriteModeNow==="draw" && !$("mWriteWrap").classList.contains("hidden")){
+      setTimeout(function(){
+        if(!mPad) mPad=createPad($("mPadCanvas"), { height:function(w){ return Math.round(Math.max(260, Math.min(520, w*0.62))); } });
+        mPad.resize(true);
+      }, 60);
+    }
   }
-  function mKeepNote(){
-    var names=mDoneNames(), aff=lsGet(LSK_AFFIRM,"").trim();
-    var text=names.join(" · ") + (aff && mDoneIds.indexOf("affirm")>=0 ? "\n\n"+aff : "");
-    saveEntry({type:"text", prompt:"Morning practice", text:text}).then(function(){ afterSaveSuccess(); toast("Kept in your journal"); showApp(); })
-      .catch(function(){ toast("Couldn’t save that"); });
+  function mDoneNames(){ return M_STEPS.filter(function(st){ return mDoneIds.indexOf(st.id)>=0; }).map(function(st){ return st.nm; }); }
+  /* Finishing keeps the morning by itself. What was typed is a text entry and
+     what was written by hand is a drawing, each under today's invitation and
+     marked as part of a morning. With neither, one short entry records the
+     practices (and the affirmations, if Affirm was one of them). */
+  function mFinish(){
+    var names=mDoneNames(), line=names.join(" · ");
+    var wrote=mDoneIds.indexOf("write")>=0;
+    var typed = wrote ? $("mWrite").value.trim() : "";
+    var inked = wrote && mPad && mPad.hasStrokes() ? mPad.toDataURL("image/png") : "";
+    var saves=[];
+    if(typed) saves.push({ type:"text", prompt:currentPrompt, promptTemplate:currentTemplate, text:typed, morning:line });
+    if(inked) saves.push({ type:"draw", prompt:currentPrompt, promptTemplate:currentTemplate, image:inked, morning:line });
+    if(!saves.length && names.length){
+      var aff=lsGet(LSK_AFFIRM,"").trim();
+      saves.push({ type:"text", prompt:"Morning practice", text: line + (aff && mDoneIds.indexOf("affirm")>=0 ? "\n\n"+aff : ""), morning:line });
+    }
+    mStop(); lsSet(LSK_M_LAST, todayKey());
+    $("mDoneSum").textContent = names.length ? (line+". You showed up for yourself. The rest of the day can have you now.") : "You showed up. That counts.";
+    $("mDoneKept").textContent = "";
+    mShow("mDone");
+    // one after another, so the two entries of a typed-and-drawn morning get different ids
+    saves.reduce(function(p, e){ return p.then(function(){ return saveEntry(e); }); }, Promise.resolve())
+      .then(function(){ if(saves.length){ afterSaveSuccess(); $("mDoneKept").textContent="Kept in your journal."; } })
+      .catch(function(){ $("mDoneKept").textContent="This one couldn’t be saved to your journal."; });
   }
 
   /* ============================================================
@@ -3445,8 +3586,9 @@
     else { enableFace().then(function(){ toast("Face ID enabled"); syncFaceToggle(); })
       .catch(function(){ toast("Couldn’t enable Face ID"); syncFaceToggle(); }); }
   });
-  $("setProfile").addEventListener("click", function(){ closeSheet(); openOnboard(true); });
-  $("setPin").addEventListener("click", function(){ closeSheet(); showLock("change-old", showApp); });
+  $("setProfile").addEventListener("click", function(){ closeSheet(); obFromSettings=true; openOnboard(true); });
+  $("setPin").addEventListener("click", function(){ closeSheet(); showLock("change-old", function(){ showApp(); openSheet(); }); });
+  $("sheetDone").addEventListener("click", function(){ haptic(6); closeSheet(); });
   $("setErase").addEventListener("click", function(){
     if(confirm("Erase ALL entries and notebook pages permanently? This cannot be undone.")){
       if(confirm("Are you sure? Everything will be gone forever.")){

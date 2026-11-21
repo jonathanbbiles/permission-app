@@ -778,9 +778,14 @@ ok("pause keeps what is left and resume re-derives the end time",
    /r\.left=Math\.max\(0, r\.endsAt-Date\.now\(\)\); r\.paused=true/.test(html) && /r\.endsAt=Date\.now\(\)\+r\.left; r\.paused=false/.test(html));
 ok("leaving Morning by any route stops the timer, the wake lock and the chime",
    /if\(id!=="morning"\) mStop\(\);/.test(html) && /function mStop\(\)\{ mStopTick\(\); mWake\(false\); mAudioOff\(\); mRun=null; \}/.test(html));
-ok("the chime is off unless asked for, and only exists while a practice runs",
+ok("the chime is off unless asked for, and is armed inside the Begin tap",
    /function mChimeOn\(\)\{ return lsGet\(LSK_M_CHIME,"0"\)==="1"; \}/.test(html) &&
-   /if\(mChimeOn\(\)\) mAudioOn\(\);/.test(html) && (code19.match(/new AC\(\)/g) || []).length === 1);
+   /if\(mChimeOn\(\)\)\{ mAudioOn\(\); mAudioPrime\(\); \}/.test(html));
+ok("the chime is a media element, not Web Audio (an iPad's mute setting silences Web Audio)",
+   /mChimeEl=new Audio\(\)/.test(code19) && /new Blob\(\[buf\], \{type:"audio\/wav"\}\)/.test(code19) &&
+   !/createOscillator|AudioContext\(\)|new AC\(\)/.test(code19.slice(code19.indexOf("var mChimeEl"), code19.indexOf("function mStopTick"))));
+ok("turning the chime on plays it once, so you hear what you chose",
+   /if\(mChimeOn\(\)\)\{ mAudioOn\(\); mChime\(\); \}/.test(html));
 ok("Morning adds no streak, no score and no notification",
    !/streak/i.test(code19.replace(/no streak/gi, "")) && !/LocalNotifications|Notification\.requestPermission|new Notification\(/.test(code19));
 ok("Morning fetches nothing", !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket\(/.test(html.slice(html.indexOf("MORNING (1.9.0)\n     Six quiet"), html.indexOf("SETTINGS SHEET"))));
@@ -791,10 +796,33 @@ ok("the feature is named Morning: the mark appears once, in the credit, nowhere 
    (html.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").match(/S\.A\.V\.E\.R\.S|SAVERS/g) || []).length === 1);
 ok("affirmations are the user's words: kept on the phone, erased with everything else",
    /lsSet\(LSK_AFFIRM, \$\("mAffirm"\)\.value\)/.test(html) && /localStorage\.removeItem\(LSK_AFFIRM\)/.test(html));
-ok("Write hands over to the real Write screen with today's invitation",
-   /if\(st\.id==="write"\)\{ lsSet\(LSK_M_LAST, todayKey\(\)\); mStop\(\); startText\(\); return; \}/.test(html));
-ok("a kept note is an ordinary text entry, so viewing and export already work",
-   /saveEntry\(\{type:"text", prompt:"Morning practice", text:text\}\)/.test(html));
+ok("Write happens inside Morning: a page to type on and a pad to write on by hand",
+   /<textarea id="mWrite"/.test(html) && /<canvas id="mPadCanvas" class="pad">/.test(html) &&
+   /mPad=createPad\(\$\("mPadCanvas"\)/.test(html) && !/mStop\(\); startText\(\)/.test(html));
+ok("finishing keeps the morning by itself: no Keep-a-note choice left",
+   !/id="mDoneKeep"/.test(html) && !/function mKeepNote/.test(html) && /id="mDoneClose" type="button">Go have your day</.test(html));
+ok("what was typed and what was drawn are ordinary entries under today's invitation",
+   /saves\.push\(\{ type:"text", prompt:currentPrompt, promptTemplate:currentTemplate, text:typed, morning:line \}\)/.test(html) &&
+   /saves\.push\(\{ type:"draw", prompt:currentPrompt, promptTemplate:currentTemplate, image:inked, morning:line \}\)/.test(html));
+ok("with nothing written, one short entry still records the morning",
+   /if\(!saves\.length && names\.length\)\{/.test(html) && /prompt:"Morning practice", text: line/.test(html));
+ok("the finish screen only says Kept after the save really happened",
+   /\.then\(function\(\)\{ if\(saves\.length\)\{ afterSaveSuccess\(\); \$\("mDoneKept"\)\.textContent="Kept in your journal\."; \} \}\)/.test(html));
+ok("a first-time Affirm has somewhere to start, and more one tap away",
+   /if\(lsGet\(LSK_AFFIRM,null\)===null\) lsSet\(LSK_AFFIRM, M_AFFIRM_START\.join\("\\n"\)\);/.test(html) && /id="mAffirmChips"/.test(html) &&
+   (html.match(/var M_AFFIRM_MORE=\[([^\]]*)\]/) || ["", ""])[1].split('","').length >= 6);
+ok("the footer and Settings use the names they go by: Glitoris and Honeywood",
+   />A gift from Glitoris &#8599;<\/a>/.test(html) && />Honeywood &#8599;<\/a>/.test(html) &&
+   /<div class="a">Visit Glitoris<\/div>/.test(html) && /<div class="b">Honeywood<\/div>/.test(html) &&
+   !/A gift from Jessica|Visit Jessica/.test(html));
+ok("Settings has a Done button, and a change made from Settings returns to Settings",
+   /id="sheetDone" type="button">Done</.test(html) && /\$\("sheetDone"\)\.addEventListener\("click", function\(\)\{ haptic\(6\); closeSheet\(\); \}\)/.test(html) &&
+   /if\(obFromSettings\)\{ obFromSettings=false; openSheet\(\); \}/.test(html) &&
+   /showLock\("change-old", function\(\)\{ showApp\(\); openSheet\(\); \}\)/.test(html));
+ok("any accent colour can be chosen, and stays legible",
+   /inp\.type="color"; inp\.id="accentPick"/.test(html) && /function customAccent\(hex\)/.test(html) &&
+   /while\(relLum\(d\)>0\.22 && guard\+\+<40\)/.test(html) && /on: relLum\(c\)>0\.55 \? "#3A0E2E" : "#FFFFFF"/.test(html) &&
+   /r\.style\.removeProperty\("--on-accent"\)/.test(html));
 ok("the system audio control is gone from both places", !/<audio[^>]*\bcontrols\b/.test(html));
 ok("both recordings use the app's player, fed the measured length",
    /bindPlayer\(\$\("playbackUi"\), \$\("playback"\), recSeconds\)/.test(html) &&
