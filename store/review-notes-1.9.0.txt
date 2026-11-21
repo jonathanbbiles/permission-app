@@ -1,0 +1,9 @@
+What is new in 1.9.0
+
+Morning: a card on the home screen opens six short timed practices (silence, affirmations, picturing the day, moving, reading, writing). To see it: unlock the app, tap "Morning", tap "Begin". "Next" moves through each practice without waiting for the timer. The last practice is a page to type on or write on by hand; "Finish" saves it to the journal.
+
+The Morning screen credits the book that inspired the routine (Hal Elrod's The Miracle Morning) and states that the app is independent and not affiliated. The name of that routine is not used as a feature name or in the store listing, and the link opens the book's public website in the browser.
+
+"What you need lately" (Settings, and the Affirm practice) is three tap-only questions that suggest affirmations. Nothing is typed, and the answers stay on the device.
+
+Unchanged: there is no account and no sign-in. The app makes no network connections; everything stays on the device. The passcode is created by the user on first launch.

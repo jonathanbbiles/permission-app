@@ -1,1 +1,1 @@
-{"version": "1.8.0", "build": "202610120337", "submit": true, "iaps": [], "screenshots": true, "releaseType": "AFTER_APPROVAL"}
+{"version": "1.9.0", "build": "202611211758", "submit": false, "iaps": [], "screenshots": true, "copy": "store/listing-1.9.0.json", "reviewNotes": "store/review-notes-1.9.0.txt", "releaseType": "AFTER_APPROVAL"}
