@@ -182,7 +182,7 @@ ok("website link uses Capacitor Browser.open + window.open fallback",
    /Browser\.open\(\{ url:url \}\)/.test(html) && /window\.open\(url,"_blank"/.test(html));
 ok("in-app rating after success moment, not first launch", /requestReview/.test(html) && /n===3/.test(html));
 /* exact version is re-asserted in section 20; here just check it moved past 1.2 */
-ok("version bumped past the live 1.2", /APP_VERSION = "1\.[3-9](\.\d+)?"/.test(html) && />v1\.[3-9]/.test(html));
+ok("version bumped past the live 1.2", /APP_VERSION = "1\.([3-9]|\d\d)(\.\d+)?"/.test(html) && />v1\.([3-9]|\d\d)/.test(html));
 ok("IndexedDB name preserved for existing users", /indexedDB\.open\("awaken_db"/.test(html));
 ok("passcode keys preserved", /"awaken_pin"/.test(html) && /"awaken_face"/.test(html));
 ok("creator link jonathanscribbles.com present + clickable",
@@ -645,12 +645,12 @@ ok("notebook PNG + PDF exports still there", /id="nbExportPage"/.test(html) && /
 ok("zero network APIs still hold",
    !/fetch\(|XMLHttpRequest|WebSocket|sendBeacon/.test(html));
 /* exact version re-asserted in section 25 */
-ok("version moved past 1.6.x", /APP_VERSION = "1\.([7-9])\.\d+"/.test(html));
+ok("version moved past 1.6.x", /APP_VERSION = "1\.([7-9]|\d\d)\.\d+"/.test(html));
 
 /* ============================================================ */
 section("25) v1.7.1 — the permissionjournal:// URL scheme, nothing else changed");
 /* exact version re-asserted in section 32 */
-ok("version moved past 1.7.0", /APP_VERSION = "1\.(7\.[1-9]|[8-9]\.\d+)"/.test(html));
+ok("version moved past 1.7.0", /APP_VERSION = "1\.(7\.[1-9]|[8-9]\.\d+|\d\d\.\d+)"/.test(html));
 /* Slow Burn's Journal button opens Permission by this exact scheme
    (SlowBurn-iOS www/index.html PERMISSION_URL). Renaming it breaks that
    button silently, so the scheme is asserted AND read back in the build. */
@@ -705,10 +705,10 @@ ok("iPad two-column layout no longer positions a .bigcard row",
 ok("the tiles still occupy the iPad's left column", /#v-home \.modes\s*\{grid-column:1/.test(html));
 
 section("32) v1.8.0 — made for iPad and the iPhone Duo");
-ok("version is 1.9.0 everywhere it must agree",
-   /APP_VERSION = "1\.9\.0"/.test(html) && />v1\.9\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.9\.0/.test(cm) && /expected 1\.9\.0/.test(cm) &&
-   /"version": "1\.9\.0"/.test(pkgRaw));
+ok("version is 1.10.0 everywhere it must agree",
+   /APP_VERSION = "1\.10\.0"/.test(html) && />v1\.10\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.10\.0/.test(cm) && /expected 1\.10\.0/.test(cm) &&
+   /"version": "1\.10\.0"/.test(pkgRaw));
 ok("build sets TARGETED_DEVICE_FAMILY \"1,2\" and reads it back",
    /TARGETED_DEVICE_FAMILY = "1,2";/.test(cm) && /is not \\"1,2\\" everywhere/.test(cm));
 ok("build sets UIDeviceFamily [1,2] and asserts it",
@@ -764,14 +764,14 @@ const code19 = stripComments(html);
 ok("Home has exactly one Morning card, and it is a real <button>",
    (html.match(/id="cardMorning"/g) || []).length === 1 && /<button class="morningcard" id="cardMorning" type="button">/.test(html));
 ok("the card moves with the time of day instead of being duplicated",
-   /function placeMorningCard\(\)[\s\S]{0,260}?insertBefore\(c, am \? \$\("depths"\) : home\.querySelector\("\.sechead"\)\)/.test(html) &&
+   /function placeMorningCard\(\)[\s\S]{0,360}?insertBefore\(c, top \? \$\("depths"\) : home\.querySelector\("\.sechead"\)\)/.test(html) &&
    /updateProfileSub\(\); placeMorningCard\(\);/.test(html));
 ok("landscape Home places Morning explicitly, above the journal column",
    /#v-home #cardMorning\{grid-column:2; grid-row:2;/.test(html) && /#v-home \.depths\{grid-column:1; align-self:center;\}/.test(html));
 ok("there are six practices, in order", (() => {
   const ids = [...html.matchAll(/\{id:"(silence|affirm|picture|move|read|write)", nm:"/g)].map((m) => m[1]);
   return ids.join(",") === "silence,affirm,picture,move,read,write"; })());
-ok("only Write is untimed", (html.match(/timed:false/g) || []).length === 1 && /id:"write", nm:"Write", timed:false/.test(html));
+ok("only the last practice of each routine is untimed", (html.match(/timed:false/g) || []).length === 2 && /id:"write", nm:"Write", timed:false/.test(html) && /id:"tomorrow", nm:"Tomorrow", timed:false/.test(html));
 ok("a running practice is an end time, not a counter",
    /r\.endsAt=Date\.now\(\)\+r\.total/.test(html) && /Math\.max\(0, r\.endsAt-Date\.now\(\)\)/.test(html));
 ok("pause keeps what is left and resume re-derives the end time",
@@ -779,15 +779,15 @@ ok("pause keeps what is left and resume re-derives the end time",
 ok("leaving Morning by any route stops the timer, the wake lock and the chime",
    /if\(id!=="morning"\) mStop\(\);/.test(html) && /function mStop\(\)\{ mStopTick\(\); mWake\(false\); mAudioOff\(\); mRun=null; \}/.test(html));
 ok("the chime is off unless asked for, and is armed inside the Begin tap",
-   /function mChimeOn\(\)\{ return lsGet\(LSK_M_CHIME,"0"\)==="1"; \}/.test(html) &&
+   /function mChimeOn\(\)\{ return lsGet\(mK\("chime"\),"0"\)==="1"; \}/.test(html) &&
    /if\(mChimeOn\(\)\)\{ mAudioOn\(\); mAudioPrime\(\); \}/.test(html));
 ok("the chime is a media element, not Web Audio (an iPad's mute setting silences Web Audio)",
    /mChimeEl=new Audio\(\)/.test(code19) && /new Blob\(\[buf\], \{type:"audio\/wav"\}\)/.test(code19) &&
    !/createOscillator|AudioContext\(\)|new AC\(\)/.test(code19.slice(code19.indexOf("var mChimeEl"), code19.indexOf("function mStopTick"))));
 ok("turning the chime on plays it once, so you hear what you chose",
    /if\(mChimeOn\(\)\)\{ mAudioOn\(\); mChime\(\); \}/.test(html));
-ok("Morning adds no streak, no score and no notification",
-   !/streak/i.test(code19.replace(/no streak/gi, "")) && !/LocalNotifications|Notification\.requestPermission|new Notification\(/.test(code19));
+ok("there is still no streak and no score",
+   !/streak/i.test(code19.replace(/no streak/gi, "")) && !/Notification\.requestPermission|new Notification\(/.test(code19));
 ok("Morning fetches nothing", !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket\(/.test(html.slice(html.indexOf("MORNING (1.9.0)\n     Six quiet"), html.indexOf("SETTINGS SHEET"))));
 ok("the source is credited on the screen, with a plain non-affiliation line",
    /inspired by the S\.A\.V\.E\.R\.S\. routine in Hal Elrod&rsquo;s book <em>The Miracle Morning<\/em>/.test(html) &&
@@ -795,7 +795,8 @@ ok("the source is credited on the screen, with a plain non-affiliation line",
 ok("the feature is named Morning: the mark appears once, in the credit, nowhere in the UI",
    (html.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "").match(/S\.A\.V\.E\.R\.S|SAVERS/g) || []).length === 1);
 ok("affirmations are the user's words: kept on the phone, erased with everything else",
-   /lsSet\(LSK_AFFIRM, \$\("mAffirm"\)\.value\)/.test(html) && /localStorage\.removeItem\(LSK_AFFIRM\)/.test(html));
+   /lsSet\(LSK_AFFIRM, \$\("mAffirm"\)\.value\)/.test(html) &&
+   /\["perm_morning_last","perm_evening_last","perm_morning_remind","perm_evening_remind", LSK_AFFIRM, LSK_KNOW, LSK_TOMORROW\]\s*\.forEach\(function\(k\)\{ localStorage\.removeItem\(k\); \}\)/.test(html));
 ok("Write happens inside Morning: a page to type on and a pad to write on by hand",
    /<textarea id="mWrite"/.test(html) && /<canvas id="mPadCanvas" class="pad">/.test(html) &&
    /mPad=createPad\(\$\("mPadCanvas"\)/.test(html) && !/mStop\(\); startText\(\)/.test(html));
@@ -858,7 +859,7 @@ ok("the questions ask nothing private and collect no free text",
    !/<input[^>]*id="kn/.test(html) && !/<textarea[^>]*id="kn/.test(html) &&
    !/sex|pleasure|desire|intima|weight|diet|diagnos/i.test(knBlock));
 ok("answers stay on the phone and go with Erase everything",
-   /lsSet\(LSK_KNOW, JSON\.stringify\(/.test(html) && /localStorage\.removeItem\(LSK_KNOW\)/.test(html) &&
+   /lsSet\(LSK_KNOW, JSON\.stringify\(/.test(html) && /LSK_AFFIRM, LSK_KNOW, LSK_TOMORROW\]/.test(html) &&
    !/fetch\(|XMLHttpRequest/.test(html.slice(html.indexOf("WHAT YOU NEED LATELY (1.9.0)\n     Three questions"), html.indexOf("SETTINGS SHEET\n"))));
 ok("it opens from Settings and from Affirm, and goes back where it came from",
    /\$\("setKnow"\)\.addEventListener\("click", function\(\)\{ closeSheet\(\); openKnow\("settings"\); \}\)/.test(html) &&
@@ -875,6 +876,53 @@ ok("the app no longer points to Slow Burn, in the footer or the store descriptio
    !/Slow Burn/.test(fs.readFileSync(path.join(ROOT, "store/listing.json"), "utf8")) &&
    !/Slow Burn/.test(fs.readFileSync(path.join(ROOT, "store/listing-1.9.0.json"), "utf8")));
 ok("Slow Burn can still open Permission by its URL scheme", /permissionjournal/.test(cm));
+
+section("35) v1.10.0 — an evening wind down, and an optional daily reminder");
+const code110 = stripComments(html);
+ok("the two routines share one screen and one Home card",
+   (html.match(/id="v-morning"/g) || []).length === 1 && (html.match(/id="cardMorning"/g) || []).length === 1 &&
+   /function mAll\(\)\{ return mEve\(\) \? E_STEPS : M_STEPS; \}/.test(html));
+ok("Morning's stored settings keep the names 1.9.0 wrote",
+   /function mK\(name\)\{ return "perm_"\+mKind\+"_"\+name; \}/.test(html) && /var mKind="morning"/.test(html));
+ok("the evening has four practices, in order", (() => {
+  const blk = html.slice(html.indexOf("var E_STEPS=["), html.indexOf("function mAll()"));
+  return [...blk.matchAll(/\{id:"(\w+)", nm:"/g)].map((m) => m[1]).join(",") === "unwind,setdown,good,tomorrow"; })());
+ok("the Home card offers the evening from 7pm until 4am, and the morning otherwise",
+   /function clockKind\(\)\{ var h=new Date\(\)\.getHours\(\); return \(h>=19 \|\| h<4\) \? "evening" : "morning"; \}/.test(html) &&
+   /openMorning\(clockKind\(\)\)/.test(html));
+ok("either routine can be reached from the other at any hour",
+   /\$\("mSwap"\)\.addEventListener\("click", function\(\)\{ haptic\(6\); openMorning\(mEve\(\) \? "morning" : "evening"\); \}\)/.test(html));
+ok("the book credit is shown for Morning only",
+   /\$\("mCredit"\)\.classList\.toggle\("hidden", mEve\(\)\)/.test(html));
+ok("the evening keeps one ordinary text entry, marked as the evening's",
+   /prompt:ROUTINE\.evening\.entry, text: parts\.length \? parts\.join\("\\n\\n"\) : line, morning:line, routine:"evening"/.test(html) &&
+   /e\.routine==="evening" \? " · Evening" : " · Morning"/.test(html));
+ok("what you want from tomorrow is shown back the next morning, then let go",
+   /lsSet\(LSK_TOMORROW, JSON\.stringify\(\{ts:Date\.now\(\), text:want\}\)\)/.test(html) &&
+   /\(Date\.now\(\)-w\.ts < 30\*3600\*1000\) \? w\.text : ""/.test(html) &&
+   /localStorage\.removeItem\(LSK_TOMORROW\); \}catch\(e\)\{\}     \/\/ last night/.test(html));
+ok("the evening's words are fit for a 13+ reader",
+   !/pleasure|desire|intimate|touch|sex/i.test(html.slice(html.indexOf("var E_STEPS=["), html.indexOf("function clockKind()"))));
+ok("reminders are off unless switched on",
+   /function remindOn\(\)\{ return lsGet\(mK\("remind"\),"0"\)==="1"; \}/.test(html) && /aria-label="Remind me every day" aria-checked="false"/.test(html));
+ok("a reminder is a local notification: asked for, scheduled daily, one fixed id per routine",
+   /var REMIND_ID=\{morning:7101, evening:7102\}/.test(html) && /p\.requestPermissions\(\)/.test(code110) &&
+   /schedule:\{ on:\{ hour:parseInt\(at\[0\],10\), minute:parseInt\(at\[1\],10\) \}, allowWhileIdle:true \}/.test(code110) &&
+   (code110.match(/\.schedule\(\{notifications:/g) || []).length === 1);
+ok("re-scheduling replaces the old one instead of stacking a second",
+   /return cancelRemind\(kind\)\.then\(function\(\)\{\s*return p\.schedule\(/.test(code110));
+ok("the switch only turns on after the phone said yes and the schedule succeeded",
+   /if\(!r \|\| r\.display!=="granted"\)\{ toast\(/.test(code110) && /if\(!ok\)\{ toast\("Couldn’t set the reminder"\); return; \}\s*var was=mKind; mKind=kind; lsSet\(mK\("remind"\),"1"\)/.test(code110));
+ok("the words on the lock screen say nothing about the journal",
+   (() => { const b = [...html.matchAll(/remindBody:"([^"]+)"/g)].map((m) => m[1]); return b.length === 2 && b.every((t) => !/journal|entry|affirm|write|private|passcode/i.test(t) && t.length < 70); })());
+ok("no reminder ever mentions a missed day", !/missed|yesterday you|don’t break|keep it going/i.test(code110));
+ok("a tapped reminder waits for the passcode before opening anything",
+   /if\(!\$\("lock"\)\.classList\.contains\("show"\) && !\$\("onboard"\)\.classList\.contains\("show"\)\) openPendingRoutine\(\);/.test(html) &&
+   /if\(pendingRoutine\) setTimeout\(openPendingRoutine, 0\);/.test(html));
+ok("Erase everything also cancels both reminders", /cancelRemind\("morning"\); cancelRemind\("evening"\);/.test(html));
+ok("reminders make no network request", !/fetch\(|XMLHttpRequest|sendBeacon/.test(html.slice(html.indexOf("---- reminders (1.10.0) ----"), html.indexOf("function openPendingRoutine"))));
+ok("the plugin is a dependency and the build refuses to ship without it",
+   /"@capacitor\/local-notifications": "\^8\.0\.0"/.test(pkgRaw) && /grep -q "local-notifications" "\$SPM" \|\| \{/.test(cm));
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

@@ -101,6 +101,16 @@ workflows:
           grep -q 'id="vTranscript"' www/index.html || { echo "BLOCKED: the transcript panel is missing from the Record screen"; exit 1; }
           echo "OK — on-device file transcription is present and will be in the IPA."
 
+          # --- IN (1.10.0): the reminders plugin. Same silent-drop risk as above:
+          # if cap sync leaves it out, the "Remind me" switch would do nothing on
+          # a real phone and nobody would know until a user said so.
+          grep -q "local-notifications" "$SPM" || {
+            echo "BLOCKED: @capacitor/local-notifications is NOT in $SPM — reminders would be dead in the IPA.";
+            exit 1;
+          }
+          grep -q "LocalNotifications" www/index.html || { echo "BLOCKED: www/index.html never calls the reminders plugin"; exit 1; }
+          echo "OK — the reminders plugin is in the build."
+
           # --- ON-DEVICE ONLY: no server fallback, ever. Without this flag iOS
           # may ship the audio to Apple, which would make the privacy claim a
           # 5.1.1(i) misrepresentation.
@@ -421,7 +431,7 @@ workflows:
           # Earlier versions are separate records in App Store Connect and are
           # NOT touched by this build: this lane publishes to TestFlight only
           # (see the review-submit toggle at the bottom, deliberately off).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.9.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.9.0" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.10.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.10.0" ios/App/App/Info.plist
 
           # Read BOTH values back out of the plist. An unexpanded variable or a
           # silent PlistBuddy no-op would otherwise ship a colliding build that
@@ -433,7 +443,7 @@ workflows:
             [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
             *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
           esac
-          [ "$GOT_V" = "1.9.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.9.0"; exit 1; }
+          [ "$GOT_V" = "1.10.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.10.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

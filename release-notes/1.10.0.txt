@@ -1,0 +1,9 @@
+New: Evening, and reminders.
+
+Evening is a short wind down for the end of the day: unwind, set one thing down, name one good thing, and say what you want from tomorrow. It takes about six minutes, and you can leave out any part. In the morning, the app shows you what you said you wanted.
+
+Reminders: Morning and Evening can each send one quiet notification a day, at a time you choose. They are off unless you turn them on, and they are scheduled by your phone, not by a server.
+
+After 7pm the Morning card on the home screen becomes Evening. Either one is a tap away at any hour.
+
+Everything still stays on your device.

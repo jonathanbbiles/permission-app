@@ -196,6 +196,15 @@ for (const d of DEVICES) {
   await page.click("#mBack"); await sleep(300);
   await page.click("#mBack"); await sleep(600);
 
+  // 1d — Evening (1.10.0): after 7pm the same card offers the wind down.
+  await page.clock.setFixedTime(new Date(2026, 10, 21, 21, 5, 0));
+  await page.evaluate(() => window.Permission.showApp()); await sleep(500);
+  await page.click("#cardMorning"); await sleep(600);
+  written.push(await shoot(page, dir, "01d-evening"));
+  await page.click("#mBack"); await sleep(500);
+  await page.clock.setFixedTime(T0);
+  await page.evaluate(() => window.Permission.showApp()); await sleep(500);
+
   // 2 — Record, with the transcript the finished recording produced.
   //     Staged, because a headless browser has no native recogniser: the
   //     DEVICE state is what a screenshot must show, not the renderer's.
