@@ -65,6 +65,18 @@ async function open(hour, opts = {}) {
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on("request", (r) => { const u = r.url(); if (!u.startsWith(ORIGIN) && !/^(data|blob):/.test(u)) foreign.push(u); });
+  if (opts.notif) await page.addInitScript((answer) => {
+    // A stand-in for @capacitor/local-notifications with the same method names and shapes.
+    const N = window.__notif = { asked: 0, scheduled: [], cancelled: [], live: [], handler: null,
+      tap(kind) { if (N.handler) N.handler({ actionId: "tap", notification: { id: kind === "evening" ? 7102 : 7101, extra: { open: kind } } }); } };
+    window.Capacitor = window.Capacitor || {}; window.Capacitor.Plugins = window.Capacitor.Plugins || {};
+    window.Capacitor.Plugins.LocalNotifications = {
+      requestPermissions: async () => { N.asked++; return { display: answer }; },
+      schedule: async (o) => { o.notifications.forEach((n) => { N.scheduled.push(n); N.live = N.live.filter((x) => x.id !== n.id).concat([n]); }); return { notifications: o.notifications.map((n) => ({ id: n.id })) }; },
+      cancel: async (o) => { o.notifications.forEach((n) => { N.cancelled.push(n.id); N.live = N.live.filter((x) => x.id !== n.id); }); },
+      addListener: (name, fn) => { if (name === "localNotificationActionPerformed") N.handler = fn; return Promise.resolve({ remove() {} }); },
+    };
+  }, opts.notif);
   await page.addInitScript(() => { window.__plays = 0; const real = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () { if (!this.muted) window.__plays++; try { return Promise.resolve(real.call(this)).catch(() => {}); } catch (e) { return Promise.resolve(); } }; });
   await page.clock.install({ time: new Date(2026, 10, 21, hour, 5, 0) });
@@ -309,6 +321,103 @@ console.log("\nHome, at 3:05 in the afternoon (dark theme)");
   await shot(page, "m9-entry-player-dark");
   ok("no page errors", errors.filter((e) => !/NotSupportedError|no supported source/i.test(e)).length === 0, errors.join(" | "));
   await ctx.close();
+}
+
+console.log("\nEvening, at 9:05 at night, with reminders (a stand-in for the phone's notification plugin)");
+{
+  const { ctx, page, tick, errors, foreign } = await open(21, { notif: "granted" });
+  const order = await page.evaluate(() => [...document.getElementById("v-home").children].map((e) => e.id || e.className.split(" ")[0]));
+  ok("at night the one card is Evening, at the top", (await page.locator("#cardMorning").count()) === 1 && (await text(page, "#routineNm")) === "Evening" && order.indexOf("cardMorning") < order.indexOf("prompt"), order.join(","));
+  ok("it says what it is", /Four small ways to set the day down · about 6 minutes/.test(await text(page, "#morningSub")), await text(page, "#morningSub"));
+  await shot(page, "e1-home-evening");
+  await page.click("#cardMorning"); await tick(400);
+  ok("it opens the evening wind down: four practices, its own words, no book credit",
+     (await text(page, "#mTitle")).toUpperCase() === "EVENING" && (await page.locator(".m-step").count()) === 4 && /A soft landing/i.test(await text(page, "#mIntroK")) && !(await page.locator("#mCredit").isVisible()));
+  await shot(page, "e2-setup");
+
+  // reminders
+  ok("the reminder is off, and the time is hidden until it is on", (await page.locator("#mRemind").getAttribute("aria-checked")) === "false" && !(await page.locator("#mRemindAt").isVisible()));
+  await page.click("#mRemind"); await tick(300);
+  let log = await page.evaluate(() => window.__notif);
+  ok("turning it on asks the phone first, then schedules one daily notification",
+     log.asked === 1 && log.scheduled.length === 1 && log.scheduled[0].id === 7102 && log.scheduled[0].schedule.on.hour === 21 && log.scheduled[0].schedule.on.minute === 30 && log.scheduled[0].extra.open === "evening", JSON.stringify(log));
+  ok("the switch is on and the time is offered", (await page.locator("#mRemind").getAttribute("aria-checked")) === "true" && await page.locator("#mRemindAt").isVisible() && (await page.inputValue("#mRemindTime")) === "21:30");
+  ok("the lock-screen words say nothing about a journal", !/journal|entry|private/i.test(log.scheduled[0].body) && log.scheduled[0].title === "Permission", log.scheduled[0].body);
+  await page.fill("#mRemindTime", "22:15"); await page.dispatchEvent("#mRemindTime", "change"); await tick(300);
+  log = await page.evaluate(() => window.__notif);
+  ok("changing the time replaces the reminder instead of adding a second", log.live.length === 1 && log.live[0].schedule.on.hour === 22 && log.live[0].schedule.on.minute === 15 && log.cancelled.includes(7102), JSON.stringify(log.live));
+  await shot(page, "e3-remind-on");
+
+  // the routine
+  await page.click('#mMinutes [data-min="1"]'); await tick(100);
+  await page.click("#mBegin"); await tick(300);
+  ok("it starts on Unwind, 1 of 4, with the clock", /Unwind/i.test(await text(page, "#mName")) && /1 of 4/i.test(await text(page, "#mKick")) && (await secs(page)) === 60 && !(await page.locator("#mNote").isVisible()));
+  await page.click("#mNext"); await tick(300);
+  ok("Set it down has one line to write, and the clock still runs", /Set it down/i.test(await text(page, "#mName")) && await page.locator("#mNote").isVisible() && await page.locator("#mRing").isVisible());
+  await page.fill("#mNote", "The email I didn’t answer.");
+  await shot(page, "e4-set-it-down");
+  await page.click("#mNext"); await tick(300);
+  ok("One good thing starts empty", /One good thing/i.test(await text(page, "#mName")) && (await page.inputValue("#mNote")) === "");
+  await page.fill("#mNote", "Coffee on the balcony.");
+  await page.click("#mNext"); await tick(300);
+  ok("Tomorrow is last: no clock, no Pause, Finish", /Tomorrow/i.test(await text(page, "#mName")) && !(await page.locator("#mRing").isVisible()) && !(await page.locator("#mPause").isVisible()) && /Finish/.test(await text(page, "#mNext")));
+  await page.fill("#mNote", "An unhurried breakfast.");
+  await page.click("#mNext"); await real(500); await tick(500); await real(300); await tick(300);
+  ok("the finish screen is the evening's, and says Kept", /That’s the day, set down/i.test(await text(page, "#mDoneTitle")) && /Unwind · Set it down · One good thing · Tomorrow\. Sleep well/.test(await text(page, "#mDoneSum")) && /Kept in your journal\./.test(await text(page, "#mDoneKept")) && /Goodnight/.test(await text(page, "#mDoneClose")));
+  await shot(page, "e5-done");
+  await page.click("#mDoneClose"); await real(400); await tick(700);
+  ok("Home says tonight's is done", /Set down for tonight/.test(await text(page, "#morningSub")), await text(page, "#morningSub"));
+  await page.click("#homeList .entry >> nth=0"); await real(400); await tick(600);
+  const body = await text(page, "#eContent");
+  ok("one entry holds the three lines under their labels, marked Evening",
+     /Evening wind down/i.test(await text(page, "#ePrompt")) && /Evening/i.test(await text(page, "#eDate")) && /Set down: The email I didn’t answer\./.test(body) && /Good today: Coffee on the balcony\./.test(body) && /Tomorrow: An unhurried breakfast\./.test(body), body);
+  await page.click("#entryBack"); await real(300); await tick(500);
+
+  // the morning one is reachable at night, and shows last night's want
+  await page.click("#cardMorning"); await tick(300); await page.click("#mSwap"); await tick(300);
+  ok("the morning one is one tap away at night: six practices, the credit back", (await text(page, "#mTitle")).toUpperCase() === "MORNING" && (await page.locator(".m-step").count()) === 6 && await page.locator("#mCredit").isVisible());
+  ok("it shows what you said you wanted from today", await page.locator("#mLastNight").isVisible() && (await text(page, "#mLastNightTx")) === "An unhurried breakfast.");
+  ok("the morning reminder is its own switch, still off", (await page.locator("#mRemind").getAttribute("aria-checked")) === "false" && (await page.evaluate(() => window.__notif.live.length)) === 1);
+  await shot(page, "e6-morning-last-night");
+  await page.click("#mBack"); await tick(500);
+
+  // a tapped reminder: opens the routine it names
+  await page.evaluate(() => window.__notif.tap("morning")); await tick(300);
+  ok("tapping a morning reminder while unlocked opens Morning", await page.locator("#v-morning").isVisible() && (await text(page, "#mTitle")).toUpperCase() === "MORNING");
+  await page.click("#mBack"); await tick(400);
+  await page.click("#btnLock"); await tick(400);
+  await page.evaluate(() => window.__notif.tap("evening")); await tick(300);
+  ok("tapping one while locked does not get past the passcode", await page.locator("#lock").isVisible() && !(await page.locator("#v-morning").isVisible()));
+  for (let i = 0; i < 4; i++) { await page.click('#pad button.key:has-text("1")'); await tick(80); }
+  await real(300); await tick(900);
+  ok("after the passcode it opens the evening it was pointing at", await page.locator("#v-morning").isVisible() && (await text(page, "#mTitle")).toUpperCase() === "EVENING");
+  await page.click("#mBack"); await tick(400);
+
+  // turning it off, and erase
+  await page.click("#cardMorning"); await tick(300); await page.click("#mRemind"); await tick(300);
+  ok("turning it off cancels it", (await page.evaluate(() => window.__notif.live.length)) === 0 && (await page.locator("#mRemind").getAttribute("aria-checked")) === "false");
+  await page.click("#mRemind"); await tick(300); await page.click("#mBack"); await tick(400);
+  page.on("dialog", (d) => d.accept());
+  await page.click("#btnSettings"); await tick(500);
+  await page.locator("#setErase").scrollIntoViewIfNeeded(); await page.click("#setErase"); await real(400); await tick(1500);
+  ok("Erase everything cancels the reminders and forgets last night's want",
+     await page.evaluate(() => window.__notif.live.length === 0 && localStorage.getItem("perm_evening_remind") === null && localStorage.getItem("perm_tomorrow") === null));
+  ok("no page errors", errors.length === 0, errors.join(" | "));
+  ok("no request left the app", foreign.length === 0, foreign.join(" | "));
+  await ctx.close();
+}
+
+console.log("\nReminders when the phone says no, and in a browser with no plugin");
+{
+  const { ctx, page, tick, errors } = await open(8, { notif: "denied" });
+  await page.click("#cardMorning"); await tick(300); await page.click("#mRemind"); await tick(300);
+  ok("refused by the phone: the switch stays off and nothing is scheduled", (await page.locator("#mRemind").getAttribute("aria-checked")) === "false" && (await page.evaluate(() => window.__notif.scheduled.length)) === 0 && !(await page.locator("#mRemindAt").isVisible()));
+  ok("no page errors", errors.length === 0, errors.join(" | "));
+  await ctx.close();
+  const b = await open(8);
+  await b.page.click("#cardMorning"); await b.tick(300); await b.page.click("#mRemind"); await b.tick(300);
+  ok("with no plugin at all the switch stays off and nothing breaks", (await b.page.locator("#mRemind").getAttribute("aria-checked")) === "false" && b.errors.length === 0, b.errors.join(" | "));
+  await b.ctx.close();
 }
 
 await browser.close();

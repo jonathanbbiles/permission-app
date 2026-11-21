@@ -128,6 +128,8 @@ for (const [w, h] of SIZES) {
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on("response", (r) => { if (r.status() >= 400 && !/favicon/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
+  // A fixed morning: the Home card is Morning (it becomes Evening at 7pm), whatever time CI runs.
+  await page.clock.setFixedTime(new Date(2026, 10, 21, 7, 5, 0));
   await page.goto(URL, { waitUntil: "load" });
   await unlock(page);
   await seed(page);
