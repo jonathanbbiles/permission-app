@@ -142,6 +142,25 @@ console.log("\nMorning, at 7:05 in the morning");
   ok("a tap adds another, once", /I am not behind\.$/.test(await page.inputValue("#mAffirm")));
   await page.click('#mAffirmChips .chip:has-text("I am not behind.")'); await tick(100);
   ok("tapping it again does not add it twice", ((await page.inputValue("#mAffirm")).match(/I am not behind\./g) || []).length === 1);
+  // What you need lately, opened from Affirm: the clock waits, and it comes back here
+  const beforeQ = await secs(page);
+  await page.click("#mFit"); await tick(300);
+  ok("Make these fit you opens the three questions", await page.locator("#know").isVisible() && (await page.locator("#know .opt").count()) === 19);
+  ok("nothing to keep until something is answered", await page.locator("#knUse").isDisabled());
+  await page.click('#knLoud .opt:has-text("Feeling behind")'); await page.click('#knWant .opt:has-text("Rest")'); await page.click('#knWant .opt:has-text("Fun")'); await tick(100);
+  const gentle = await page.locator("#knOut .ln").allInnerTexts();
+  ok("answers turn into affirmations as you tap", gentle.length === 4 && gentle[1] === "I am not behind. I am here." && gentle[2] === "I let myself slow down.", gentle.join(" | "));
+  await page.click('#knWant .opt:has-text("Calm")'); await tick(100);
+  ok("a third pick replaces the oldest, never more than two", (await page.locator("#knWant .opt.on").count()) === 2 && !(await page.locator('#knWant .opt:has-text("Rest")').evaluate((e) => e.classList.contains("on"))));
+  await page.click('#knTone .opt:has-text("Playful")'); await tick(100);
+  const playful = await page.locator("#knOut .ln").allInnerTexts();
+  ok("the tone changes how it is said, not what it is about", playful[1] === "Nobody is keeping score, including me." && playful.length === 4, playful.join(" | "));
+  await shot(page, "m4b-know");
+  await tick(30000);
+  await page.click("#knUse"); await tick(300);
+  ok("Use these puts them in the box, back on Affirm", !(await page.locator("#know").isVisible()) && (await page.inputValue("#mAffirm")) === playful.join("\n"), await page.inputValue("#mAffirm"));
+  const afterQ = await secs(page);
+  ok("the practice waited while the questions were open", Math.abs(afterQ - beforeQ) <= 1 && /Pause/.test(await text(page, "#mPause")), `${beforeQ} -> ${afterQ}`);
   await page.fill("#mAffirm", "I am allowed to begin.\nI am not behind.");
   await shot(page, "m4-affirm");
   await page.click("#mNext"); await tick(300);
@@ -229,6 +248,11 @@ console.log("\nMorning, at 7:05 in the morning");
   await shot(page, "m11-settings-yellow");
   await page.click(".aswatch[data-accent=rose]"); await tick(100);
   ok("going back to a preset restores white on the accent", (await page.evaluate(() => document.documentElement.style.getPropertyValue("--on-accent"))) === "");
+  await page.click("#setKnow"); await tick(400);
+  ok("Settings opens the questions with the last answers still chosen", await page.locator("#know").isVisible() && (await page.locator("#knTone .opt.on").innerText()) === "Playful" && (await page.locator("#knLoud .opt.on").innerText()) === "Feeling behind");
+  await page.click("#knAdd"); await tick(400);
+  ok("Add them to mine keeps what was there and returns to Settings", await page.locator("#settingsSheet").evaluate((e) => e.classList.contains("show")) &&
+     await page.evaluate(() => { const a = localStorage.getItem("perm_affirm").split("\n"); return a[0] === "I am allowed to begin." && a.includes("Nobody is keeping score, including me.") && new Set(a).size === a.length; }));
   await page.click("#sheetDone"); await tick(500);
   ok("Done closes Settings", !(await page.locator("#settingsSheet").evaluate((e) => e.classList.contains("show"))));
 
@@ -237,7 +261,7 @@ console.log("\nMorning, at 7:05 in the morning");
   await page.click("#btnSettings"); await tick(500);
   await page.locator("#setErase").scrollIntoViewIfNeeded(); await page.click("#setErase"); await tick(1500);
   ok("Erase everything removes the affirmations and today's mark",
-     await page.evaluate(() => localStorage.getItem("perm_affirm") === null && localStorage.getItem("perm_morning_last") === null));
+     await page.evaluate(() => localStorage.getItem("perm_affirm") === null && localStorage.getItem("perm_morning_last") === null && localStorage.getItem("perm_know") === null));
 
   ok("no page errors", errors.length === 0, errors.join(" | "));
   ok("no request left the app", foreign.length === 0, foreign.join(" | "));

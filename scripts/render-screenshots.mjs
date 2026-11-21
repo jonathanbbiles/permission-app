@@ -44,7 +44,7 @@ const DEVICES = [
 const SAMPLE = [
   {
     id: "s1", type: "text", offsetMin: 40,
-    prompt: "What is one thing you long for in your intimate life?",
+    prompt: "What is one thing you long for in your closest relationships?",
     text: "I want to stop apologising for wanting to be wanted. Writing that down felt like putting down something I had been carrying with both arms.",
   },
   {

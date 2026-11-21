@@ -753,6 +753,22 @@
   #onboard{position:fixed; inset:0; z-index:65; background:linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
     display:none; flex-direction:column; padding:calc(26px + env(safe-area-inset-top)) 22px calc(26px + env(safe-area-inset-bottom)); overflow-y:auto;}
   #onboard.show{display:flex;}
+  /* WHAT YOU NEED LATELY (1.9.0) — three questions that shape the
+     affirmations. Same full-screen form as "You", one layer above it. */
+  #know{position:fixed; inset:0; z-index:66; background:linear-gradient(180deg,var(--bg) 0%, var(--bg2) 100%);
+    display:none; flex-direction:column; padding:calc(26px + env(safe-area-inset-top)) 22px calc(26px + env(safe-area-inset-bottom)); overflow-y:auto;}
+  #know.show{display:flex;}
+  #know > *{max-width:560px; margin-left:auto; margin-right:auto; width:100%;}
+  #know h2{font-size:26px; margin:0 0 6px; color:var(--ink); text-transform:uppercase; letter-spacing:.8px;}
+  #know .ob-sub{font-size:14px; color:var(--ink-soft); line-height:1.55; margin-bottom:10px; max-width:440px;}
+  #know .ob-label span{text-transform:none; letter-spacing:0; font-weight:600; color:var(--faint);}
+  #know .opt{min-height:44px;}
+  .kn-out{background:linear-gradient(180deg,var(--panel),var(--panel-tint)); border:1px solid var(--accent-soft); border-radius:var(--radius-sm); padding:14px 16px; margin-top:22px;}
+  .kn-out .k{font-size:10px; color:var(--accent-deep); text-transform:uppercase; letter-spacing:2px; font-weight:800; margin-bottom:8px;}
+  .kn-out .ln{font-size:17px; line-height:1.4; color:var(--ink); font-family:var(--display); font-weight:500; padding:4px 0;}
+  .kn-out .none{font-size:14px; color:var(--muted); line-height:1.5;}
+  #know .ob-actions{margin-top:18px; display:flex; flex-direction:column; gap:8px;}
+  .m-fit{margin-top:14px;}
   #onboard .ob-logo{width:56px; height:56px; border-radius:18px; margin-bottom:16px; box-shadow:0 10px 26px var(--on-accent-shadow);}
   #onboard h2{font-size:26px; margin:0 0 6px; color:var(--ink); text-transform:uppercase; letter-spacing:.8px;}
   #onboard .ob-sub{font-size:14px; color:var(--ink-soft); line-height:1.55; margin-bottom:22px; max-width:440px;}
@@ -855,6 +871,28 @@
   <div class="ob-foot">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <span>Never uploaded. Used only to gently phrase your prompts. Leave it blank and everything stays warm and neutral.</span>
+  </div>
+</div>
+
+<div id="know">
+  <h2 class="serif">What you need lately</h2>
+  <div class="ob-sub">Three quick questions, so your affirmations sound like they were written for you. Answer what you like. It all stays on this phone.</div>
+
+  <div class="ob-label">What&rsquo;s taking up room lately? <span>(up to two)</span></div>
+  <div class="opts" id="knLoud"></div>
+
+  <div class="ob-label">What do you want more of? <span>(up to two)</span></div>
+  <div class="opts" id="knWant"></div>
+
+  <div class="ob-label">How should it talk to you?</div>
+  <div class="opts" id="knTone"></div>
+
+  <div class="kn-out"><div class="k">Yours</div><div id="knOut"></div></div>
+
+  <div class="ob-actions">
+    <button class="btn primary" id="knUse" type="button">Use these</button>
+    <button class="btn" id="knAdd" type="button">Add them to mine</button>
+    <button class="btn ghost" id="knSkip" type="button">Not now</button>
   </div>
 </div>
 
@@ -999,6 +1037,7 @@
         <div class="count">Yours to keep, and yours to change. They&rsquo;ll be here tomorrow morning.</div>
         <div class="m-chips-lbl">Tap to add one</div>
         <div class="m-chips" id="mAffirmChips"></div>
+        <button class="textlink m-fit" id="mFit" type="button">Make these fit you &rsaquo;</button>
       </div>
       <div id="mWriteWrap" class="hidden">
         <div class="promptmini"><div class="k">Today&rsquo;s invitation</div><div class="q" id="mInvite"></div></div>
@@ -1229,6 +1268,13 @@
     <div class="accentrow" id="accentRow"></div>
   </div>
 
+  <div class="setrow" id="setKnow" style="cursor:pointer;">
+    <div class="l">
+      <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+      <div class="tx"><div class="a">What you need lately</div><div class="b" id="knowSub">Three questions that shape your affirmations</div></div>
+    </div>
+    <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+  </div>
   <div class="setrow" id="setProfile">
     <div class="l">
       <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
@@ -1416,7 +1462,7 @@
     {t:"deep", q:"What feels good and true to you in this exact moment?"},
     {t:"deep", q:"What have you been told is “selfish” that might actually be self-honoring?"},
     {t:"deep", q:"Write yourself a permission slip. What does it allow you to feel or do?"},
-    {t:"deep", q:"What is one thing you long for in your intimate life? Speak it gently to this page."},
+    {t:"deep", q:"What is one thing you long for in your closest relationships? Speak it gently to this page."},
     {t:"deep", q:"When you imagine feeling free in your body, what do you see?"},
     {t:"deep", q:"What emotion have you been carrying in your body? Where does it seem to live?"},
     {t:"deep", q:"What would change if you stopped performing and simply let yourself be?"},
@@ -3332,8 +3378,8 @@
     {id:"picture", nm:"Picture", timed:true, dsc:"See today going well.",
       guide:"Close your eyes. Picture one moment of today going well. Where are you? What does it feel like in your body?",
       ic:mSvg('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')},
-    {id:"move", nm:"Move", timed:true, dsc:"Stretch, dance, touch. Feel good.",
-      guide:"Stretch, walk, shake it out, dance in the kitchen. Pleasure counts too: slow touch, your own or someone’s you love. Whatever gets you back in your body.",
+    {id:"move", nm:"Move", timed:true, dsc:"Stretch, dance, shake. Feel good.",
+      guide:"Stretch, walk, shake it out, dance in the kitchen. Move the way that feels good, not the way that looks good. Your body is allowed to enjoy this.",
       ic:mSvg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>')},
     {id:"read", nm:"Read", timed:true, dsc:"A page or two that feeds you.",
       guide:"A real book if you have one nearby. A page or two of something that feeds you. Slowly.",
@@ -3345,7 +3391,7 @@
   /* A place to start, for someone who has never written one. They are only a
      start: the box is the user's, and what is in it is what is kept. */
   var M_AFFIRM_START=["I’m allowed to want this.","My body gets to have opinions.","I get to feel more, not do more."];
-  var M_AFFIRM_MORE=["Wanting is not too much.","I can begin before I’m ready.","Pleasure is not homework.","I am not behind.",
+  var M_AFFIRM_MORE=["Wanting is not too much.","I can begin before I’m ready.","Feeling good is not homework.","I am not behind.",
     "I get to take up room.","Rest counts.","I am safe to land in.","Today I choose what feels good."];
   var M_CHECK=mSvg('<path d="M20 6L9 17l-5-5"/>');
   var M_RING_C=2*Math.PI*54;
@@ -3571,6 +3617,106 @@
   }
 
   /* ============================================================
+     WHAT YOU NEED LATELY (1.9.0)
+     Three questions, each answered with a tap, that turn into a handful of
+     affirmations. No typing, no account, nothing leaves the phone, and
+     nothing here asks about anything private: it asks what is on your mind
+     and what you want more of, the way a friend would.
+     Each answer has three lines — gentle, straight, playful — so the same
+     need can be said in the voice the person asked for.
+     ============================================================ */
+  var LSK_KNOW="perm_know";
+  var KN_LOUD=[
+    {id:"work",   nm:"Work or school",   l:["I am more than what I get done today.","My worth is not my output.","The to-do list is not the boss of me."]},
+    {id:"body",   nm:"My body",          l:["My body is not a problem to solve.","My body is mine, and it is fine.","My body is the one hosting this party."]},
+    {id:"people", nm:"Someone I love",   l:["I can love someone and still have my own side.","Their mood is not my job.","I can care without carrying."]},
+    {id:"money",  nm:"Money",            l:["I am safe in this moment.","A number does not get to name me.","I have figured out hard things before. Annoyingly often."]},
+    {id:"tired",  nm:"Being tired",      l:["Rest is allowed before I earn it.","Tired is information, not failure.","I can run on low and still be lovely."]},
+    {id:"change", nm:"A big change",     l:["I can be new at this.","I don’t need the whole map.","Plot twist. I can handle a plot twist."]},
+    {id:"behind", nm:"Feeling behind",   l:["I am not behind. I am here.","There is no schedule I am failing.","Nobody is keeping score, including me."]},
+    {id:"fine",   nm:"Honestly, not much", l:["Ordinary days count.","Nothing to fix today.","A quiet day is still mine."]}
+  ];
+  var KN_WANT=[
+    {id:"rest",    nm:"Rest",        l:["I let myself slow down.","I stop when I’m done, not when I drop.","I am a big fan of the nap."]},
+    {id:"nerve",   nm:"Confidence",  l:["I can trust my own voice.","I say the thing.","I take up room, and the room survives."]},
+    {id:"fun",     nm:"Fun",         l:["I am allowed to enjoy today.","Fun is a need, not a reward.","I am here for a good time, on purpose."]},
+    {id:"calm",    nm:"Calm",        l:["I can come back to my breath.","Not everything needs my reaction.","I unclench. Jaw first."]},
+    {id:"close",   nm:"Closeness",   l:["I let people in a little further.","I ask for what I want.","I reach out first sometimes."]},
+    {id:"home",    nm:"Feeling at home in my body", l:["I get to feel good in my body.","I live here, and I’m staying.","My body gets to have opinions."]},
+    {id:"courage", nm:"Courage",     l:["I can begin before I’m ready.","Scared, and doing it anyway.","Brave looks a lot like awkward, and I’m fine with that."]},
+    {id:"focus",   nm:"Focus",       l:["One thing at a time is plenty.","I choose what gets my attention.","One tab open. Metaphorically."]}
+  ];
+  var KN_TONE=[
+    {id:"soft",     nm:"Gentle",   first:"I’m allowed to want this."},
+    {id:"straight", nm:"Straight", first:"I’m allowed to want things."},
+    {id:"play",     nm:"Playful",  first:"I’m allowed to want this. All of it."}
+  ];
+  var knDraft={loud:[], want:[], tone:"soft"}, knFrom="", knResume=false;
+  function knLoad(){
+    try{ var k=JSON.parse(lsGet(LSK_KNOW,"null")); if(k && Array.isArray(k.loud) && Array.isArray(k.want)) return {loud:k.loud.slice(0,2), want:k.want.slice(0,2), tone:k.tone||"soft"}; }catch(e){}
+    return {loud:[], want:[], tone:"soft"};
+  }
+  function knLines(d){
+    var ti=Math.max(0, KN_TONE.map(function(t){ return t.id; }).indexOf(d.tone)), out=[];
+    if(!d.loud.length && !d.want.length) return out;
+    out.push(KN_TONE[ti].first);
+    KN_LOUD.forEach(function(o){ if(d.loud.indexOf(o.id)>=0) out.push(o.l[ti]); });
+    KN_WANT.forEach(function(o){ if(d.want.indexOf(o.id)>=0) out.push(o.l[ti]); });
+    return out.filter(function(x,i){ return out.indexOf(x)===i; });
+  }
+  function knPaint(){
+    [["knLoud","loud"],["knWant","want"]].forEach(function(p){
+      $(p[0]).querySelectorAll(".opt").forEach(function(b){ var on=knDraft[p[1]].indexOf(b.dataset.id)>=0; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on?"true":"false"); }); });
+    $("knTone").querySelectorAll(".opt").forEach(function(b){ var on=b.dataset.id===knDraft.tone; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on?"true":"false"); });
+    var lines=knLines(knDraft), box=$("knOut"); box.innerHTML="";
+    if(!lines.length){ var n=document.createElement("div"); n.className="none"; n.textContent="Tap an answer above and yours will appear here."; box.appendChild(n); }
+    lines.forEach(function(t){ var d=document.createElement("div"); d.className="ln"; d.textContent=t; box.appendChild(d); });
+    ["knUse","knAdd"].forEach(function(id){ $(id).disabled=!lines.length; $(id).style.opacity=lines.length?"":".45"; });
+  }
+  function buildKnow(){
+    var fill=function(hostId, list, key, max){
+      var host=$(hostId); host.innerHTML="";
+      list.forEach(function(o){
+        var b=document.createElement("button"); b.type="button"; b.className="opt"; b.dataset.id=o.id; b.textContent=o.nm;
+        b.addEventListener("click", function(){
+          if(key==="tone"){ knDraft.tone=o.id; }
+          else { var a=knDraft[key], i=a.indexOf(o.id);
+            if(i>=0) a.splice(i,1); else { a.push(o.id); if(a.length>max) a.shift(); } }   // a third pick replaces the oldest
+          haptic(6); knPaint();
+        });
+        host.appendChild(b);
+      });
+    };
+    fill("knLoud", KN_LOUD, "loud", 2); fill("knWant", KN_WANT, "want", 2); fill("knTone", KN_TONE, "tone", 1);
+    $("knUse").addEventListener("click", function(){ knKeep(false); });
+    $("knAdd").addEventListener("click", function(){ knKeep(true); });
+    $("knSkip").addEventListener("click", function(){ closeKnow(); });
+    $("setKnow").addEventListener("click", function(){ closeSheet(); openKnow("settings"); });
+    $("mFit").addEventListener("click", function(){ openKnow("affirm"); });
+  }
+  function openKnow(from){
+    knFrom=from||""; knDraft=knLoad(); knPaint();
+    // Asked from inside a running practice: the clock waits while you answer.
+    knResume=false;
+    if(mRun && mRun.plan[mRun.i].timed && !mRun.paused && !mRun.rang){ mPauseTap(); knResume=true; }
+    $("know").classList.add("show"); $("know").scrollTop=0;
+  }
+  function closeKnow(){
+    $("know").classList.remove("show");
+    if(knFrom==="settings") openSheet();
+    if(knFrom==="affirm"){ $("mAffirm").value=lsGet(LSK_AFFIRM,""); if(knResume && mRun && mRun.paused) mPauseTap(); }
+    knFrom=""; knResume=false;
+  }
+  function knKeep(append){
+    var lines=knLines(knDraft); if(!lines.length) return;
+    var cur=lsGet(LSK_AFFIRM,"").replace(/\s+$/,"");
+    if(append && cur){ var have=cur.split("\n"); lines=have.concat(lines.filter(function(t){ return have.indexOf(t)<0; })); }
+    lsSet(LSK_AFFIRM, lines.join("\n"));
+    lsSet(LSK_KNOW, JSON.stringify({loud:knDraft.loud, want:knDraft.want, tone:knDraft.tone}));
+    toast("Yours now"); haptic(12); closeKnow();
+  }
+
+  /* ============================================================
      SETTINGS SHEET
      ============================================================ */
   function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); updateProfileSub(); }
@@ -3592,7 +3738,7 @@
   $("setErase").addEventListener("click", function(){
     if(confirm("Erase ALL entries and notebook pages permanently? This cannot be undone.")){
       if(confirm("Are you sure? Everything will be gone forever.")){
-        try{ localStorage.removeItem(LSK_AFFIRM); localStorage.removeItem(LSK_M_LAST); }catch(e){}
+        try{ localStorage.removeItem(LSK_AFFIRM); localStorage.removeItem(LSK_M_LAST); localStorage.removeItem(LSK_KNOW); }catch(e){}
         Promise.all([dbClear(), nbClear()]).then(function(){ nbPages=[""]; nbIndex=0; nbLoaded=false; toast("Everything erased"); closeSheet(); showApp(); }); } }
   });
 
@@ -3629,7 +3775,7 @@
   /* ============================================================
      BOOT
      ============================================================ */
-  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad(); buildMorning();
+  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad(); buildMorning(); buildKnow();
 
   function bootAfterPin(firstRun){
     if(firstRun && !hasProfile()){
