@@ -705,10 +705,10 @@ ok("iPad two-column layout no longer positions a .bigcard row",
 ok("the tiles still occupy the iPad's left column", /#v-home \.modes\s*\{grid-column:1/.test(html));
 
 section("32) v1.8.0 — made for iPad and the iPhone Duo");
-ok("version is 1.10.0 everywhere it must agree",
-   /APP_VERSION = "1\.10\.0"/.test(html) && />v1\.10\.0</.test(html) &&
-   /CFBundleShortVersionString 1\.10\.0/.test(cm) && /expected 1\.10\.0/.test(cm) &&
-   /"version": "1\.10\.0"/.test(pkgRaw));
+ok("version is 1.11.0 everywhere it must agree",
+   /APP_VERSION = "1\.11\.0"/.test(html) && />v1\.11\.0</.test(html) &&
+   /CFBundleShortVersionString 1\.11\.0/.test(cm) && /expected 1\.11\.0/.test(cm) &&
+   /"version": "1\.11\.0"/.test(pkgRaw));
 ok("build sets TARGETED_DEVICE_FAMILY \"1,2\" and reads it back",
    /TARGETED_DEVICE_FAMILY = "1,2";/.test(cm) && /is not \\"1,2\\" everywhere/.test(cm));
 ok("build sets UIDeviceFamily [1,2] and asserts it",
@@ -927,6 +927,182 @@ ok("the plugin is a dependency and the build refuses to ship without it",
 section("36) the build uses the iOS 27 SDK (Apple's ITMS-90725)");
 ok("the TestFlight lane is pinned to Xcode 27 or later, not `latest`",
    /\n      xcode: (2[7-9]|[3-9]\d)(\.\d+)*\n/.test(cm) && !/\n      xcode: latest\n/.test(cm));
+
+section("37) v1.11.0 — Sounds: rain, ocean, brown and white noise, ten minutes to ten hours");
+{
+  const sStart = html.indexOf("     SOUNDS (1.11.0)\n     Rain, ocean");
+  const sndAll = html.slice(sStart, html.indexOf("     SETTINGS SHEET\n     =====", sStart));
+  const sndCode = stripComments(sndAll);
+  const sndView = html.slice(html.indexOf('<div class="view" id="v-sounds">'), html.indexOf("<!-- JOURNAL (all entries) -->"));
+  /* The synthesis and the wording helpers are pure functions, so they are
+     lifted out of the page and run here exactly as the phone runs them. */
+  const stored = { perm_sound_id: null, perm_sound_min: null };
+  const S = new Function("lsGet",
+    sliceTo(html, "  var SND_SR=22050", "  /* ---- what is loaded:") + "\n" +
+    sliceTo(html, "  function sndDef(id)", "  /* ---- two players, taking turns ---- */") +
+    "\n; return {SND_SR,SND_LEN,SND_FADE,SND_MIN,SND_MAX,SND,SND_STOPS,SND_RMS,sndMake,sndWav,sndDurText,sndLeftText,sndStopAt,sndMinutes,sndPick};"
+  )((k, d) => (stored[k] === null || stored[k] === undefined ? d : stored[k]));
+  const sr = S.SND_SR;
+
+  ok("Home has exactly one Sounds card, and it is a real <button>",
+     (html.match(/id="cardSounds"/g) || []).length === 1 && /<button class="morningcard" id="cardSounds" type="button">/.test(html));
+  ok("the card stays the last thing above the journal, under the Morning card when that sits below the tiles",
+     /function sndHome\(\)\{ var home=\$\("v-home"\); home\.insertBefore\(\$\("cardSounds"\), home\.querySelector\("\.sechead"\)\); sndPaint\(\); \}/.test(html) &&
+     /updateProfileSub\(\); placeMorningCard\(\); sndHome\(\);/.test(html));
+  ok("landscape Home places the card explicitly, beside the greeting",
+     /#v-home \.greet\{grid-column:1;\}\s*#v-home #cardSounds\{grid-column:2; grid-row:1;/.test(html));
+  ok("one Sounds screen, with its own back button and title",
+     (html.match(/id="v-sounds"/g) || []).length === 1 && /id="sBack" type="button" aria-label="Back"/.test(sndView) && /<div class="ttl serif">Sounds<\/div>/.test(sndView));
+  ok("the screen is built at boot", /buildKnow\(\); buildSounds\(\); initReminders\(\);/.test(html));
+
+  ok("four sounds, in order: rain, ocean, brown noise, white noise",
+     S.SND.map((x) => x.id).join(",") === "rain,ocean,brown,white" && S.SND.map((x) => x.nm).join("|") === "Rain|Ocean|Brown noise|White noise");
+  ok("each sound says what it is in a few plain words",
+     S.SND.every((x) => x.dsc.length > 8 && x.dsc.length < 48 && /\.$/.test(x.dsc)) && !/pleasure|desire|intimate|sexy|naughty/i.test(sndAll + sndView));
+
+  ok("the timer runs from 10 minutes to 10 hours",
+     S.SND_MIN === 10 && S.SND_MAX === 600 && S.SND_STOPS[0] === 10 && S.SND_STOPS[S.SND_STOPS.length - 1] === 600 && /10 minutes to 10 hours/.test(sndView));
+  ok("the slider's stops only ever rise, in whole 5 minutes, and the slider has exactly that many positions",
+     S.SND_STOPS.every((m, i) => m % 5 === 0 && (i === 0 || m > S.SND_STOPS[i - 1])) &&
+     new RegExp('id="sRange" type="range" min="0" max="' + (S.SND_STOPS.length - 1) + '" step="1"').test(sndView));
+  ok("short times are fine-grained, long ones are not fiddly",
+     S.SND_STOPS.filter((m) => m <= 60).length === 11 && S.SND_STOPS.filter((m) => m > 180).every((m) => m % 30 === 0));
+  ok("every length in between can be reached: two buttons move it by 5 minutes",
+     /id="sLess" type="button" aria-label="Five minutes less"/.test(sndView) && /id="sMore" type="button" aria-label="Five minutes more"/.test(sndView) &&
+     /sndSetMin\(sndMinutes\(\)-5, false\)/.test(html) && /sndSetMin\(sndMinutes\(\)\+5, false\)/.test(html));
+  ok("the quick picks are all inside the range and include both ends", (() => {
+    const picks = [...sndView.matchAll(/data-min="(\d+)"/g)].map((m) => +m[1]);
+    return picks.length === 6 && picks.every((m) => m >= 10 && m <= 600) && picks.includes(10) && picks.includes(600); })());
+  ok("a saved length outside the range is brought back inside it", (() => {
+    const at = (v) => { stored.perm_sound_min = v; const m = S.sndMinutes(); stored.perm_sound_min = null; return m; };
+    return at("5") === 10 && at("9999") === 600 && at("junk") === 30 && at("47") === 45 && at(null) === 30; })());
+  ok("an unknown saved sound falls back to rain", (() => {
+    stored.perm_sound_id = "thunder"; const a = S.sndPick(); stored.perm_sound_id = "ocean"; const b = S.sndPick(); stored.perm_sound_id = null;
+    return a === "rain" && b === "ocean" && S.sndPick() === "rain"; })());
+  ok("lengths are said plainly",
+     S.sndDurText(10) === "10 minutes" && S.sndDurText(60) === "1 hour" && S.sndDurText(90) === "1 hr 30 min" && S.sndDurText(600) === "10 hours" &&
+     S.sndLeftText(30) === "under a minute left" && S.sndLeftText(61) === "2 minutes left" && S.sndLeftText(5400) === "1 hr 30 min left");
+
+  /* ---- the sound itself ---- */
+  const stat = (x) => {
+    let q = 0, dq = 0, mean = 0, peak = 0, bad = 0;
+    for (let i = 0; i < x.length; i++) { const v = x[i]; if (!Number.isFinite(v)) bad++; q += v * v; mean += v; if (i) dq += (v - x[i - 1]) ** 2; if (Math.abs(v) > peak) peak = Math.abs(v); }
+    mean /= x.length; let va = 0, m4 = 0;
+    for (let i = 0; i < x.length; i++) { const e = x[i] - mean; va += e * e; m4 += e * e * e * e; }
+    va /= x.length; m4 /= x.length;
+    const win = [];
+    for (let s = 0; s + sr <= x.length; s += sr) { let w = 0; for (let i = s; i < s + sr; i++) w += x[i] * x[i]; win.push(10 * Math.log10(w / sr)); }
+    return { rms: Math.sqrt(q / x.length), bright: dq / q, kurt: m4 / (va * va), peak, bad, mean, range: Math.max(...win) - Math.min(...win) };
+  };
+  const made = {}, st = {};
+  for (const x of S.SND) { made[x.id] = S.sndMake(x.id, 40 * sr, sr); st[x.id] = stat(made[x.id]); }
+  ok("every sound is made of real numbers and never clips",
+     S.SND.every((x) => st[x.id].bad === 0 && st[x.id].peak <= 1), JSON.stringify(st));
+  ok("each sound comes out at its own set loudness, with no DC",
+     S.SND.every((x) => Math.abs(20 * Math.log10(st[x.id].rms / S.SND_RMS[x.id])) < 0.3 && Math.abs(st[x.id].mean) < 0.002), JSON.stringify(st));
+  ok("the same sound is the same every time (a seeded generator, not Math.random)",
+     S.SND.every((x) => { const again = S.sndMake(x.id, 2 * sr, sr), first = S.sndMake(x.id, 2 * sr, sr); return again.every((v, i) => v === first[i]); }) &&
+     !/Math\.random/.test(sndCode));
+  ok("white noise is bright and brown noise is low",
+     st.white.bright > 1.8 && st.brown.bright < 0.15, `white ${st.white.bright} brown ${st.brown.bright}`);
+  ok("rain and ocean sit between them, each with its own colour",
+     st.rain.bright > 0.4 && st.rain.bright < 1.2 && st.ocean.bright > 0.2 && st.ocean.bright < 1.0 && Math.abs(st.rain.bright - st.ocean.bright) > 0.08,
+     `rain ${st.rain.bright} ocean ${st.ocean.bright}`);
+  ok("white and brown noise hold steady; the ocean comes and goes",
+     st.white.range < 0.5 && st.brown.range < 3 && st.ocean.range > 6, `white ${st.white.range} brown ${st.brown.range} ocean ${st.ocean.range}`);
+  ok("rain has drops you can pick out, not only hiss", st.rain.kurt > 3.4 && st.white.kurt < 2.2, `rain ${st.rain.kurt}`);
+
+  /* ---- the pieces the players are given ---- */
+  const F = S.SND_FADE * sr, nLoop = S.SND_LEN * sr;
+  const ones = new Float32Array(20 * sr).fill(1);
+  const wav = new DataView(S.sndWav(ones, ones.length, sr, F, F, false));
+  const tag = (o) => String.fromCharCode(wav.getUint8(o), wav.getUint8(o + 1), wav.getUint8(o + 2), wav.getUint8(o + 3));
+  const smp = (v, i) => v.getInt16(44 + i * 2, true) / 32767;
+  ok("a piece is a real 16-bit mono WAV at 22.05 kHz",
+     tag(0) === "RIFF" && tag(8) === "WAVE" && tag(12) === "fmt " && tag(36) === "data" && wav.getUint16(20, true) === 1 && wav.getUint16(22, true) === 1 &&
+     wav.getUint32(24, true) === 22050 && wav.getUint32(28, true) === 44100 && wav.getUint16(32, true) === 2 && wav.getUint16(34, true) === 16 &&
+     wav.getUint32(40, true) === ones.length * 2 && wav.getUint32(4, true) === 36 + ones.length * 2 && wav.byteLength === 44 + ones.length * 2);
+  ok("it starts from silence, ends in silence, and is untouched in between",
+     smp(wav, 0) === 0 && Math.abs(smp(wav, ones.length - 1)) < 0.001 && smp(wav, F) === 1 && smp(wav, ones.length - F - 1) === 1);
+  ok("the fade out and the next fade in add up to an even level (equal power)", (() => {
+    let worst = 0;
+    for (let j = 0; j < F; j += 97) { const a = smp(wav, j), b = smp(wav, ones.length - F + j); worst = Math.max(worst, Math.abs(a * a + b * b - 1)); }
+    return worst < 0.002; })());
+  ok("the loop is 90 seconds with 6-second fades, so a new piece starts every 84",
+     S.SND_LEN === 90 && S.SND_FADE === 6 && /\(el\.currentTime\|\|0\)>=SND_LEN-SND_FADE\) sndHand\(\);/.test(sndCode) &&
+     /sndWav\(buf, n, SND_SR, SND_FADE\*SND_SR, SND_FADE\*SND_SR, false\)/.test(sndCode));
+  const soft = new DataView(S.sndWav(ones, ones.length, sr, F, 8 * sr, true));
+  ok("the ending is a slower, softer fade",
+     Math.abs(smp(soft, ones.length - 4 * sr) - 0.5) < 0.01 && Math.abs(smp(soft, ones.length - 1)) < 0.0001 &&
+     /sndWav\(sndBuf, Math\.round\(sec\*SND_SR\), SND_SR, SND_FADE\*SND_SR, Math\.min\(20, sec\/2\)\*SND_SR, true\)/.test(sndCode));
+  ok("an ending is exactly as long as the time that is left", (() => {
+    const t = new DataView(S.sndWav(made.rain, Math.round(12.5 * sr), sr, F, 6.25 * sr, true));
+    return t.byteLength === 44 + Math.round(12.5 * sr) * 2 && smp(t, 0) === 0 && Math.abs(smp(t, Math.round(12.5 * sr) - 1)) < 0.001; })());
+  ok("a piece never reads past the sound it was cut from",
+     S.sndWav(ones, ones.length * 3, sr, F, F, false).byteLength === 44 + ones.length * 2 && S.sndWav(ones, 0, sr, F, F, false).byteLength === 44);
+  ok("a whole loop is the size the players expect", S.sndWav(new Float32Array(nLoop), nLoop, sr, F, F, false).byteLength === 44 + 90 * 22050 * 2);
+
+  /* ---- how it plays ---- */
+  ok("sounds play through media elements, not Web Audio (which iOS stops behind a locked screen)",
+     /var el=new Audio\(\)/.test(sndCode) && /new Blob\(\[ab\], \{type:"audio\/wav"\}\)/.test(sndCode) &&
+     !/AudioContext|createOscillator|createBufferSource|webkitAudio|AudioWorklet/.test(sndCode));
+  ok("nothing loops by itself: every piece ends, and the next one is started",
+     !/\.loop\s*=|setAttribute\("loop"/.test(sndCode) && /el\.addEventListener\("ended", function\(\)\{ sndEnded\(i\); \}\)/.test(sndCode));
+  ok("no code tries to set a media element's volume (iOS ignores it): the fades are in the samples", !/\.volume\s*=/.test(sndCode));
+  ok("the timer is an end time, not a counter",
+     /sndStart\(sndPick\(\), Date\.now\(\)\+sndMinutes\(\)\*60000\)/.test(sndCode) && /left=\(r\.endsAt-Date\.now\(\)\)\/1000/.test(sndCode));
+  ok("both players are started inside the Play tap, the second one silently",
+     /var a=sndSet\(0, url\);[\s\S]{0,80}?var p=sndGo\(a\);/.test(sndCode) && /var b=sndSet\(1, url\);\s*try\{ b\.muted=true; var q=b\.play\(\)/.test(sndCode));
+  ok("a player taking its turn is always unmuted first", /function sndSet\(i, url\)\{[^}]*\} el\.muted=false; return el; \}/.test(sndCode));
+  const tickSrc = sliceTo(sndCode, "  function sndTick(){", "  function sndEnded(i){");
+  ok("a pause from outside is noticed, never answered with a pause of our own (iOS would then not resume it after a call)",
+     !!tickSrc && /var held=!!el\.paused;/.test(tickSrc) && !/\.pause\(|sndHalt\(/.test(tickSrc));
+  ok("when the time is up it stops even if the last fade never reported its end",
+     /if\(held \? left<=0 : left<=-2\)\{ sndStop\(true\); return; \}/.test(tickSrc));
+  ok("a player that restarts by itself after Stop is stopped again",
+     /el\.addEventListener\("play", function\(\)\{ if\(!sndRun\)\{ try\{ el\.pause\(\); \}catch\(e\)\{\} return; \} sndTick\(\); \}\)/.test(sndCode));
+  ok("with seconds left the fade already under way is the ending; with less than a piece left, an ending cut to fit",
+     /if\(left<8 \|\| !sndLoad\(r\.id\)\)\{ r\.last=true; return; \}/.test(sndCode) && /var url = left>=SND_LEN \? sndLoop : sndTailUrl\(left\);/.test(sndCode));
+
+  /* ---- what stops it, and what does not ---- */
+  ok("a recording never hears it: starting or resuming a take stops the sound first",
+     /function startTake\(\)\{\n    sndStop\(false\);/.test(html) && /function resumeTake\(\)\{\n    sndStop\(false\);/.test(html) &&
+     /\$\("vidPick"\)\.addEventListener\("click", function\(\)\{ haptic\(8\); sndStop\(false\);/.test(html));
+  ok("Erase everything stops it and forgets the sound and the length",
+     /sndStop\(false\); try\{ localStorage\.removeItem\(LSK_SND\); localStorage\.removeItem\(LSK_SNDMIN\); \}catch\(e\)\{\}/.test(html) &&
+     /var LSK_SND="perm_sound_id", LSK_SNDMIN="perm_sound_min";/.test(html));
+  const viewSrc = sliceTo(html, "  function showView(id){", "  function showApp(){"), lockSrc = sliceTo(html, "  function showLock(mode, cb){", "\n  }\n");
+  ok("leaving the screen and locking the app do not stop it",
+     !!viewSrc && viewSrc.length > 400 && !/snd(Stop|Halt)\(/.test(viewSrc) && !!lockSrc && lockSrc.length > 200 && !/snd(Stop|Halt)\(/.test(lockSrc));
+  ok("choosing the sound that is already playing does not restart it; another sound, or a paused one, does",
+     /if\(r && \(r\.id!==id \|\| r\.held\)\)\{ sndStart\(id, r\.endsAt\); return; \}/.test(sndCode));
+  ok("a new length runs from now, and starts the sound up again if its last fade had begun",
+     /r\.from=Date\.now\(\); r\.endsAt=r\.from\+m\*60000;\s*if\(r\.last && !r\.held\)\{ sndStart\(r\.id, r\.endsAt\); return; \}/.test(sndCode));
+  ok("while the slider is still moving nothing about a playing sound changes",
+     /if\(r && !live\)\{/.test(sndCode) && /addEventListener\("input", function\(\)\{ sndSetMin\([^;]*, true\); \}\)/.test(sndCode) &&
+     /addEventListener\("change", function\(\)\{ haptic\(6\); sndSetMin\([^;]*, false\); \}\)/.test(sndCode));
+
+  /* ---- nothing shipped, nothing fetched ---- */
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+  ok("no audio file ships with the app",
+     walk(path.join(ROOT, "www")).filter((f) => /\.(mp3|m4a|wav|ogg|aac|caf|flac)$/i.test(f)).length === 0 && !/src=["'][^"']+\.(mp3|m4a|wav|ogg|aac)/i.test(html));
+  ok("Sounds make no network request", !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket\(|https?:\/\//.test(sndCode));
+  ok("the screen says so, in one line", /Made right here on your phone\. Nothing is downloaded, and nothing leaves it\./.test(sndView));
+  ok("every control on the screen is a real button or the slider",
+     !/<(div|span|a)\b[^>]*(onclick|role="button"|tabindex)/.test(sndView) && (sndView.match(/<button\b/g) || []).length === 11 && (sndView.match(/<input\b/g) || []).length === 1);
+
+  /* ---- the build ---- */
+  ok("version is 1.11.0 in the build's read-back", /expected 1\.11\.0/.test(cm));
+  ok("the build declares the audio background mode, so the sound survives the lock screen",
+     /Delete :UIBackgroundModes/.test(cm) && /Add :UIBackgroundModes array/.test(cm) && /Add :UIBackgroundModes:0 string audio/.test(cm));
+  ok("and it is the only background mode", (cm.match(/Add :UIBackgroundModes:\d+ string/g) || []).length === 1);
+  ok("the build reads it back and refuses to ship without it",
+     /\[ "\$GOT_BG" = "Array\{audio\}" \] \|\| \{ echo "BLOCKED: UIBackgroundModes is/.test(cm));
+  ok("the store notes for 1.11.0 exist, and tell App Review where background audio is used",
+     fs.existsSync(path.join(ROOT, "release-notes/1.11.0.txt")) && fs.existsSync(path.join(ROOT, "store/review-notes-1.11.0.txt")) &&
+     /background/i.test(fs.readFileSync(path.join(ROOT, "store/review-notes-1.11.0.txt"), "utf8")) &&
+     /Sounds/.test(fs.readFileSync(path.join(ROOT, "store/review-notes-1.11.0.txt"), "utf8")));
+}
 
 /* ============================================================ */
 console.log("\n" + "=".repeat(40));

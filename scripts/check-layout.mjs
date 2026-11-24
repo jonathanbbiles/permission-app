@@ -10,8 +10,8 @@
    Codemagic/CI image has no browser; run it before every layout change.
    CHROMIUM_PATH=/path/to/chrome overrides the browser Playwright would pick.
 
-   Per size it checks, on Home, Write, Record, Draw, Notebook, an entry, the
-   full journal and the Settings sheet:
+   Per size it checks, on Home, Morning, Sounds, Write, Record, Draw, Notebook,
+   an entry, the full journal and the Settings sheet:
      - no horizontal overflow (the page never scrolls sideways);
      - the LAST control of the screen can be scrolled to and sits fully on
        screen (nothing trapped below the fold or under the home indicator);
@@ -157,6 +157,18 @@ for (const [w, h] of SIZES) {
   await page.click("#mBack"); await sleep(300);
   await page.click("#mBack"); await sleep(450);
   if (!(await page.locator("#v-home").isVisible())) fail(`${tag} morning: Back did not return Home`);
+
+  /* SOUNDS (1.11.0) — the card on Home, then the screen with a sound playing */
+  const sc = await page.evaluate(() => { const c = document.getElementById("cardSounds").getBoundingClientRect(); return { l: c.left, r: c.right, h: c.height, iw: innerWidth }; });
+  if (sc.l < -0.5 || sc.r > sc.iw + 0.5 || sc.h < 44) fail(`${tag} home: the Sounds card is off screen or too small (${JSON.stringify(sc)})`);
+  await page.locator("#cardSounds").scrollIntoViewIfNeeded(); await page.click("#cardSounds"); await sleep(450);
+  await checkScreen(page, tag, "10-sounds", "#sPlay");
+  await page.click("#sPlay"); await sleep(300);
+  await checkScreen(page, tag, "10b-sounds-playing", "#sNow");
+  if ((await page.locator("#sPlay").innerText()) !== "Stop") fail(`${tag} sounds: Play did not start a sound`);
+  await page.click("#sPlay"); await sleep(200);
+  await page.click("#sBack"); await sleep(450);
+  if (!(await page.locator("#v-home").isVisible())) fail(`${tag} sounds: Back did not return Home`);
 
   /* WRITE */
   await page.click('.mode[data-mode="text"]'); await sleep(450);
