@@ -730,6 +730,62 @@
     #v-home #cardMorning{grid-column:2; grid-row:2; align-self:center; margin:0 0 14px;}
   }
 
+  /* ============================================================
+     SOUNDS (1.11.0) — rain, waves and soft noise, for as long as
+     you like. The Home card and the rows borrow Morning's; only
+     what is new is styled here.
+     ============================================================ */
+  #v-sounds{max-width:620px; margin-left:auto; margin-right:auto;}
+  /* The four sounds. They look like Morning's practice rows but are their own
+     class: here exactly one is chosen, so the other three are not dimmed the
+     way a switched-off practice is, and nothing that counts Morning's rows
+     counts these. */
+  .s-list{display:flex; flex-direction:column; gap:8px; margin-bottom:16px;}
+  .s-opt{display:flex; align-items:center; gap:12px; width:100%; text-align:left; font-family:inherit; cursor:pointer;
+    background:linear-gradient(180deg,var(--surface),var(--surface-tint)); border:1px solid var(--line2); border-radius:var(--radius-sm);
+    padding:10px 13px; color:var(--ink); min-height:56px; transition:border-color .15s, transform .12s;}
+  .s-opt:active{transform:scale(.985);}
+  .s-opt .ic{width:36px; height:36px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(155deg,var(--secondary),var(--secondary-deep)); color:var(--on-accent);}
+  .s-opt .ic svg{width:18px; height:18px;}
+  .s-opt .tx{flex:1; min-width:0; display:block;}
+  .s-opt .nm{display:block; font-size:14.5px; font-weight:700;}
+  .s-opt .dsc{display:block; font-size:12px; color:var(--muted); margin-top:1px;}
+  .s-opt .ck{width:24px; height:24px; border-radius:50%; flex:none; border:2px solid var(--line2); display:flex; align-items:center; justify-content:center; color:transparent;}
+  .s-opt .ck svg{width:14px; height:14px;}
+  .s-opt[aria-pressed="true"]{border-color:var(--accent-soft);}
+  .s-opt[aria-pressed="true"] .ck{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+  .s-dur{display:flex; align-items:center; gap:12px; margin:0 0 4px;}
+  .s-dur .iconbtn{width:44px; height:44px; flex:none;}
+  .s-dur .iconbtn:disabled{opacity:.35; cursor:default;}
+  .s-dur .mid{flex:1; min-width:0; text-align:center;}
+  .s-dur .v{font-family:var(--display); font-size:26px; font-weight:600; color:var(--ink); letter-spacing:.3px; font-variant-numeric:tabular-nums;}
+  .s-dur .h{font-size:12px; color:var(--muted); margin-top:1px;}
+  .s-range{-webkit-appearance:none; appearance:none; display:block; width:100%; height:44px; background:transparent; margin:0 0 6px; padding:0; touch-action:pan-y;}
+  .s-range::-webkit-slider-runnable-track{height:8px; border-radius:999px; border:1px solid var(--line2);
+    background:linear-gradient(90deg,var(--accent) var(--pl,0%),var(--surface2) var(--pl,0%));}
+  .s-range::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:30px; height:30px; margin-top:-12px; border-radius:50%;
+    background:linear-gradient(180deg,var(--accent),var(--accent-deep)); border:3px solid var(--surface); box-shadow:0 3px 10px var(--on-accent-shadow);}
+  .s-range::-moz-range-track{height:8px; border-radius:999px; background:var(--surface2); border:1px solid var(--line2);}
+  .s-range::-moz-range-thumb{width:24px; height:24px; border-radius:50%; background:var(--accent); border:3px solid var(--surface);}
+  .modeseg.s-quick{display:grid; grid-template-columns:repeat(3,1fr); border-radius:22px; margin-bottom:16px;}
+  .modeseg.s-quick button{min-height:44px;}
+  #sOff{margin-top:6px;}
+  .s-now{font-size:14px; color:var(--ink-soft); text-align:center; min-height:22px; margin:12px 4px 0; font-variant-numeric:tabular-nums;}
+  .s-note{font-size:12px; color:var(--muted); line-height:1.55; text-align:center; margin:18px 6px 6px;}
+  @media (min-width: 600px){
+    .modeseg.s-quick{grid-template-columns:repeat(6,1fr);}
+    .s-dur .v{font-size:32px;} .s-dur .h{font-size:13.5px;} .s-now{font-size:16px;}
+  }
+  /* Landscape Home places every block by row. Under the tiles the card
+     would be below the fold on an 11-inch iPad, so it takes the empty half
+     of the first row instead: the greeting keeps the left column, and
+     Sounds sits beside it, above the Morning card. */
+  @media (min-width: 760px) and (orientation: landscape){
+    #v-home .greet{grid-column:1;}
+    #v-home #cardSounds{grid-column:2; grid-row:1; align-self:end; margin:0 0 14px;}
+  }
+
   /* entry viewer */
   .viewer .vq{font-size:19px; line-height:1.36; color:var(--ink); font-weight:500; font-family:var(--display); margin-bottom:2px;}
   .viewer .body{font-size:17px; line-height:1.68; color:var(--ink-soft); font-family:var(--body); white-space:pre-wrap; word-wrap:break-word;}
@@ -992,6 +1048,16 @@
     <span class="chev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
   </button>
 
+  <!-- Sounds (1.11.0): rain, waves and soft noise. Its own card, the last
+       thing above the journal: showApp() keeps it there, under the Morning
+       card whenever that one sits below the tiles. It keeps playing after
+       you leave its screen. -->
+  <button class="morningcard" id="cardSounds" type="button">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 13c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 18c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/></svg></span>
+    <span class="tx"><span class="nm">Sounds</span><span class="dsc" id="soundsSub">Rain, waves, soft noise to rest in</span></span>
+    <span class="chev"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+  </button>
+
   <div class="sechead">
     <h3 class="serif">Your journal</h3>
     <button class="textlink" id="viewAll" style="display:none;">See all &rsaquo;</button>
@@ -1098,6 +1164,45 @@
       <button class="btn primary" id="mDoneClose" type="button">Go have your day</button>
     </div>
   </div>
+</div>
+
+<!-- SOUNDS (1.11.0)
+     Rain, ocean, brown noise and white noise, for 10 minutes to 10 hours.
+     Each one is made on the phone and played through media elements, so it
+     carries on with the screen off. Nothing ships as a file, nothing is
+     downloaded and nothing is recorded. -->
+<div class="view" id="v-sounds">
+  <div class="editor-head">
+    <button class="iconbtn back" id="sBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="ttl serif">Sounds</div>
+  </div>
+  <div class="promptmini">
+    <div class="k">Something to rest in</div>
+    <div class="q">Pick a sound and how long you want it. It keeps going with the screen dark, and stops on its own.</div>
+  </div>
+  <div class="m-label">The sound</div>
+  <div class="s-list" id="sList"></div>
+  <div class="m-label">Play for</div>
+  <div class="s-dur">
+    <button class="iconbtn" id="sLess" type="button" aria-label="Five minutes less"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+    <div class="mid"><div class="v" id="sDurTx">30 minutes</div><div class="h">10 minutes to 10 hours</div></div>
+    <button class="iconbtn" id="sMore" type="button" aria-label="Five minutes more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <!-- The slider moves through SND_STOPS (fine steps for short times, wider
+       ones for long), so its own value is a position, not minutes. -->
+  <input class="s-range" id="sRange" type="range" min="0" max="32" step="1" value="4" aria-label="How long to play"/>
+  <div class="modeseg s-quick" id="sQuick">
+    <button type="button" data-min="10">10 min</button>
+    <button type="button" data-min="30">30 min</button>
+    <button type="button" data-min="60">1 hr</button>
+    <button type="button" data-min="120">2 hr</button>
+    <button type="button" data-min="480">8 hr</button>
+    <button type="button" data-min="600">10 hr</button>
+  </div>
+  <button class="btn primary" id="sPlay" type="button">Play</button>
+  <button class="btn ghost hidden" id="sOff" type="button">Stop</button>
+  <div class="s-now" id="sNow"></div>
+  <div class="s-note">Made right here on your phone. Nothing is downloaded, and nothing leaves it.</div>
 </div>
 
 <!-- JOURNAL (all entries) -->
@@ -1343,7 +1448,7 @@
     </div>
     <div class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
   </div>
-  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care by Honeywood, for Glitoris &middot; <span id="verLabel">v1.10.0</span></div>
+  <div style="text-align:center; margin-top:14px; font-size:11.5px; color:var(--faint); line-height:1.5;">Made with care by Honeywood, for Glitoris &middot; <span id="verLabel">v1.11.0</span></div>
 </div>
 
 <!-- TOAST -->
@@ -1353,7 +1458,7 @@
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
-  var APP_VERSION = "1.10.0";
+  var APP_VERSION = "1.11.0";
 
   /* ============================================================
      BRAND LOGO (inline SVG used for header + lock + icon)
@@ -1942,7 +2047,7 @@
     document.querySelectorAll(".depth").forEach(function(b){ b.classList.toggle("on", b.dataset.depth===promptMode); });
     pickPrompt(false);
     $("greetHi").textContent=greeting(); $("greetDate").textContent=longDate();
-    updateProfileSub(); placeMorningCard();
+    updateProfileSub(); placeMorningCard(); sndHome();
     refreshLists(); showView("home");
     if(pendingRoutine) setTimeout(openPendingRoutine, 0);
   }
@@ -2323,7 +2428,7 @@
     $("vidPickLabel").textContent="Record a video";
     try{ $("vidInput").value=""; }catch(e){}
   }
-  $("vidPick").addEventListener("click", function(){ haptic(8); try{ $("vidInput").click(); }catch(e){ toast("Couldn’t open the camera here"); } });
+  $("vidPick").addEventListener("click", function(){ haptic(8); sndStop(false); try{ $("vidInput").click(); }catch(e){ toast("Couldn’t open the camera here"); } });
   $("vidInput").addEventListener("change", function(){
     var f=this.files && this.files[0];
     if(!f){ return; }                      // user cancelled — nothing to do, no error
@@ -2565,6 +2670,7 @@
     startTake();
   }
   function startTake(){
+    sndStop(false);   // a sound that is playing never reaches the microphone
     var vp=vrPlugin();
     if(capNative() && vp){
       recBlob=null; recResetClock();
@@ -2621,6 +2727,7 @@
     recStopTick(); stopMeter(); recSetState("paused"); haptic(8);
   }
   function resumeTake(){
+    sndStop(false);
     if(nativeRec){
       var vp=vrPlugin();
       if(!nativeCanPause()) return;
@@ -3882,6 +3989,358 @@
   }
 
   /* ============================================================
+     SOUNDS (1.11.0)
+     Rain, ocean, brown noise and white noise, for ten minutes to ten hours.
+
+     Where the sound comes from: each one is synthesised on the phone from a
+     seeded generator, the first time it is chosen. No audio file ships with
+     the app and nothing is downloaded.
+
+     How it plays: through two media elements taking turns, not Web Audio.
+     iOS stops Web Audio when the screen locks and silences it with the mute
+     switch, and neither is any use for something to fall asleep to. One
+     element plays a 90-second piece that fades out over its last six
+     seconds; six seconds before its end the other starts the same piece
+     from the top, fading in. Both fades are written into the samples (iOS
+     ignores a media element's volume) and together they hold a steady
+     level, so the join cannot be heard.
+
+     How it ends: nothing here loops by itself. Every piece ends in a fade,
+     and the next one is started by sndTick(). If iOS ever stopped running
+     this page behind a locked screen, the piece that is playing would fade
+     out and it would go quiet: it can never play all night by accident.
+     The last piece is cut to end on the minute, with a slower fade.
+
+     What stops it: Stop, the timer, starting a recording (so the microphone
+     never hears it) and Erase everything. Leaving this screen, locking the
+     app and locking the phone do not. If something outside the app pauses
+     it (a call, another app, the lock-screen button) the timer keeps
+     running and the screen offers to carry on.
+     ============================================================ */
+  var SND_SR=22050, SND_LEN=90, SND_FADE=6, SND_MIN=10, SND_MAX=600;
+  var SND_SEED={rain:0x51A7E01, ocean:0x0CEA4B2, brown:0xB20A4D3, white:0x7A11E55};
+  var SND_RMS ={rain:0.16, ocean:0.15, brown:0.24, white:0.125};
+  var SND=[
+    {id:"rain",  nm:"Rain",        dsc:"Steady, on the roof.",                     ic:'<path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M8 13v8"/><path d="M16 13v8"/><path d="M12 15v8"/>'},
+    {id:"ocean", nm:"Ocean",       dsc:"Waves coming in, going out.",              ic:'<path d="M2 7c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 12c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 17c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/>'},
+    {id:"brown", nm:"Brown noise", dsc:"Low and warm. A hum to sink into.",        ic:'<path d="M2 12c3-9 6-9 10 0s7 9 10 0"/>'},
+    {id:"white", nm:"White noise", dsc:"Bright and even. Covers everything else.", ic:'<path d="M4 10v4"/><path d="M8 6v12"/><path d="M12 9v6"/><path d="M16 4v16"/><path d="M20 10v4"/>'}
+  ];
+  /* The slider's stops: every 5 minutes to an hour, every 15 to three hours,
+     every 30 after that. The two buttons beside the time move it by 5. */
+  var SND_STOPS=(function(){ var a=[], m; for(m=10;m<=60;m+=5) a.push(m); for(m=75;m<=180;m+=15) a.push(m); for(m=210;m<=600;m+=30) a.push(m); return a; })();
+  var LSK_SND="perm_sound_id", LSK_SNDMIN="perm_sound_min";
+
+  /* ---- making the sound ---- */
+  /* A small seeded generator (mulberry32), so each sound is the same on every
+     phone and nothing has to ship as a file. */
+  function sndRng(seed){
+    var a=seed>>>0;
+    return function(){ a=(a+0x6D2B79F5)|0; var t=Math.imul(a^(a>>>15), 1|a); t=(t+Math.imul(t^(t>>>7), 61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; };
+  }
+  /* n samples of one sound, unfaded, levelled to its own loudness. */
+  function sndMake(id, n, sr){
+    var out=new Float32Array(n), rnd=sndRng(SND_SEED[id]||1), TAU=2*Math.PI, i, w, k;
+    if(id==="white"){
+      for(i=0;i<n;i++) out[i]=rnd()*2-1;
+    } else if(id==="brown"){
+      /* White noise through a leaky integrator: flat to about 100 Hz, then
+         falling 6 dB an octave. The second step takes out DC and sub-bass. */
+      var b=0, bx=0, by=0;
+      for(i=0;i<n;i++){ w=rnd()*2-1; b=(b+0.031*w)/1.031; by=b-bx+0.995*by; bx=b; out[i]=by; }
+    } else if(id==="rain"){
+      /* Three layers: a steady hiss (pink noise with the lows taken out), a
+         crowd of drops (each a very short ring at its own pitch), and a low
+         body underneath, the way a roof sounds from inside. */
+      var p0=0, p1=0, p2=0, hx=0, hy=0, body=0, dx=0, dy=0, g=1, K=12,
+          c1=new Float64Array(K), c2=new Float64Array(K), s1=new Float64Array(K), s2=new Float64Array(K), life=new Int32Array(K),
+          next=0, alive=0, ph1=rnd()*TAU, ph2=rnd()*TAU, ph3=rnd()*TAU;
+      for(i=0;i<n;i++){
+        w=rnd()*2-1;
+        p0=0.99765*p0+w*0.0990460; p1=0.96300*p1+w*0.2965164; p2=0.57000*p2+w*1.0526913;
+        var pink=p0+p1+p2+w*0.1848;
+        hy=0.834*(hy+pink-hx); hx=pink;
+        if((i&255)===0){ var t=i/sr; g=1+0.13*Math.sin(TAU*t/9.7+ph1)+0.09*Math.sin(TAU*t/23.3+ph2)+0.05*Math.sin(TAU*t/4.1+ph3); }
+        var s=hy*0.17*g;
+        if(i>=next){
+          next=i+1+Math.floor(-Math.log(1-rnd())*sr/(250*g));
+          var u=rnd(), f, cyc, amp;
+          if(u<0.86){ f=2000*Math.pow(3.4, rnd()); cyc=0.8+rnd(); amp=0.10+0.42*rnd(); }                          /* the crowd */
+          else if(u<0.985){ f=750*Math.pow(4.4, rnd()); cyc=1.4+1.9*rnd(); var a3=rnd(); amp=0.30+1.10*a3*a3*a3; }  /* drops you can pick out */
+          else { f=240*Math.pow(3.1, rnd()); cyc=1.8+2.6*rnd(); amp=0.45+0.55*rnd(); }                             /* the heavy ones */
+          if(rnd()<0.5) amp=-amp;
+          var om=TAU*f/sr, tau=cyc/f, r=Math.exp(-1/(tau*sr)), v=0, best=1e9;
+          for(k=0;k<K;k++){ if(life[k]<best){ best=life[k]; v=k; } }
+          c1[v]=2*r*Math.cos(om); c2[v]=r*r; s1[v]=0; s2[v]=-amp*Math.sin(om)/r; life[v]=Math.ceil(6.9*tau*sr); alive=K;
+        }
+        if(alive){
+          alive=0;
+          for(k=0;k<K;k++){ if(life[k]>0){ var y=c1[k]*s1[k]-c2[k]*s2[k]; s2[k]=s1[k]; s1[k]=y; s+=y; life[k]--; alive++; } }
+        }
+        body=(body+0.02*w)/1.02; dy=body-dx+0.995*dy; dx=body;
+        out[i]=s+dy*1.5;
+      }
+    } else {
+      /* Ocean: a swell that never quite repeats lifts a low roar and opens it
+         up as each wave comes in; the hiss of foam trails after it; and a
+         distant surf sits underneath so the lulls are never silent. */
+      var o1=rnd()*TAU, o2=rnd()*TAU, o3=rnd()*TAU, E=0, F=0, al=0.05, gR=0, gF=0,
+          l1=0, l2=0, fl=0, fh=0, far=0, far2=0, deep=0,
+          BL=64, ka=1-Math.exp(-BL/(0.45*sr)), kr=1-Math.exp(-BL/(2.1*sr)), kfa=1-Math.exp(-BL/(0.9*sr)), kfr=1-Math.exp(-BL/(3.8*sr));
+      for(i=0;i<n;i++){
+        if((i&63)===0){
+          var tt=i/sr, sw=0.5+0.27*Math.cos(TAU*tt/11.3+o1)+0.15*Math.cos(TAU*tt/7.1+o2)+0.08*Math.cos(TAU*tt/17.9+o3);
+          if(sw<0) sw=0;
+          var e=Math.pow(sw, 2.0);
+          E+=(e-E)*(e>E?ka:kr); F+=(E-F)*(E>F?kfa:kfr);
+          al=1-Math.exp(-TAU*(220+3900*Math.pow(E,1.25))/sr);
+          gR=0.30+1.75*E; gF=0.06+1.55*Math.pow(F,1.15);
+        }
+        w=rnd()*2-1;
+        l1+=al*(w-l1); l2+=al*(l1-l2);
+        fl+=0.47*(w-fl); fh+=0.72*((w-fl)-fh);
+        far+=0.11*(w-far); far2+=0.11*(far-far2);
+        deep=(deep+0.02*w)/1.02;
+        out[i]=l2*gR*2.2+fh*gF+far2*1.15+deep*1.9;
+      }
+    }
+    return sndLevel(out, SND_RMS[id]||0.1);
+  }
+  /* Bring a sound to its loudness, and round off the rare peak instead of clipping it. */
+  function sndLevel(buf, target){
+    var n=buf.length, i, sum=0, x, a;
+    for(i=0;i<n;i++) sum+=buf[i]*buf[i];
+    var gain=target/(Math.sqrt(sum/(n||1))||1);
+    for(i=0;i<n;i++){ x=buf[i]*gain; a=x<0?-x:x;
+      if(a>0.72){ a=0.72+0.26*Math.tanh((a-0.72)/0.26); x=x<0?-a:a; }
+      buf[i]=x; }
+    return buf;
+  }
+  /* The first `len` samples as a 16-bit mono WAV, with the fades written into
+     the samples. fin: an equal-power rise. fout: an equal-power fall, or a
+     slower, softer one when `soft` is set (the end of the timer). */
+  function sndWav(src, len, sr, fin, fout, soft){
+    var n=Math.max(0, Math.min(src.length, len|0)), buf=new ArrayBuffer(44+n*2), v=new DataView(buf), i, gn, x,
+        str=function(o,t){ for(var q=0;q<t.length;q++) v.setUint8(o+q, t.charCodeAt(q)); };
+    str(0,"RIFF"); v.setUint32(4,36+n*2,true); str(8,"WAVE"); str(12,"fmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+    v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); str(36,"data"); v.setUint32(40,n*2,true);
+    fin=Math.min(fin|0, n>>1); fout=Math.min(fout|0, n>>1);
+    var H=Math.PI/2;
+    for(i=0;i<n;i++){
+      gn=1;
+      if(i<fin) gn=Math.sin(H*i/fin);
+      if(i>=n-fout){ var c=Math.cos(H*(i-(n-fout))/fout); gn*=soft?c*c:c; }
+      x=src[i]*gn; v.setInt16(44+i*2, Math.round((x>1?1:(x<-1?-1:x))*32767), true);
+    }
+    return buf;
+  }
+
+  /* ---- what is loaded: the chosen sound's samples, its loop, and one ending ---- */
+  var sndBuf=null, sndBufId="", sndLoop="", sndTail="";
+  function sndUrl(ab){ return URL.createObjectURL(new Blob([ab], {type:"audio/wav"})); }
+  function sndFree(u){ if(u){ try{ URL.revokeObjectURL(u); }catch(e){} } }
+  function sndLoad(id){
+    if(sndBufId===id && sndLoop) return sndLoop;
+    try{
+      var n=SND_LEN*SND_SR, buf=sndMake(id, n, SND_SR), url=sndUrl(sndWav(buf, n, SND_SR, SND_FADE*SND_SR, SND_FADE*SND_SR, false));
+      sndFree(sndLoop); sndFree(sndTail); sndTail="";
+      sndBuf=buf; sndBufId=id; sndLoop=url;
+      return url;
+    }catch(e){ return ""; }
+  }
+  function sndTailUrl(sec){
+    try{
+      var url=sndUrl(sndWav(sndBuf, Math.round(sec*SND_SR), SND_SR, SND_FADE*SND_SR, Math.min(20, sec/2)*SND_SR, true));
+      sndFree(sndTail); sndTail=url; return url;
+    }catch(e){ return ""; }
+  }
+
+  /* ---- settings ---- */
+  function sndDef(id){ for(var i=0;i<SND.length;i++){ if(SND[i].id===id) return SND[i]; } return SND[0]; }
+  function sndPick(){ return sndDef(lsGet(LSK_SND,"rain")).id; }
+  function sndMinutes(){ var n=parseInt(lsGet(LSK_SNDMIN,"30"),10); if(isNaN(n)) n=30; return Math.max(SND_MIN, Math.min(SND_MAX, Math.round(n/5)*5)); }
+  function sndStopAt(m){ var best=0, d=1e9; for(var i=0;i<SND_STOPS.length;i++){ var e=Math.abs(SND_STOPS[i]-m); if(e<d){ d=e; best=i; } } return best; }
+  function sndDurText(m){ var h=Math.floor(m/60), r=m%60; return m<60 ? m+" minutes" : (r ? h+" hr "+r+" min" : h+(h===1?" hour":" hours")); }
+  function sndLeftText(sec){ var m=Math.ceil(sec/60); return m<=1 ? "under a minute left" : sndDurText(m)+" left"; }
+
+  /* ---- two players, taking turns ---- */
+  var sndEls=[null,null], sndSrc=["",""], sndRun=null, sndTimer=null, sndNote="", sndWarmT=null;
+  function sndEl(i){
+    if(!sndEls[i]){
+      var el=new Audio(); el.preload="auto"; el.setAttribute("playsinline","");
+      el.addEventListener("timeupdate", sndTick);
+      el.addEventListener("pause", sndTick);
+      /* Nothing plays unless a timer is running: a player that iOS restarts
+         by itself after a call, once Stop has been pressed, is stopped again. */
+      el.addEventListener("play", function(){ if(!sndRun){ try{ el.pause(); }catch(e){} return; } sndTick(); });
+      el.addEventListener("ended", function(){ sndEnded(i); });
+      sndEls[i]=el;
+    }
+    return sndEls[i];
+  }
+  function sndSet(i, url){ var el=sndEl(i); if(sndSrc[i]!==url){ el.src=url; sndSrc[i]=url; } el.muted=false; return el; }
+  function sndGo(el){ try{ var p=el.play(); if(p && p.catch) p.catch(function(){}); return p; }catch(e){ return null; } }
+  function sndHalt(){ for(var i=0;i<2;i++){ if(sndEls[i]){ try{ sndEls[i].pause(); }catch(e){} } } }
+
+  /* Start `id`, to end at `endsAt`. This must run inside a tap: starting both
+     players here is what lets each start again later on its own, behind a
+     locked screen. */
+  function sndStart(id, endsAt){
+    sndHalt(); sndNote="";
+    var url=sndLoad(id);
+    if(!url){ sndStop(false); toast("That sound couldn’t be made here"); return false; }
+    var r={id:id, endsAt:endsAt, from:Date.now(), cur:0, last:false, held:false};
+    sndRun=r;
+    var a=sndSet(0, url); try{ a.currentTime=0; }catch(e){}
+    var p=sndGo(a);
+    if(p && p.catch) p.catch(function(){ if(sndRun===r && r.cur===0 && a.paused){ sndStop(false); toast("Couldn’t start the sound"); } });
+    /* The second player: a muted play inside this same tap, stopped at once. */
+    var b=sndSet(1, url);
+    try{ b.muted=true; var q=b.play(), quiet=function(){ if(sndRun && sndRun.cur===1) return; try{ b.pause(); b.currentTime=0; }catch(e){} b.muted=false; };
+      if(q && q.then) q.then(quiet, function(){ b.muted=false; }); else quiet();
+    }catch(e){ b.muted=false; }
+    if(!sndTimer) sndTimer=setInterval(sndTick, 500);
+    sndSession(); sndPaint();
+    return true;
+  }
+  /* The other player's turn. With a full piece or more to go it plays the
+     loop again; with less, an ending cut to finish on the minute; with only
+     moments left, the fade already under way is the ending. */
+  function sndHand(){
+    var r=sndRun; if(!r) return;
+    var left=(r.endsAt-Date.now())/1000;
+    if(left<8 || !sndLoad(r.id)){ r.last=true; return; }
+    var url = left>=SND_LEN ? sndLoop : sndTailUrl(left);
+    if(!url){ r.last=true; return; }
+    if(left<SND_LEN) r.last=true;
+    var nxt=1-r.cur, el=sndSet(nxt, url);
+    try{ el.currentTime=0; }catch(e){}
+    r.cur=nxt; sndGo(el); sndPosition();
+  }
+  /* Runs twice a second and on every player event. "Held" is simply what the
+     current player says: paused, and not at its end. */
+  function sndTick(){
+    var r=sndRun; if(!r) return;
+    var el=sndEl(r.cur), left=(r.endsAt-Date.now())/1000;
+    if(el.ended){ sndEnded(r.cur); return; }
+    var held=!!el.paused;
+    if(held!==r.held){ r.held=held; sndPosition(); }
+    if(held ? left<=0 : left<=-2){ sndStop(true); return; }
+    if(!held && !r.last && (el.currentTime||0)>=SND_LEN-SND_FADE) sndHand();
+    sndPaint();
+  }
+  function sndEnded(i){
+    var r=sndRun; if(!r || i!==r.cur) return;
+    if(!r.last) sndHand();                          /* its turn was missed: carry on after a breath */
+    if(sndRun===r && r.cur===i) sndStop(true);      /* nothing came after it: that was the end */
+  }
+  function sndStop(done){
+    var was=sndRun; sndRun=null;
+    if(sndTimer){ clearInterval(sndTimer); sndTimer=null; }
+    sndHalt();
+    if(was){ sndNote=done?"Finished. Rest well.":""; sndSession(); }
+    sndPaint();
+  }
+  /* The lock screen's own pause and play. */
+  function sndPauseAll(){ if(!sndRun) return; sndHalt(); sndTick(); }
+  function sndResume(){ var r=sndRun; if(!r) return; var el=sndEl(r.cur); el.muted=false; sndGo(el); sndTick(); }
+  function sndSession(){
+    try{
+      var ms=navigator.mediaSession, r=sndRun; if(!ms) return;
+      var set=function(k,f){ try{ ms.setActionHandler(k,f); }catch(e){} };
+      if(!r){ ms.metadata=null; set("play",null); set("pause",null); set("stop",null); return; }
+      if(window.MediaMetadata) ms.metadata=new MediaMetadata({title:sndDef(r.id).nm, artist:"Permission"});
+      set("play",sndResume); set("pause",sndPauseAll); set("stop",function(){ sndStop(false); });
+      sndPosition();
+    }catch(e){}
+  }
+  /* The lock screen shows how far through the whole timer it is, not through one 90-second piece. */
+  function sndPosition(){
+    try{
+      var ms=navigator.mediaSession, r=sndRun; if(!ms || !r || !ms.setPositionState) return;
+      var total=(r.endsAt-r.from)/1000, at=(Date.now()-r.from)/1000;
+      if(total>0) ms.setPositionState({duration:total, playbackRate:1, position:Math.max(0, Math.min(total, at))});
+    }catch(e){}
+  }
+
+  /* ---- the screen ---- */
+  function sndTx(id, t){ var el=$(id); if(el.textContent!==t) el.textContent=t; }
+  function sndAt(el, k, v){ if(el.getAttribute(k)!==v) el.setAttribute(k, v); }
+  function sndPaint(){
+    var r=sndRun, id=r?r.id:sndPick(), min=sndMinutes(), nm=sndDef(id).nm,
+        left=r?Math.max(0,(r.endsAt-Date.now())/1000):0;
+    sndTx("soundsSub", !r ? "Rain, waves, soft noise to rest in" : nm+" · "+(r.held?"paused":sndLeftText(left)));
+    if(!$("v-sounds").classList.contains("active")) return;
+    $("sList").querySelectorAll(".s-opt").forEach(function(b){ sndAt(b, "aria-pressed", b.dataset.snd===id?"true":"false"); });
+    sndTx("sDurTx", sndDurText(min));
+    var rg=$("sRange"), ix=sndStopAt(min);
+    if(rg.value!==String(ix)) rg.value=String(ix);
+    var pl=(100*ix/(SND_STOPS.length-1)).toFixed(1)+"%";
+    if(rg.style.getPropertyValue("--pl")!==pl) rg.style.setProperty("--pl", pl);
+    sndAt(rg, "aria-valuetext", sndDurText(min));
+    $("sQuick").querySelectorAll("button").forEach(function(b){ var on=parseInt(b.dataset.min,10)===min; b.classList.toggle("on", on); sndAt(b, "aria-pressed", on?"true":"false"); });
+    $("sLess").disabled = min<=SND_MIN; $("sMore").disabled = min>=SND_MAX;
+    sndTx("sPlay", !r ? "Play" : (r.held ? "Carry on" : "Stop"));
+    $("sOff").classList.toggle("hidden", !(r && r.held));
+    sndTx("sNow", !r ? sndNote : (r.held?"Paused":nm)+" · "+sndLeftText(left));
+  }
+  /* A new length. While the slider is still moving (`live`) only the words
+     change; once it is let go, a sound that is playing runs for the new
+     length from now. */
+  function sndSetMin(m, live){
+    m=Math.max(SND_MIN, Math.min(SND_MAX, Math.round(m/5)*5));
+    lsSet(LSK_SNDMIN, String(m)); sndNote="";
+    var r=sndRun;
+    if(r && !live){
+      r.from=Date.now(); r.endsAt=r.from+m*60000;
+      if(r.last && !r.held){ sndStart(r.id, r.endsAt); return; }      /* it was already fading towards the old end */
+      sndPosition();
+    }
+    sndPaint();
+  }
+  function sndChoose(id){
+    lsSet(LSK_SND, id); haptic(6); sndNote="";
+    var r=sndRun;
+    if(r && (r.id!==id || r.held)){ sndStart(id, r.endsAt); return; }
+    sndPaint(); if(!r) sndWarm();
+  }
+  /* Make the chosen sound a moment after the screen has settled, so Play
+     answers at once. If Play comes first, it is made inside that tap. */
+  function sndWarm(){
+    if(sndWarmT) clearTimeout(sndWarmT);
+    sndWarmT=setTimeout(function(){ sndWarmT=null; if(!sndRun && $("v-sounds").classList.contains("active")) sndLoad(sndPick()); }, 450);
+  }
+  function sndToggle(){
+    var r=sndRun; haptic(10);
+    if(!r){ sndStart(sndPick(), Date.now()+sndMinutes()*60000); return; }
+    if(r.held && r.endsAt>Date.now()){ sndStart(r.id, r.endsAt); return; }
+    sndStop(false);
+  }
+  function openSounds(){ sndNote=""; showView("sounds"); sndPaint(); sndWarm(); }
+  /* Home: the card is the last thing above the journal, so in the afternoon
+     it sits under the Morning card rather than between it and the tiles. */
+  function sndHome(){ var home=$("v-home"); home.insertBefore($("cardSounds"), home.querySelector(".sechead")); sndPaint(); }
+  function buildSounds(){
+    var list=$("sList");
+    SND.forEach(function(sd){
+      var b=document.createElement("button"); b.type="button"; b.className="s-opt"; b.dataset.snd=sd.id; b.setAttribute("aria-pressed","false");
+      b.innerHTML='<span class="ic">'+mSvg(sd.ic)+'</span><span class="tx"><span class="nm">'+sd.nm+'</span><span class="dsc">'+escapeHtml(sd.dsc)+'</span></span><span class="ck">'+M_CHECK+'</span>';
+      b.addEventListener("click", function(){ sndChoose(sd.id); });
+      list.appendChild(b);
+    });
+    $("cardSounds").addEventListener("click", function(){ haptic(10); openSounds(); });
+    $("sBack").addEventListener("click", function(){ showApp(); });
+    $("sPlay").addEventListener("click", sndToggle);
+    $("sOff").addEventListener("click", function(){ haptic(6); sndStop(false); });
+    $("sRange").addEventListener("input", function(){ sndSetMin(SND_STOPS[parseInt(this.value,10)]||SND_MIN, true); });
+    $("sRange").addEventListener("change", function(){ haptic(6); sndSetMin(SND_STOPS[parseInt(this.value,10)]||SND_MIN, false); });
+    $("sLess").addEventListener("click", function(){ haptic(6); sndSetMin(sndMinutes()-5, false); });
+    $("sMore").addEventListener("click", function(){ haptic(6); sndSetMin(sndMinutes()+5, false); });
+    $("sQuick").querySelectorAll("button").forEach(function(b){ b.addEventListener("click", function(){ haptic(6); sndSetMin(parseInt(b.dataset.min,10), false); }); });
+    document.addEventListener("visibilitychange", function(){ if(sndRun) sndTick(); });
+  }
+
+  /* ============================================================
      SETTINGS SHEET
      ============================================================ */
   function openSheet(){ $("sheet-scrim").classList.add("show"); $("settingsSheet").classList.add("show"); syncFaceToggle(); updateProfileSub(); }
@@ -3905,6 +4364,7 @@
       if(confirm("Are you sure? Everything will be gone forever.")){
         try{ ["perm_morning_last","perm_evening_last","perm_morning_remind","perm_evening_remind", LSK_AFFIRM, LSK_KNOW, LSK_TOMORROW]
           .forEach(function(k){ localStorage.removeItem(k); }); }catch(e){}
+        sndStop(false); try{ localStorage.removeItem(LSK_SND); localStorage.removeItem(LSK_SNDMIN); }catch(e){}
         cancelRemind("morning"); cancelRemind("evening");
         Promise.all([dbClear(), nbClear()]).then(function(){ nbPages=[""]; nbIndex=0; nbLoaded=false; toast("Everything erased"); closeSheet(); showApp(); }); } }
   });
@@ -3942,7 +4402,7 @@
   /* ============================================================
      BOOT
      ============================================================ */
-  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad(); buildMorning(); buildKnow(); initReminders();
+  applyTheme(); applyAccent(); buildThemeControls(); buildOnboard(); buildChips(); buildPad(); buildMorning(); buildKnow(); buildSounds(); initReminders();
 
   function bootAfterPin(firstRun){
     if(firstRun && !hasProfile()){

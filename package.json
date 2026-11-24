@@ -1,6 +1,6 @@
 {
   "name": "permission",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "description": "Permission \u2014 a private journal (native iOS via Capacitor)",
   "scripts": {
@@ -8,7 +8,8 @@
     "verify:transcription": "node scripts/verify-transcription.mjs",
     "verify:no-network": "node scripts/verify-no-network.mjs",
     "verify:layout": "node scripts/check-layout.mjs",
-    "verify:morning": "node scripts/verify-morning.mjs"
+    "verify:morning": "node scripts/verify-morning.mjs",
+    "verify:sounds": "node scripts/verify-sounds.mjs"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^8.0.0",

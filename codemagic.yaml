@@ -265,6 +265,8 @@ workflows:
           #   Camera            — <input accept="video/*"> "Record Video" (v1.3)
           #   Photo library     — same input's "Photo Library" source (v1.3)
           #   Face ID           — passcode-free unlock
+          # (Sounds, 1.11.0, needs no usage string: it plays, it never records.
+          #  Its background mode is set and read back further down.)
           # ---------------------------------------------------------------
           P=ios/App/App/Info.plist
           set +e
@@ -304,6 +306,17 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$P"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string permissionjournal" "$P"
 
+          # 1.11.0 — Sounds (rain, ocean, brown and white noise on a timer of
+          # ten minutes to ten hours) keep playing with the screen locked.
+          # That needs the audio background mode: without it iOS silences the
+          # app a few seconds after the phone locks. The app plays audio in
+          # the background ONLY while a Sounds timer the user started is
+          # running; it never records there. Rebuilt from empty every build
+          # (ios/ is regenerated), so exactly one mode is ever declared.
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$P" 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$P"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$P"
+
           # Print each key BACK so the build log proves it landed, and fail the
           # build if any is missing — a missing string is a shipped crash.
           set -e
@@ -324,6 +337,9 @@ workflows:
           GOT_SCHEME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes:0" "$P" 2>/dev/null) || GOT_SCHEME=""
           echo "URL scheme: $GOT_SCHEME"
           [ "$GOT_SCHEME" = "permissionjournal" ] || { echo "BLOCKED: the permissionjournal URL scheme did not land — Slow Burn could not open Permission."; exit 1; }
+          GOT_BG=$(/usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$P" 2>/dev/null | tr -d ' \n') || GOT_BG=""
+          echo "UIBackgroundModes: $GOT_BG"
+          [ "$GOT_BG" = "Array{audio}" ] || { echo "BLOCKED: UIBackgroundModes is '$GOT_BG', expected exactly [audio] — Sounds would stop when the phone locks."; exit 1; }
 
 
           # ---------------------------------------------------------------
@@ -423,6 +439,8 @@ workflows:
           # sequence keeps rising across the change.)
           NEXT="$(date -u +%Y%m%d%H%M)"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" ios/App/App/Info.plist
+          # 1.11.0 — Sounds: rain, ocean, brown and white noise on a timer,
+          # with the audio background mode (set and read back above).
           # 1.8.0 — made for iPad and the iPhone Duo: Universal build, all four
           # iPad orientations, portrait + landscape big-screen layouts.
           # 1.7.1 — the permissionjournal:// URL scheme (Slow Burn opens Permission).
@@ -434,7 +452,7 @@ workflows:
           # Earlier versions are separate records in App Store Connect and are
           # NOT touched by this build: this lane publishes to TestFlight only
           # (see the review-submit toggle at the bottom, deliberately off).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.10.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.10.0" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.11.0" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.11.0" ios/App/App/Info.plist
 
           # Read BOTH values back out of the plist. An unexpanded variable or a
           # silent PlistBuddy no-op would otherwise ship a colliding build that
@@ -446,7 +464,7 @@ workflows:
             [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
             *) echo "BLOCKED: CFBundleVersion '$GOT_B' is not a 12-digit stamp."; exit 1;;
           esac
-          [ "$GOT_V" = "1.10.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.10.0"; exit 1; }
+          [ "$GOT_V" = "1.11.0" ] || { echo "BLOCKED: version string is '$GOT_V', expected 1.11.0"; exit 1; }
       - name: Set up code signing — apply the stored profile + the ONE shared cert (no mint, no revoke)
         script: |
           security find-identity -v -p codesigning || true

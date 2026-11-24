@@ -1,6 +1,7 @@
 # Permission — Apple Review Readiness record
 
-**Version:** 1.8.0 (made for iPad and the iPhone Duo; 1.7.1 added the `permissionjournal://` URL scheme)
+**Version:** 1.8.0 (made for iPad and the iPhone Duo; 1.7.1 added the `permissionjournal://` URL scheme).
+Later versions add their own section below; the newest is 1.11.0 (Sounds).
 **Date:** 2026-10-11
 **Gate run:** `scripts/apple-review-audit.sh` (canonical copy, App Builder Template)
 
@@ -20,6 +21,48 @@ The three blockers from the 2026-08-07 run are now cleared:
 | Universal build with no large-screen media query | **PASS** — real two-column iPad layout at ≥700px |
 | No 2048×2732 iPad screenshots | **PASS** — rendered from the current build |
 | No `appicon-1024.png` at repo root | **PASS** — 1024×1024, no alpha, re-embedded and verified every build |
+
+---
+
+## 1.11.0 — Sounds, and the audio background mode (2026-11-24)
+
+Rain, ocean, brown noise and white noise on a timer of 10 minutes to 10 hours (Home → Sounds).
+Jonathan asked for it on 2026-11-23; it went to TestFlight for his device test, not to review.
+
+**What App Review will look at: `UIBackgroundModes: audio`.** The app now declares it, for this
+one feature. A sound the user started keeps playing with the phone locked until the time they
+chose, then fades out and stops. Nothing plays in the background unless Play was pressed on that
+screen, and nothing records there. The build sets exactly `[audio]` and reads it back
+(`codemagic.yaml`, the Info.plist step); `store/review-notes-1.11.0.txt` says where to see it.
+
+**Where the sound comes from.** Each sound is synthesised on the phone by the app's own code
+(`sndMake` in `www/index.html`) from a seeded generator. No audio file ships, nothing is
+downloaded, and no third-party audio is used, so there is nothing to license and the
+"no network connections" claim is untouched (`npm test` section 37 checks all of it).
+
+**How it plays, and why.** Two media elements take turns with a 90-second piece that fades in and
+out over six seconds; the fades are written into the samples because iOS ignores a media
+element's volume. Not Web Audio: iOS stops that behind a locked screen and silences it with the
+mute switch. Nothing loops by itself, so if iOS ever stopped running the page, the piece playing
+would fade out and it would go quiet rather than play all night.
+
+**Proved off the device** (`npm run verify:sounds`, 190 checks): the joins have no gap for ten
+minutes and for ten hours, the sound ends when the timer does, a pause from outside is noticed
+and not answered with a pause of the app's own, a recording stops it, Erase everything forgets
+it, and real media elements in Chrome really decode each sound and really hand over.
+
+**Only a real iPhone can prove** (this is the device test for 1.11.0):
+
+1. Home → Sounds → Rain → 10 min → Play. Lock the phone. It must still be playing after two
+   minutes (the first hand-over between the two players happens at 1:24) and must stop by itself
+   at ten. If it goes quiet at about a minute and a half, iOS is not running the page in the
+   background and the design needs a native player.
+2. With the silent switch on, it still plays.
+3. A phone call or Siri pauses it; afterwards it carries on, or the screen says "Paused" with
+   "Carry on".
+4. The lock screen shows the sound's name, and its pause and play work.
+5. Each of the four sounds is pleasant at a low volume and has no click or dip where it repeats.
+6. Record a voice entry while a sound plays: the sound stops first.
 
 ---
 

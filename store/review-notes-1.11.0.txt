@@ -1,0 +1,13 @@
+What is new in 1.11.0
+
+Sounds: a card on the home screen opens a screen with four ambient sounds (rain, ocean, brown noise, white noise) and a timer that can be set from 10 minutes to 10 hours. To see it: unlock the app, tap "Sounds", tap "Play". "Stop" ends it. The slider, the minus and plus buttons and the six quick picks set the length.
+
+Background audio (UIBackgroundModes: audio). This version adds the audio background mode for one purpose, which is this feature: a sound the user has started keeps playing when the phone is locked or the app is in the background, until the time the user chose runs out. Then it fades out and stops by itself. To see it: start a sound and lock the phone. It carries on, and the lock screen shows the name of the sound with pause and play. The app plays nothing in the background unless the user pressed Play on that screen, and it never records in the background.
+
+The sounds are generated on the device by the app's own code at the moment one is chosen. No audio file is bundled with the app, nothing is downloaded or streamed, and no third-party audio is used.
+
+Starting a voice or video recording stops a sound that is playing, so it is not picked up by the microphone.
+
+Unchanged from 1.10.0: Morning and Evening routines, and the optional daily reminders (local notifications scheduled on the device, off by default).
+
+Unchanged: there is no account and no sign-in. The app makes no network connections; everything stays on the device. The passcode is created by the user on first launch.
