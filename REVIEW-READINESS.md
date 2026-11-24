@@ -29,6 +29,12 @@ The three blockers from the 2026-08-07 run are now cleared:
 Rain, ocean, brown noise and white noise on a timer of 10 minutes to 10 hours (Home → Sounds).
 Jonathan asked for it on 2026-11-23; it went to TestFlight for his device test, not to review.
 
+**Device test and ship (2026-11-24).** He was asked for step 1 below (Rain, ten minutes, phone
+locked) and for how the sounds sound, on build 202611240804. His answer at 12:24 PM PT:
+"Permission is perfect. Please continue with anything that you're waiting on my Permission for".
+He did not report steps 2 to 6 one by one. `release.json` names that build; the description
+(`store/listing-1.11.0.json`) and the review notes (`store/review-notes-1.11.0.txt`) go with it.
+
 **What App Review will look at: `UIBackgroundModes: audio`.** The app now declares it, for this
 one feature. A sound the user started keeps playing with the phone locked until the time they
 chose, then fades out and stops. Nothing plays in the background unless Play was pressed on that
